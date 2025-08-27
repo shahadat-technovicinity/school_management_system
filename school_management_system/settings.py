@@ -169,6 +169,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -226,24 +227,44 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+# Let Whitenoise serve compressed static files
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# # Default PK
+# DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# # DRF default (auth required for APIs)
+# REST_FRAMEWORK = {
+#     'DEFAULT_PERMISSION_CLASSES': [
+#         'rest_framework.permissions.IsAuthenticated',
+#     ],
+#     'DEFAULT_AUTHENTICATION_CLASSES': [
+#         'rest_framework.authentication.SessionAuthentication',
+#         'rest_framework.authentication.BasicAuthentication',
+#     ],
+# }
+
+# # Swagger: make it public
+# SWAGGER_SETTINGS = {
+#     'USE_SESSION_AUTH': False,       # don’t require login
+#     'SECURITY_DEFINITIONS': None,    # hide "Authorize" button
+#     'LOGIN_URL': None,
+#     'LOGOUT_URL': None,
+# }
+
 # Default PK
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# DRF default (auth required for APIs)
+# DRF default (auth not required for APIs)
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.permissions.AllowAny',
     ],
 }
 
 # Swagger: make it public
 SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': False,       # don’t require login
-    'SECURITY_DEFINITIONS': None,    # hide "Authorize" button
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': None,
     'LOGIN_URL': None,
     'LOGOUT_URL': None,
 }
