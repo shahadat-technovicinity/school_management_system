@@ -145,13 +145,12 @@
 from pathlib import Path
 import os
 
-# Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY
 SECRET_KEY = 'django-insecure-^&@6w!vmgg=4cjp%+!gbzb4b)nwherooji2o+=$f!wng4cx9-@'
-DEBUG = False  # Always False in production
-ALLOWED_HOSTS = ["school-management-system-s87o.onrender.com", "127.0.0.1"]
+DEBUG = False  # keep False on production
+
+ALLOWED_HOSTS = ["school-management-system-s87o.onrender.com", "127.0.0.1", "localhost"]
 
 # Application definition
 INSTALLED_APPS = [
@@ -197,7 +196,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'school_management_system.wsgi.application'
 
-# Database (PostgreSQL)
+# Database
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -217,7 +216,6 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -225,18 +223,16 @@ USE_TZ = True
 
 # Static files
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'  # Collected static files for production
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',  # Optional: if you have a 'static' folder
-]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
-# Default primary key field
+# Default PK
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# DRF settings
+# DRF default (auth required for APIs)
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',  # default
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
@@ -244,8 +240,10 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Swagger public access (even if DRF requires auth globally)
+# Swagger: make it public
 SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': False,
-    'SECURITY_DEFINITIONS': None,
+    'USE_SESSION_AUTH': False,       # don’t require login
+    'SECURITY_DEFINITIONS': None,    # hide "Authorize" button
+    'LOGIN_URL': None,
+    'LOGOUT_URL': None,
 }
