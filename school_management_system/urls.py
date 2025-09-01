@@ -47,6 +47,7 @@ urlpatterns = [
     # your app APIs
     path("blog/", include("blog.urls")),
     path("auth/", include("userauthentication.urls")),
+    path("stdadmission/", include("student_admission.urls")),
 
 
     # Swagger
