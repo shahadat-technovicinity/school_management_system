@@ -167,6 +167,7 @@ INSTALLED_APPS = [
     # Mehedi
     'userauthentication',
     'student_admission',
+    'admission_exam',
 
     # Third-party
     "rest_framework",

@@ -46,8 +46,11 @@ urlpatterns = [
     # path("admin/", admin.site.urls),
     # your app APIs
     path("blog/", include("blog.urls")),
+
+    ######### Mehedi##########
     path("auth/", include("userauthentication.urls")),
     path("stdadmission/", include("student_admission.urls")),
+    path("admissionexam/", include("admission_exam.urls")),
 
 
     # Swagger
