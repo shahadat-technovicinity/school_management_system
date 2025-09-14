@@ -114,7 +114,7 @@ class StudentAdmission(models.Model):
     roll = models.IntegerField()
     gpa = models.FloatField()
     passing_year = models.IntegerField()
-    sibling_id_number = models.CharField(max_length=255)
+    sibling_id_number = models.CharField(max_length=255, blank=True, null=True)
 
     
 
