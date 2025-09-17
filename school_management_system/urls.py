@@ -51,6 +51,8 @@ urlpatterns = [
     path("auth/", include("userauthentication.urls")),
     path("stdadmission/", include("student_admission.urls")),
     path("admissionexam/", include("admission_exam.urls")),
+    path("academic_class_routine/", include("academic_class_routine.urls")),
+
 
 
     # Swagger
