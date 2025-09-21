@@ -52,6 +52,8 @@ urlpatterns = [
     path("stdadmission/", include("student_admission.urls")),
     path("admissionexam/", include("admission_exam.urls")),
     path("academic_class_routine/", include("academic_class_routine.urls")),
+    path("academic_online_class/", include("academic_online_class.urls")),
+
 
 
 
