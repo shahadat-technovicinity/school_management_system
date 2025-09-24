@@ -14,7 +14,8 @@ sqlparse==0.5.3
 tzdata==2025.2
 uritemplate==4.2.0
 gunicorn>=23.0.0
-whitenoise==6.8.2  
+whitenoise==6.8.2
+Pillow==10.4.0
 
 # venv\Scripts\activate
 # python manage.py runserver
