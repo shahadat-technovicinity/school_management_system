@@ -60,15 +60,15 @@ class StudentAdmission(models.Model):
 ########## Gurdian information ################################
 ########## Gurdian information ################################
     # Father's Information
-    father_name_en = models.CharField(max_length=255, null=True, blank=True)
-    father_name_bn = models.CharField(max_length=255, null=True, blank=True)
-    father_nid_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    father_name_en = models.CharField(max_length=255)
+    father_name_bn = models.CharField(max_length=255)
+    father_nid_number = models.CharField(max_length=20, unique=True)
     father_is_deceased = models.BooleanField(default=False)
 
     # Mother's Information
-    mother_name_en = models.CharField(max_length=255, null=True, blank=True)
-    mother_name_bn = models.CharField(max_length=255, null=True, blank=True)
-    mother_nid_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    mother_name_en = models.CharField(max_length=255)
+    mother_name_bn = models.CharField(max_length=255)
+    mother_nid_number = models.CharField(max_length=20, unique=True)
     mother_is_deceased = models.BooleanField(default=False)
     
    
@@ -81,21 +81,21 @@ class StudentAdmission(models.Model):
     # Contact Information
     mobile_number = models.CharField(max_length=20)
     whatsapp_available = models.BooleanField(default=False)
-    guardian_profession = models.CharField(max_length=255, null=True, blank=True)
-    family_annual_income = models.CharField(max_length=100, null=True, blank=True)
+    guardian_profession = models.CharField(max_length=255)
+    family_annual_income = models.CharField(max_length=100, default=0)
     
     # Present Address
-    present_address_village = models.CharField(max_length=255, null=True, blank=True)
-    present_address_post_office = models.CharField(max_length=255, null=True, blank=True)
-    present_address_sub_district = models.CharField(max_length=255, null=True, blank=True)
-    present_address_district = models.CharField(max_length=255, null=True, blank=True)
+    present_address_village = models.CharField(max_length=255)
+    present_address_post_office = models.CharField(max_length=255)
+    present_address_sub_district = models.CharField(max_length=255)
+    present_address_district = models.CharField(max_length=255)
     
     # Permanent Address
     is_permanent_same_as_present = models.BooleanField(default=False)
-    permanent_address_village = models.CharField(max_length=255, null=True, blank=True)
-    permanent_address_post_office = models.CharField(max_length=255, null=True, blank=True)
-    permanent_address_sub_district = models.CharField(max_length=255, null=True, blank=True)
-    permanent_address_district = models.CharField(max_length=255, null=True, blank=True)
+    permanent_address_village = models.CharField(max_length=255)
+    permanent_address_post_office = models.CharField(max_length=255)
+    permanent_address_sub_district = models.CharField(max_length=255)
+    permanent_address_district = models.CharField(max_length=255)
 
     
 
