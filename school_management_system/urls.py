@@ -52,6 +52,7 @@ urlpatterns = [
     path("stdadmission/", include("student_admission.urls")),
     path("admissionexam/", include("admission_exam.urls")),
     path("exam/", include("exam.urls")),
+    path("teacher/", include("teacher.urls")),
 
 
     # Swagger

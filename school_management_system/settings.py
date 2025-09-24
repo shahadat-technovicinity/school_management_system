@@ -176,7 +176,8 @@ INSTALLED_APPS = [
 
     "drf_yasg",
     "blog",
-    "exam"
+    "exam",
+    "teacher",
 ]
 
 MIDDLEWARE = [
