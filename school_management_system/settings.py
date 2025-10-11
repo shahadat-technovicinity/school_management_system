@@ -225,11 +225,14 @@ WSGI_APPLICATION = 'school_management_system.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "school_management_system_hoeg",
-        "USER": "school_management_system_hoeg_user",
-        "PASSWORD": "5ouKgIKeRZQQnjrzafJQM2Bokcy1ufqs",
-        "HOST": "dpg-d2n963vdiees73cbgvqg-a.oregon-postgres.render.com",
+        "NAME": "neondb",
+        "USER": "neondb_owner",
+        "PASSWORD": "npg_G56BpUWmRfKZ",
+        "HOST": "ep-misty-cell-af7kkmmg-pooler.c-2.us-west-2.aws.neon.tech",
         "PORT": "5432",
+        "OPTIONS": {
+            "sslmode": "require",
+        }
     }
 }
 
@@ -300,7 +303,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ]
 } 
-
 
 AUTH_USER_MODEL = 'userauthentication.User'
 
