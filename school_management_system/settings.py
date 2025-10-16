@@ -170,6 +170,7 @@ INSTALLED_APPS = [
     'admission_exam',
     'academic_class_routine',
     'academic_online_class',
+    'student_profile',
 
     # Third-party
     "corsheaders",
