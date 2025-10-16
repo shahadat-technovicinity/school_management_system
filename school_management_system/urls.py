@@ -55,6 +55,12 @@ urlpatterns = [
     path("teacher/", include("teacher.urls")),
     path("academic_class_routine/", include("academic_class_routine.urls")),
     path("academic_online_class/", include("academic_online_class.urls")),
+    path("student_profile_create_all/", include("student_profile.urls")),
+
+
+
+
+
     # Swagger
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
