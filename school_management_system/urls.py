@@ -49,12 +49,22 @@ urlpatterns = [
 
     ######### Mehedi##########
     path("auth/", include("userauthentication.urls")),
+
+    #####addmission
     path("stdadmission/", include("student_admission.urls")),
     path("admissionexam/", include("admission_exam.urls")),
+
+    ## Academic Management
     path("academic_class_routine/", include("academic_class_routine.urls")),
     path("academic_online_class/", include("academic_online_class.urls")),
+
+    ### Student Management
     path("student_profile_create_all/", include("student_profile.urls")),
 
+
+
+    ######## Exam Management
+    path("exam_management_exam_setup/", include("exam_mm_exam_setup.urls")),
 
 
 
