@@ -165,11 +165,21 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Mehedi
+    ## user authentication
     'userauthentication',
+
+    ## student admission
     'student_admission',
     'admission_exam',
+
+    ## academic management
     'academic_class_routine',
     'academic_online_class',
+
+    ## exam management
+    'exam_mm_exam_setup',
+
+    ## student management
     'student_profile',
 
     # Third-party
