@@ -57,7 +57,7 @@ urlpatterns = [
 
     ## Academic Management
 
-    path("exam/", include("exam.urls")),
+    
     path("teacher/", include("teacher.urls")),
     main
     path("academic_class_routine/", include("academic_class_routine.urls")),
