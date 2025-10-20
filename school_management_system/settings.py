@@ -178,6 +178,7 @@ INSTALLED_APPS = [
 
     ## exam management
     'exam_mm_exam_setup',
+    'exam_mm_exmroutine_exmadmit',
 
     ## student management
     'student_profile',
