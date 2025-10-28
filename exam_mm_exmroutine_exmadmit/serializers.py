@@ -13,3 +13,12 @@ class ExamAdmitSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExamAdmit
         fields = '__all__'
+
+
+
+##### admit card summary dashboard serializer
+
+class AdmitSummarySerializer(serializers.Serializer):
+    generated = serializers.IntegerField()
+    pending = serializers.IntegerField()
+    total = serializers.IntegerField()

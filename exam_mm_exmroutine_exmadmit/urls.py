@@ -10,4 +10,9 @@ urlpatterns = [
 
     path("exam_admit", ExamAdmitListCreateView.as_view(), name='exam_routine'),
     path("exam_admit_action/<int:pk>/", ExamAdmitDetailView.as_view(), name = 'exam_r_action'),
+
+
+    ######   admit generate summary dashboard api endpoin ########
+    path("admit_card_generate_summary_dashboard/", AdmitCardSummaryDashboardAPIView.as_view(), name = 'admitgeneratesummarydashboard'),
+
 ]
