@@ -53,13 +53,13 @@ urlpatterns = [
     #####addmission
     path("stdadmission/", include("student_admission.urls")),
     path("admissionexam/", include("admission_exam.urls")),
-    examsetup-done
+    # examsetup-done
 
     ## Academic Management
 
     
     path("teacher/", include("teacher.urls")),
-    main
+    # main
     path("academic_class_routine/", include("academic_class_routine.urls")),
     path("academic_online_class/", include("academic_online_class.urls")),
 
