@@ -71,6 +71,7 @@ urlpatterns = [
     ######## Exam Management
     path("exam_management_exam_setup/", include("exam_mm_exam_setup.urls")),
     path("exam_mm_exmroutine_exmadmit/", include("exam_mm_exmroutine_exmadmit.urls")),
+    path("exam_mm_question_bank/", include("exam_mm_question_bank.urls")),
 
 
 
