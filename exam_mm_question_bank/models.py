@@ -19,7 +19,9 @@ class ExmQuestionBank(models.Model):
     # ✅ Shongshodhon kora holo: User model-ke settings theke load kora hochche
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        null=True, 
+        blank=True,
     ) 
     
     question_title = models.CharField(max_length=255)
