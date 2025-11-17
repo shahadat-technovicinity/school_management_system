@@ -76,3 +76,8 @@ class FinalResultView(generics.ListAPIView):
         context = super().get_serializer_context()
         context['exam_type'] = self.exam_type
         return context
+    
+
+class MarkRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ExamMark.objects.all()
+    serializer_class = MarksSerializer
