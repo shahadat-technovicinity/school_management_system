@@ -101,7 +101,7 @@ class FinalResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StudentPersonalInfo
-        # এই ফিল্ডগুলিই আপনার ফাইনাল রেজাল্ট টেবিলে দেখা যাবে
+        # this field showing finall result
         fields = ('student_roll_number', 'student_name', 'all_subjects_marks', 
                   'grand_total', 'percentage', 'pass_fail_status')
     
