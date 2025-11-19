@@ -81,3 +81,7 @@ class FinalResultView(generics.ListAPIView):
 class MarkRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ExamMark.objects.all()
     serializer_class = MarksSerializer
+
+
+
+

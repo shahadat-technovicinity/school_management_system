@@ -6,5 +6,4 @@ urlpatterns = [
     path('marksadd/', MarksListCreateAPIView.as_view(), name='studentmarkadd'),
     path('FinalResultView/', FinalResultView.as_view(), name='studentmarkadd'),
     path('resultupdate/<int:pk>/', MarkRetrieveUpdateDestroyAPIView.as_view(), name='admin-change-status'),
-
 ]

@@ -185,6 +185,10 @@ INSTALLED_APPS = [
     ## student management
     'student_profile',
 
+    ## account management
+    'account_mm_std_stipent',
+
+
     # Third-party
     "corsheaders",
     "rest_framework",

@@ -75,6 +75,8 @@ urlpatterns = [
     path("exam_mm_result_archive/", include("exam_mm_result_archive.urls")),
 
 
+    ######## account Management
+    path("account_mm_stipend_student/", include('account_mm_std_stipent.urls')),
 
 
 
