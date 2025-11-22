@@ -72,6 +72,7 @@ urlpatterns = [
 
     ######## account Management
     path("account_mm_stipend_student/", include('account_mm_std_stipent.urls')),
+    path("account_mm_income/", include('account_mm_income.urls')),
 
 
     # Swagger
