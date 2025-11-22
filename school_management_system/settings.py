@@ -187,6 +187,7 @@ INSTALLED_APPS = [
 
     ## account management
     'account_mm_std_stipent',
+    'account_mm_income',
 
 
     # Third-party
