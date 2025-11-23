@@ -5,8 +5,7 @@ class account_Income(models.Model):
     INCOME_CATEGORIES = [
         ('student salary', 'Student Salary'),
         ('session fees', 'Session Fees'),
-        ('exam fees', 'Exam Fees'),
-        ('registration', 'Registration'),
+        ('exam fees', 'Exam Fees'),                                        
         ('form filup', 'Form Filup'),
         ('shop rent', 'Shop Rent'),
         ('land rent', 'Land Rent'),
