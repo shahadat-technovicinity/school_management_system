@@ -188,6 +188,7 @@ INSTALLED_APPS = [
     ## account management
     'account_mm_std_stipent',
     'account_mm_income',
+    'account_mm_voucher_generate',
 
 
     # Third-party
