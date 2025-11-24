@@ -17,7 +17,6 @@ class ExpenseVoucher(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        # এখন আইডি (PK) ব্যবহার করা হবে
         return f"Voucher #{self.pk}" 
 
     class Meta:
