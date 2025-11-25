@@ -53,8 +53,13 @@ urlpatterns = [
     #####addmission
     path("stdadmission/", include("student_admission.urls")),
     path("admissionexam/", include("admission_exam.urls")),
+    # examsetup-done
 
     ## Academic Management
+
+    
+    path("teacher/", include("teacher.urls")),
+    # main
     path("academic_class_routine/", include("academic_class_routine.urls")),
     path("academic_online_class/", include("academic_online_class.urls")),
 
@@ -74,6 +79,7 @@ urlpatterns = [
     path("account_mm_stipend_student/", include('account_mm_std_stipent.urls')),
     path("account_mm_income/", include('account_mm_income.urls')),
     path("account_mm_voucher_generate/", include('account_mm_voucher_generate.urls')),
+
 
 
     # Swagger
