@@ -74,6 +74,7 @@ urlpatterns = [
     path("account_mm_stipend_student/", include('account_mm_std_stipent.urls')),
     path("account_mm_income/", include('account_mm_income.urls')),
     path("account_mm_voucher_generate/", include('account_mm_voucher_generate.urls')),
+    path("account_mm_create_fee/", include('account_mm_create_fee.urls')),
 
 
     # Swagger
