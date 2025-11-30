@@ -61,6 +61,7 @@ urlpatterns = [
 
     
     path("teacher/", include("teacher.urls")),
+    path("teacher/", include("teacher_leave.urls")),  # Leave APIs under /teacher/
     # main
     path("academic_class_routine/", include("academic_class_routine.urls")),
     path("academic_online_class/", include("academic_online_class.urls")),
