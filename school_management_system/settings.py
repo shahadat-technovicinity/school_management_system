@@ -193,6 +193,7 @@ INSTALLED_APPS = [
 
     ## teacher management
     'teacher_leave',
+    'salary',
 
 
     # Third-party
