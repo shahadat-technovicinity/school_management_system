@@ -172,6 +172,10 @@ INSTALLED_APPS = [
     'student_admission',
     'admission_exam',
 
+
+     ## Teacher Management
+    'teacher_mm_workdistribute',
+
     ## academic management
     'academic_class_routine',
     'academic_online_class',
@@ -190,6 +194,8 @@ INSTALLED_APPS = [
     'account_mm_income',
     'account_mm_voucher_generate',
     'account_mm_create_fee',
+
+
 
 
     # Third-party
