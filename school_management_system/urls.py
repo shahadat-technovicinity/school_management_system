@@ -23,6 +23,8 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -59,6 +61,8 @@ urlpatterns = [
 
     
     path("teacher/", include("teacher.urls")),
+    path("teacher/", include("teacher_leave.urls")),  # Leave APIs under /teacher/
+    path("salary/", include("salary.urls")),  # Salary Management APIs
     # main
     path("academic_class_routine/", include("academic_class_routine.urls")),
     path("academic_online_class/", include("academic_online_class.urls")),
@@ -91,3 +95,7 @@ urlpatterns = [
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
 ]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
