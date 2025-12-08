@@ -77,6 +77,10 @@ urlpatterns = [
     path("account_mm_create_fee/", include('account_mm_create_fee.urls')),
 
 
+    ##### Teacher Management
+    path("teacher_mmss_workdistribute/", include('teacher_mm_workdistribute.urls')),
+
+
     # Swagger
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
