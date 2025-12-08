@@ -24,7 +24,7 @@ class TeacherListSerializer(serializers.ModelSerializer):
     Used for GET /teachers/ endpoint.
     """
     user = UserMinimalSerializer(read_only=True)
-    full_name = serializers.CharField(read_only=True)
+    full_name = serializers.SerializerMethodField()  # ✅ Change this
 
     class Meta:
         model = Teacher
@@ -43,6 +43,8 @@ class TeacherListSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         ref_name = "TeacherProfileList"
+    def get_full_name(self, obj):  # ✅ Add this method
+        return obj.full_name
 
 
 class TeacherDetailSerializer(serializers.ModelSerializer):
@@ -51,8 +53,9 @@ class TeacherDetailSerializer(serializers.ModelSerializer):
     Used for GET /teachers/{id}/ endpoint.
     """
     user = UserMinimalSerializer(read_only=True)
-    full_name = serializers.CharField(read_only=True)
-    email = serializers.CharField(read_only=True)
+    full_name = serializers.SerializerMethodField()  # ✅ Change this
+    email = serializers.SerializerMethodField()  # ✅ Change this
+
 
     class Meta:
         model = Teacher
@@ -140,6 +143,11 @@ class TeacherDetailSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+    def get_full_name(self, obj):  # ✅ Add this
+        return obj.full_name
+    
+    def get_email(self, obj):  # ✅ Add this
+        return obj.email
 
 
 class TeacherCreateSerializer(serializers.ModelSerializer):
