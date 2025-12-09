@@ -17,5 +17,5 @@ urlpatterns = [
     # /teacher/leave-types/
     # /teacher/leaves/
     # /teacher/leave-balances/
-    path("", include(router.urls)),
+    # path("", include(router.urls)),
 ]
