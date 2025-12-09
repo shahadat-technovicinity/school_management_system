@@ -3,8 +3,8 @@ from django.urls import path, include
 from .views import TeacherViewSet
 
 # Create a router and register our viewset
-router = DefaultRouter()
-router.register(r"", TeacherViewSet, basename="teacher")
+# router = DefaultRouter()
+# router.register(r"", TeacherViewSet, basename="teacher")
 
 # The API URLs are determined automatically by the router
 # Available endpoints:
