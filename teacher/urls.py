@@ -17,5 +17,5 @@ router.register(r"", TeacherViewSet, basename="teacher")
 # - GET    /teachers/statistics/ -> Get teacher statistics
 
 urlpatterns = [
-    path("", include(router.urls)),
+ #   path("", include(router.urls)),
 ]
