@@ -7,10 +7,10 @@ from .views import (
 )
 
 # Teacher Leave Router
-router = DefaultRouter()
-router.register(r"leave-types", LeaveTypeViewSet, basename="leave-types")
-router.register(r"leaves", TeacherLeaveViewSet, basename="teacher-leaves")
-router.register(r"leave-balances", LeaveBalanceViewSet, basename="leave-balances")
+# router = DefaultRouter()
+# router.register(r"leave-types", LeaveTypeViewSet, basename="leave-types")
+# router.register(r"leaves", TeacherLeaveViewSet, basename="teacher-leaves")
+# router.register(r"leave-balances", LeaveBalanceViewSet, basename="leave-balances")
 
 urlpatterns = [
     # All endpoints under /teacher/...
