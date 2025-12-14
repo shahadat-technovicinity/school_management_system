@@ -175,6 +175,7 @@ INSTALLED_APPS = [
 
      ## Teacher Management
     'teacher_mm_workdistribute',
+    'teacher_mm_comitee',
 
     ## academic management
     'academic_class_routine',

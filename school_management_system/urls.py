@@ -79,6 +79,8 @@ urlpatterns = [
 
     ##### Teacher Management
     path("teacher_mmss_workdistribute/", include('teacher_mm_workdistribute.urls')),
+    path("teacher_mmm_comitee/", include('teacher_mm_comitee.urls')),
+
 
 
     # Swagger
