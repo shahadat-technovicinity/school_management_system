@@ -58,12 +58,6 @@ urlpatterns = [
     # examsetup-done
 
     ## Academic Management
-
-    
-    path("teacher/", include("teacher.urls")),
-    path("teacher/", include("teacher_leave.urls")),  # Leave APIs under /teacher/
-    path("salary/", include("salary.urls")),  # Salary Management APIs
-    # main
     path("academic_class_routine/", include("academic_class_routine.urls")),
     path("academic_online_class/", include("academic_online_class.urls")),
 
