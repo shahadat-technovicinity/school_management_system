@@ -197,8 +197,6 @@ INSTALLED_APPS = [
     'account_mm_create_fee',
 
     ## teacher management
-    'teacher_leave',
-    'salary',
 
 
 
@@ -211,7 +209,6 @@ INSTALLED_APPS = [
 
     "drf_yasg",
     "blog",
-    "teacher",
 ]
 
 MIDDLEWARE = [
