@@ -176,6 +176,8 @@ INSTALLED_APPS = [
      ## Teacher Management
     'teacher_mm_workdistribute',
     'teacher_mm_comitee',
+    'teacher_mm_teacher',
+    'teacher_mm_teacher_leave',
 
     ## academic management
     'academic_class_routine',
@@ -197,6 +199,10 @@ INSTALLED_APPS = [
     'account_mm_create_fee',
 
     ## teacher management
+
+
+    ## Institute info management
+    'institute_mm_institute_profile',
 
 
 
