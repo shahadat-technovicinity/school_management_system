@@ -150,7 +150,7 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-^&@6w!vmgg=4cjp%+!gbzb4b)nwherooji2o+=$f!wng4cx9-@'
-DEBUG = False  # keep False on production
+DEBUG = True  # Temporarily enabled for debugging
 
 # ALLOWED_HOSTS = ["school-management-system-s87o.onrender.com", "127.0.0.1", "localhost"]
 ALLOWED_HOSTS = ['52.66.239.49', '*']
@@ -198,6 +198,8 @@ INSTALLED_APPS = [
     'account_mm_voucher_generate',
     'account_mm_create_fee',
 
+    ## teacher management
+
 
     ## Institute info management
     'institute_mm_institute_profile',
@@ -209,6 +211,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     'rest_framework_simplejwt',
+    "django_filters",
 
     "drf_yasg",
     "blog",
@@ -287,6 +290,10 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Media files (file uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Let Whitenoise serve compressed static files
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
