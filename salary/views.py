@@ -41,7 +41,7 @@ from .pagination import SalaryPagination
 from .services import SalaryDashboardService, SalaryExportService
 
 # Common Swagger tag
-SWAGGER_TAG = ["Teachers"]
+SWAGGER_TAG = ["Salary Management"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -69,33 +69,21 @@ class SalaryDashboardView(APIView):
         Get aggregated salary metrics for the dashboard.
         
         Returns:
-        - Total salary disbursement for the month
+        - Total salary disbursement
         - Total employees with salary records
         - Average salary
         - Pending approvals count
-        - Percentage changes from previous month
         """,
         tags=SWAGGER_TAG,
         manual_parameters=[
-            openapi.Parameter(
-                "month", openapi.IN_QUERY,
-                description="Month in YYYY-MM format (defaults to current month)",
-                type=openapi.TYPE_STRING,
-                example="2025-05"
-            ),
             openapi.Parameter(
                 "department", openapi.IN_QUERY,
                 description="Filter by department",
                 type=openapi.TYPE_STRING
             ),
             openapi.Parameter(
-                "staff_category", openapi.IN_QUERY,
-                description="Filter by staff category",
-                type=openapi.TYPE_STRING
-            ),
-            openapi.Parameter(
-                "employment_type", openapi.IN_QUERY,
-                description="Filter by employment type (full-time, part-time, contract)",
+                "position", openapi.IN_QUERY,
+                description="Filter by position",
                 type=openapi.TYPE_STRING
             ),
         ],
@@ -104,28 +92,15 @@ class SalaryDashboardView(APIView):
         }
     )
     def get(self, request):
-        # Parse month parameter
-        month_str = request.query_params.get("month")
-        month = None
-        if month_str:
-            try:
-                year, month_num = month_str.split("-")
-                month = date(int(year), int(month_num), 1)
-            except (ValueError, AttributeError):
-                pass
-
-        # Get other filters
+        # Get filters
         department = request.query_params.get("department")
-        staff_category = request.query_params.get("staff_category")
-        employment_type = request.query_params.get("employment_type")
+        position = request.query_params.get("position")
 
         # Calculate metrics
         service = SalaryDashboardService()
         metrics = service.get_dashboard_metrics(
-            month=month,
             department=department,
-            staff_category=staff_category,
-            employment_type=employment_type
+            position=position
         )
 
         serializer = SalaryDashboardSerializer(metrics)
@@ -157,27 +132,28 @@ class SalaryViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = SalaryFilter
     search_fields = [
-        "employee__user__name",
-        "employee__user__email",
-        "employee__teacher_id",
+        "employee__name",
+        "employee__username",
+        "employee__phone_number",
+        "department",
+        "position",
     ]
     ordering_fields = [
-        "month",
+        "department",
+        "position",
         "basic_salary",
         "payment_status",
         "payment_date",
-        "employee__user__name",
-        "employee__subject",
+        "employee__name",
         "created_at",
     ]
-    ordering = ["-month", "-created_at"]
+    ordering = ["-created_at"]
     pagination_class = SalaryPagination
 
     def get_queryset(self):
         """Optimized queryset with select_related and prefetch_related."""
         return EmployeeSalary.objects.select_related(
             "employee",
-            "employee__user",
             "created_by",
             "paid_by",
         ).prefetch_related(
@@ -217,27 +193,21 @@ class SalaryViewSet(viewsets.ModelViewSet):
         Get paginated list of salary records with filtering and sorting.
         
         Filters:
-        - month: YYYY-MM format
         - department: Department name
-        - employment_type: full-time, part-time, contract
+        - position: Position/role name
         - payment_status: pending, paid, processing, cancelled
-        - search: Search by employee name, email, or ID
+        - search: Search by employee name, department, position, or ID
         """,
         tags=SWAGGER_TAG,
         manual_parameters=[
-            openapi.Parameter(
-                "month", openapi.IN_QUERY,
-                description="Filter by month (YYYY-MM)",
-                type=openapi.TYPE_STRING
-            ),
             openapi.Parameter(
                 "department", openapi.IN_QUERY,
                 description="Filter by department",
                 type=openapi.TYPE_STRING
             ),
             openapi.Parameter(
-                "employment_type", openapi.IN_QUERY,
-                description="Filter by employment type",
+                "position", openapi.IN_QUERY,
+                description="Filter by position",
                 type=openapi.TYPE_STRING
             ),
             openapi.Parameter(
@@ -561,23 +531,13 @@ class SalaryViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def statistics(self, request):
         """Get salary statistics."""
-        month_str = request.query_params.get("month")
-        month = None
-        
-        if month_str:
-            try:
-                year, month_num = month_str.split("-")
-                month = date(int(year), int(month_num), 1)
-            except (ValueError, AttributeError):
-                month = None
-
         service = SalaryDashboardService()
         
         # Get department breakdown
-        department_breakdown = service.get_department_breakdown(month)
+        department_breakdown = service.get_department_breakdown()
         
         # Get payment status summary
-        payment_summary = service.get_payment_status_summary(month)
+        payment_summary = service.get_payment_status_summary()
 
         return Response({
             "status": "success",

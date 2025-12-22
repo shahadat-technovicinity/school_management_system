@@ -10,13 +10,14 @@ This module contains models for managing employee salaries including:
 from django.db import models
 from django.core.validators import MinValueValidator
 from decimal import Decimal
-from teacher.models import Teacher
+from django.conf import settings
 
 
 class EmployeeSalary(models.Model):
     """
-    Main salary record for an employee for a specific month.
-    Links to Teacher model and contains all salary components.
+    Main salary record for an employee.
+    Links to User model and contains all salary components.
+    Works for all employee types: Teachers, Staff, Admins, etc.
     """
 
     class PaymentFrequency(models.TextChoices):
@@ -37,17 +38,25 @@ class EmployeeSalary(models.Model):
         PROCESSING = "processing", "Processing"
         CANCELLED = "cancelled", "Cancelled"
 
-    # Employee relationship
+    # Employee relationship - any User with employee role
     employee = models.ForeignKey(
-        Teacher,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="salaries",
-        help_text="The employee/teacher this salary belongs to"
+        help_text="The employee (user) this salary belongs to"
     )
 
-    # Salary period (stored as first day of month for easy querying)
-    month = models.DateField(
-        help_text="Salary month (stored as first day of month, e.g., 2025-05-01)"
+    # Department and Position at time of salary assignment
+    department = models.CharField(
+        max_length=100,
+        default="General",
+        help_text="Employee's department at time of salary assignment"
+    )
+    
+    position = models.CharField(
+        max_length=100,
+        default="Employee",
+        help_text="Employee's position/role at time of salary assignment"
     )
 
     # Salary components
@@ -117,17 +126,16 @@ class EmployeeSalary(models.Model):
         db_table = "employee_salary"
         verbose_name = "Employee Salary"
         verbose_name_plural = "Employee Salaries"
-        ordering = ["-month", "employee__user__name"]
-        # Ensure one salary record per employee per month
-        unique_together = ["employee", "month"]
+        ordering = ["-created_at", "employee__name"]
         indexes = [
-            models.Index(fields=["month"]),
+            models.Index(fields=["department"]),
+            models.Index(fields=["position"]),
             models.Index(fields=["payment_status"]),
-            models.Index(fields=["employee", "month"]),
+            models.Index(fields=["employee"]),
         ]
 
     def __str__(self):
-        return f"{self.employee.user.name} - {self.month.strftime('%B %Y')}"
+        return f"{self.employee.name} - {self.department} - {self.position}"
 
     @property
     def total_allowances(self) -> Decimal:

@@ -198,6 +198,9 @@ INSTALLED_APPS = [
     'account_mm_voucher_generate',
     'account_mm_create_fee',
 
+    # Salary management
+    'salary',
+
     ## teacher management
 
 
