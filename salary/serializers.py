@@ -15,7 +15,7 @@ from decimal import Decimal
 from datetime import datetime
 
 from .models import EmployeeSalary, SalaryAllowance, SalaryDeduction
-from teacher.models import Teacher
+from userauthentication.models import User
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -86,49 +86,40 @@ class DeductionInputSerializer(serializers.Serializer):
 
 class EmployeeBasicInfoSerializer(serializers.ModelSerializer):
     """Basic employee info for salary list."""
-    name = serializers.CharField(source="user.name", read_only=True)
-    email = serializers.EmailField(source="user.email", read_only=True)
-    department = serializers.CharField(source="subject", read_only=True)  # Using subject as department
-    position = serializers.CharField(source="qualification", read_only=True)  # Using qualification as position
-    employment_type = serializers.CharField(source="contract_type", read_only=True)
+    employee_id = serializers.CharField(source="username", read_only=True)
+    department = serializers.CharField(source="role", read_only=True)
 
     class Meta:
-        model = Teacher
+        model = User
         fields = [
             "id",
-            "teacher_id",
+            "employee_id",
             "name",
-            "email",
+            "username",
+            "role",
             "department",
-            "position",
-            "employment_type",
+            "phone_number",
         ]
 
 
 class EmployeeDetailInfoSerializer(serializers.ModelSerializer):
     """Detailed employee info for salary details."""
-    name = serializers.CharField(source="user.name", read_only=True)
-    email = serializers.EmailField(source="user.email", read_only=True)
-    phone = serializers.CharField(source="primary_contact_number", read_only=True)
-    profile_picture = serializers.ImageField(source="photo", read_only=True)
-    department = serializers.CharField(source="subject", read_only=True)
-    position = serializers.CharField(source="qualification", read_only=True)
-    employment_type = serializers.CharField(source="contract_type", read_only=True)
-    joining_date = serializers.DateField(source="date_of_joining", read_only=True)
+    employee_id = serializers.CharField(source="username", read_only=True)
+    department = serializers.CharField(source="role", read_only=True)
+    joining_date = serializers.DateTimeField(source="date_joined", read_only=True)
 
     class Meta:
-        model = Teacher
+        model = User
         fields = [
             "id",
-            "teacher_id",
+            "employee_id",
             "name",
-            "email",
-            "phone",
-            "profile_picture",
+            "username",
+            "role",
             "department",
-            "position",
-            "employment_type",
+            "phone_number",
             "joining_date",
+            "is_active",
         ]
 
 
@@ -141,10 +132,8 @@ class SalaryListSerializer(serializers.ModelSerializer):
     Serializer for salary list view.
     Shows summary info for each salary record.
     """
-    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
-    employee_id = serializers.CharField(source="employee.teacher_id", read_only=True)
-    department = serializers.CharField(source="employee.subject", read_only=True)  # Using subject as department
-    position = serializers.CharField(source="employee.qualification", read_only=True)  # Using qualification as position
+    employee_name = serializers.CharField(source="employee.name", read_only=True)
+    employee_id = serializers.CharField(source="employee.username", read_only=True)
     
     # Computed fields
     total_allowances = serializers.DecimalField(
@@ -168,7 +157,6 @@ class SalaryListSerializer(serializers.ModelSerializer):
         source="get_payment_status_display",
         read_only=True
     )
-    month_display = serializers.SerializerMethodField()
 
     class Meta:
         model = EmployeeSalary
@@ -178,8 +166,6 @@ class SalaryListSerializer(serializers.ModelSerializer):
             "employee_id",
             "department",
             "position",
-            "month",
-            "month_display",
             "basic_salary",
             "total_allowances",
             "total_deductions",
@@ -189,9 +175,6 @@ class SalaryListSerializer(serializers.ModelSerializer):
             "payment_date",
         ]
 
-    def get_month_display(self, obj) -> str:
-        return obj.month.strftime("%B %Y")
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Salary Detail Serializer
@@ -199,17 +182,13 @@ class SalaryListSerializer(serializers.ModelSerializer):
 
 class PaymentHistorySerializer(serializers.Serializer):
     """Serializer for payment history entries."""
-    month = serializers.DateField()
-    month_display = serializers.SerializerMethodField()
+    department = serializers.CharField()
+    position = serializers.CharField()
     net_salary = serializers.DecimalField(max_digits=12, decimal_places=2)
     payment_status = serializers.CharField()
     payment_status_display = serializers.CharField()
     payment_date = serializers.DateTimeField()
-
-    def get_month_display(self, obj) -> str:
-        if isinstance(obj.get("month"), datetime):
-            return obj["month"].strftime("%B %Y")
-        return obj.get("month", "").strftime("%B %Y") if obj.get("month") else ""
+    created_at = serializers.DateTimeField()
 
 
 class SalaryDetailSerializer(serializers.ModelSerializer):
@@ -258,9 +237,8 @@ class SalaryDetailSerializer(serializers.ModelSerializer):
         source="get_payment_method_display",
         read_only=True
     )
-    month_display = serializers.SerializerMethodField()
     
-    # Payment history (last 6 months)
+    # Payment history (last 6 records)
     payment_history = serializers.SerializerMethodField()
 
     class Meta:
@@ -268,8 +246,8 @@ class SalaryDetailSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "employee",
-            "month",
-            "month_display",
+            "department",
+            "position",
             "basic_salary",
             "payment_frequency",
             "payment_frequency_display",
@@ -290,25 +268,23 @@ class SalaryDetailSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_month_display(self, obj) -> str:
-        return obj.month.strftime("%B %Y")
-
     def get_payment_history(self, obj) -> list:
-        """Get last 6 months of payment history for this employee."""
+        """Get last 6 payment records for this employee."""
         history = EmployeeSalary.objects.filter(
             employee=obj.employee
         ).exclude(
             id=obj.id
-        ).order_by("-month")[:6]
+        ).order_by("-created_at")[:6]
 
         return [
             {
-                "month": item.month,
-                "month_display": item.month.strftime("%B %Y"),
+                "department": item.department,
+                "position": item.position,
                 "net_salary": item.net_salary,
                 "payment_status": item.payment_status,
                 "payment_status_display": item.get_payment_status_display(),
                 "payment_date": item.payment_date,
+                "created_at": item.created_at,
             }
             for item in history
         ]
@@ -323,20 +299,15 @@ class SalaryCreateSerializer(serializers.ModelSerializer):
     Serializer for creating a new salary record.
     Supports nested allowances and deductions.
     """
-    allowances = AllowanceInputSerializer(many=True, required=False, default=[])
-    deductions = DeductionInputSerializer(many=True, required=False, default=[])
-    
-    # Accept month as YYYY-MM string or date
-    month = serializers.DateField(
-        input_formats=["%Y-%m-%d", "%Y-%m"],
-        help_text="Salary month in format YYYY-MM or YYYY-MM-DD"
-    )
+    allowances = AllowanceInputSerializer(many=True, required=False)
+    deductions = DeductionInputSerializer(many=True, required=False)
 
     class Meta:
         model = EmployeeSalary
         fields = [
             "employee",
-            "month",
+            "department",
+            "position",
             "basic_salary",
             "payment_frequency",
             "payment_method",
@@ -345,27 +316,11 @@ class SalaryCreateSerializer(serializers.ModelSerializer):
             "deductions",
         ]
 
-    def validate_month(self, value):
-        """Normalize month to first day of month."""
-        return value.replace(day=1)
-
-    def validate(self, attrs):
-        """Check for duplicate salary record."""
-        employee = attrs.get("employee")
-        month = attrs.get("month")
-
-        if EmployeeSalary.objects.filter(employee=employee, month=month).exists():
-            raise serializers.ValidationError({
-                "month": f"Salary record for {month.strftime('%B %Y')} already exists for this employee."
-            })
-
-        return attrs
-
     @transaction.atomic
     def create(self, validated_data):
         """Create salary with nested allowances and deductions."""
-        allowances_data = validated_data.pop("allowances", [])
-        deductions_data = validated_data.pop("deductions", [])
+        allowances_data = validated_data.pop("allowances", None) or []
+        deductions_data = validated_data.pop("deductions", None) or []
 
         # Add created_by if available
         request = self.context.get("request")
@@ -400,6 +355,8 @@ class SalaryUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeSalary
         fields = [
+            "department",
+            "position",
             "basic_salary",
             "payment_frequency",
             "payment_method",
@@ -503,26 +460,16 @@ class SalaryPaymentSerializer(serializers.Serializer):
 
 class SalaryDashboardSerializer(serializers.Serializer):
     """Serializer for salary dashboard metrics."""
-    # Current month metrics
+    # Metrics
     total_salary_disbursement = serializers.DecimalField(max_digits=15, decimal_places=2)
-    disbursement_change_percent = serializers.DecimalField(max_digits=6, decimal_places=2)
-    
     total_employees = serializers.IntegerField()
-    employees_change_percent = serializers.DecimalField(max_digits=6, decimal_places=2)
-    
     average_salary = serializers.DecimalField(max_digits=12, decimal_places=2)
-    average_change_percent = serializers.DecimalField(max_digits=6, decimal_places=2)
-    
     pending_approvals = serializers.IntegerField()
     paid_count = serializers.IntegerField()
     
     # Additional metrics
     total_allowances = serializers.DecimalField(max_digits=15, decimal_places=2)
     total_deductions = serializers.DecimalField(max_digits=15, decimal_places=2)
-    
-    # Month info
-    current_month = serializers.DateField()
-    current_month_display = serializers.CharField()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -531,11 +478,11 @@ class SalaryDashboardSerializer(serializers.Serializer):
 
 class SalaryExportSerializer(serializers.ModelSerializer):
     """Serializer for exporting salary data to CSV/Excel."""
-    employee_name = serializers.CharField(source="employee.user.name")
-    employee_id = serializers.CharField(source="employee.teacher_id")
-    department = serializers.CharField(source="employee.subject")
-    position = serializers.CharField(source="employee.qualification")
-    employment_type = serializers.CharField(source="employee.contract_type")
+    employee_name = serializers.CharField(source="employee.name")
+    employee_id = serializers.CharField(source="employee.username")
+    department = serializers.CharField(source="employee.role")
+    position = serializers.CharField(source="employee.role")
+    employment_type = serializers.CharField(source="employee.role")
     month_display = serializers.SerializerMethodField()
     total_allowances = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_deductions = serializers.DecimalField(max_digits=12, decimal_places=2)

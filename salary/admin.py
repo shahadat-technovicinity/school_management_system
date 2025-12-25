@@ -42,13 +42,12 @@ class EmployeeSalaryAdmin(admin.ModelAdmin):
         "payment_method",
         "payment_frequency",
         "month",
-        "employee__subject",
-        "employee__contract_type",
+        "employee__role",
     ]
     search_fields = [
-        "employee__user__name",
-        "employee__user__email",
-        "employee__teacher_id",
+        "employee__name",
+        "employee__username",
+        "employee__phone_number",
     ]
     date_hierarchy = "month"
     ordering = ["-month", "-created_at"]
@@ -100,17 +99,17 @@ class EmployeeSalaryAdmin(admin.ModelAdmin):
     )
 
     def employee_name(self, obj):
-        return obj.employee.user.name
+        return obj.employee.name
     employee_name.short_description = "Employee"
-    employee_name.admin_order_field = "employee__user__name"
+    employee_name.admin_order_field = "employee__name"
 
     def employee_id_display(self, obj):
-        return obj.employee.teacher_id
+        return obj.employee.username
     employee_id_display.short_description = "Employee ID"
 
     def department(self, obj):
-        return obj.employee.subject or "-"
-    department.admin_order_field = "employee__subject"
+        return obj.employee.role or "-"
+    department.admin_order_field = "employee__role"
 
     def month_display(self, obj):
         return obj.month.strftime("%B %Y")
@@ -148,7 +147,7 @@ class EmployeeSalaryAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(
-            "employee", "employee__user", "created_by", "paid_by"
+            "employee", "created_by", "paid_by"
         ).prefetch_related("allowances", "deductions")
 
 
@@ -157,7 +156,7 @@ class SalaryAllowanceAdmin(admin.ModelAdmin):
     """Admin for salary allowances."""
     list_display = ["id", "salary", "allowance_type", "name", "amount"]
     list_filter = ["allowance_type"]
-    search_fields = ["name", "salary__employee__user__name"]
+    search_fields = ["name", "salary__employee__name"]
     ordering = ["-salary__month", "allowance_type"]
 
 
@@ -166,5 +165,5 @@ class SalaryDeductionAdmin(admin.ModelAdmin):
     """Admin for salary deductions."""
     list_display = ["id", "salary", "deduction_type", "name", "amount"]
     list_filter = ["deduction_type"]
-    search_fields = ["name", "salary__employee__user__name"]
+    search_fields = ["name", "salary__employee__name"]
     ordering = ["-salary__month", "deduction_type"]

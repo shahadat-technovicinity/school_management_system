@@ -64,6 +64,9 @@ urlpatterns = [
     ### Student Management
     path("student_profile_create_all/", include("student_profile.urls")),
 
+    ### Salary Management
+    path("salary/", include("salary.urls")),
+
 
 
     ######## Exam Management

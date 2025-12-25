@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('teacher', '0002_add_user_link_and_extended_fields'),
+        ('teacher_mm_teacher', '__first__'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('created_by', models.ForeignKey(blank=True, help_text='User who created this record', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_salaries', to=settings.AUTH_USER_MODEL)),
-                ('employee', models.ForeignKey(help_text='The employee/teacher this salary belongs to', on_delete=django.db.models.deletion.CASCADE, related_name='salaries', to='teacher.teacher')),
+                ('employee', models.ForeignKey(help_text='The employee/teacher this salary belongs to', on_delete=django.db.models.deletion.CASCADE, related_name='salaries', to='teacher_mm_teacher.teacher')),
                 ('paid_by', models.ForeignKey(blank=True, help_text='User who processed the payment', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='paid_salaries', to=settings.AUTH_USER_MODEL)),
             ],
             options={
