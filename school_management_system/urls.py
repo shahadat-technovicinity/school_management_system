@@ -65,7 +65,7 @@ urlpatterns = [
     path("student_profile_create_all/", include("student_profile.urls")),
 
     ### Salary Management
-    path("salarys/", include("salary.urls")),
+    path("salary/", include("salary.urls")),
 
 
 
