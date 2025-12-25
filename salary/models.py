@@ -81,7 +81,6 @@ class EmployeeSalary(models.Model):
         help_text="Method of payment"
     )
 
-    month = models.DateField(null=True, blank=True) # <--- এই লাইনটি অবশ্যই লাগবে
 
     # Payment status
     payment_status = models.CharField(
