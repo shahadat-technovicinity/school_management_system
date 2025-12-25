@@ -2,7 +2,7 @@
 Salary Management Models
 
 This module contains models for managing employee salaries including:
-- EmployeeSalary: Main salary record for each employee per month
+- EmployeeSalary: Main salary record for each employee
 - SalaryAllowance: Dynamic allowances (housing, transport, medical, custom)
 - SalaryDeduction: Dynamic deductions (tax, pension, insurance, custom)
 """

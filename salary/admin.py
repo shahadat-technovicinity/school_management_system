@@ -31,7 +31,7 @@ class EmployeeSalaryAdmin(admin.ModelAdmin):
         "employee_name",
         "employee_id_display",
         "department",
-        "month_display",
+        "position",
         "basic_salary",
         "net_salary_display",
         "payment_status_badge",
@@ -41,16 +41,15 @@ class EmployeeSalaryAdmin(admin.ModelAdmin):
         "payment_status",
         "payment_method",
         "payment_frequency",
-        "month",
-        "employee__role",
+        "department",
+        "position",
     ]
     search_fields = [
         "employee__name",
         "employee__username",
         "employee__phone_number",
     ]
-    date_hierarchy = "month"
-    ordering = ["-month", "-created_at"]
+    ordering = ["-created_at", "employee__name"]
     readonly_fields = [
         "created_at",
         "updated_at",
@@ -66,7 +65,8 @@ class EmployeeSalaryAdmin(admin.ModelAdmin):
         }),
         ("Salary Details", {
             "fields": (
-                "month",
+                "department",
+                "position",
                 "basic_salary",
                 "payment_frequency",
                 "payment_method",
@@ -108,13 +108,12 @@ class EmployeeSalaryAdmin(admin.ModelAdmin):
     employee_id_display.short_description = "Employee ID"
 
     def department(self, obj):
-        return obj.employee.role or "-"
-    department.admin_order_field = "employee__role"
+        return obj.department
+    department.admin_order_field = "department"
 
-    def month_display(self, obj):
-        return obj.month.strftime("%B %Y")
-    month_display.short_description = "Month"
-    month_display.admin_order_field = "month"
+    def position(self, obj):
+        return obj.position
+    position.admin_order_field = "position"
 
     def net_salary_display(self, obj):
         return f"${obj.net_salary:,.2f}"

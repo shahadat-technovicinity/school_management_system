@@ -59,7 +59,6 @@ class SalaryDashboardView(APIView):
     - Employee count
     - Average salary
     - Pending approvals
-    - All with percentage change from previous month
     """
     permission_classes = [AllowAny]  # Change to IsAuthenticated in production
 
@@ -439,13 +438,13 @@ class SalaryViewSet(viewsets.ModelViewSet):
         tags=SWAGGER_TAG,
         manual_parameters=[
             openapi.Parameter(
-                "month", openapi.IN_QUERY,
-                description="Filter by month (YYYY-MM)",
+                "department", openapi.IN_QUERY,
+                description="Filter by department",
                 type=openapi.TYPE_STRING
             ),
             openapi.Parameter(
-                "department", openapi.IN_QUERY,
-                description="Filter by department",
+                "position", openapi.IN_QUERY,
+                description="Filter by position",
                 type=openapi.TYPE_STRING
             ),
             openapi.Parameter(
@@ -468,9 +467,9 @@ class SalaryViewSet(viewsets.ModelViewSet):
         # Create CSV response
         response = HttpResponse(content_type="text/csv")
         
-        # Generate filename
-        month_str = request.query_params.get("month", datetime.now().strftime("%Y-%m"))
-        response["Content-Disposition"] = f'attachment; filename="salaries_{month_str}.csv"'
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        response["Content-Disposition"] = f'attachment; filename="salaries_{timestamp}.csv"'
 
         # Write CSV
         writer = csv.DictWriter(response, fieldnames=export_service.get_export_headers())
@@ -520,13 +519,6 @@ class SalaryViewSet(viewsets.ModelViewSet):
         operation_summary="Get salary statistics",
         operation_description="Get overall salary statistics and breakdowns.",
         tags=SWAGGER_TAG,
-        manual_parameters=[
-            openapi.Parameter(
-                "month", openapi.IN_QUERY,
-                description="Month in YYYY-MM format",
-                type=openapi.TYPE_STRING
-            ),
-        ]
     )
     @action(detail=False, methods=["get"])
     def statistics(self, request):

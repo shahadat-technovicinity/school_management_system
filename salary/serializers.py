@@ -480,10 +480,7 @@ class SalaryExportSerializer(serializers.ModelSerializer):
     """Serializer for exporting salary data to CSV/Excel."""
     employee_name = serializers.CharField(source="employee.name")
     employee_id = serializers.CharField(source="employee.username")
-    department = serializers.CharField(source="employee.role")
-    position = serializers.CharField(source="employee.role")
-    employment_type = serializers.CharField(source="employee.role")
-    month_display = serializers.SerializerMethodField()
+    employee_role = serializers.CharField(source="employee.role")
     total_allowances = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_deductions = serializers.DecimalField(max_digits=12, decimal_places=2)
     net_salary = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -497,8 +494,7 @@ class SalaryExportSerializer(serializers.ModelSerializer):
             "employee_name",
             "department",
             "position",
-            "employment_type",
-            "month_display",
+            "employee_role",
             "basic_salary",
             "total_allowances",
             "total_deductions",
@@ -506,10 +502,8 @@ class SalaryExportSerializer(serializers.ModelSerializer):
             "payment_status_display",
             "payment_method_display",
             "payment_date",
+            "created_at",
         ]
-
-    def get_month_display(self, obj) -> str:
-        return obj.month.strftime("%B %Y")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
