@@ -19,7 +19,7 @@ class EmployeeSalary(models.Model):
     Links to User model and contains all salary components.
     Works for all employee types: Teachers, Staff, Admins, etc.
     """
-
+    month = models.DateField(null=True, blank=True)
     class PaymentFrequency(models.TextChoices):
         MONTHLY = "monthly", "Monthly"
         WEEKLY = "weekly", "Weekly"
