@@ -9,3 +9,4 @@ urlpatterns = [
 #     # 2. GET Method: To download the generated PDF using the saved voucher ID (pk)
 #     path('finance/voucher/generate/<int:pk>/', VoucherGenerateAPIView.as_view(), name='voucher-pdf-download'),
 ]
+

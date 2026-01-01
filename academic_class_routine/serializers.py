@@ -14,6 +14,7 @@ class TeacherListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["value", "label"]
+        ref_name = "ClassRoutineTeacherList"
 
 
 
