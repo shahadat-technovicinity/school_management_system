@@ -3,7 +3,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
 from django.http import FileResponse
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, DestroyAPIView
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -111,3 +111,34 @@ class GenerateVoucherAPIView(ListCreateAPIView):
                 "error": "Failed to generate PDF",
                 "details": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+class DeleteVoucherAPIView(DestroyAPIView):
+    queryset = ExpenseVoucher.objects.all()
+    serializer_class = ExpenseVoucherSerializer
+    lookup_field = 'pk'  # URL থেকে ID নিবে
+    
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            voucher_id = instance.pk
+            self.perform_destroy(instance)
+            
+            return Response(
+                {
+                    "success": True,
+                    "message": f"Voucher ID {voucher_id} successfully deleted"
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "success": False,
+                    "error": "Failed to delete voucher",
+                    "details": str(e)
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )

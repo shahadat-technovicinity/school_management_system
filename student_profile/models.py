@@ -254,3 +254,6 @@ class StudentAdditionalInfo(models.Model):
 
     def __str__(self):
         return f"Extra Info of {self.student.first_name} {self.student.last_name or ''}"
+
+
+

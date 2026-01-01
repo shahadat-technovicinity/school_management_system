@@ -1,19 +1,27 @@
-from django.shortcuts import render
+from rest_framework import generics, status
+from rest_framework.response import Response
 from .models import *
 from .serializers import *
-from rest_framework import generics
 
-# Create your views here.
-class FeeCreate(generics.ListCreateAPIView):
+class FeeListCreateView(generics.ListCreateAPIView):
     queryset = CreateFee.objects.all()
     serializer_class = CreateFeeSerializer
 
-# class income_collect_retrievedestroy(generics.RetrieveUpdateDestroyAPIView):
-#     queryset = account_Income.objects.all()
-#     serializer_class = account_income_serializer
+
+class FeeCreateUpdateDelete(generics.RetrieveUpdateDestroyAPIView):
+    queryset = CreateFee.objects.all()
+    serializer_class = CreateFeeSerializer
 
 
-# class CreateFeeListCreateAPIView(generics.ListCreateAPIView):
-#     queryset = CreateFee.objects.all() 
-#     serializer_class = CreateFeeSerializer
-    
+
+class FormFilupListCreateView(generics.ListCreateAPIView):
+    queryset = FormFilupAmount.objects.all()
+    serializer_class = FormFilupAmountSerializer
+
+
+class FormFilupUpdateDelete(generics.RetrieveUpdateDestroyAPIView):
+    queryset = FormFilupAmount.objects.all()
+    serializer_class = FormFilupAmountSerializer
+
+
+        
