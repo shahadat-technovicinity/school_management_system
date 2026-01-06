@@ -2,6 +2,8 @@
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+
 
 from .models import *
 from .serializers import *
@@ -56,3 +58,25 @@ class CommitteeDashboardView(APIView):
                 })
         
         return Response(result)
+
+
+
+
+# ১০ জনের জন্য কাস্টম প্যাজিনেশন ক্লাস
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+class CommitteeMemberListView(generics.ListAPIView):
+    serializer_class = CommitteeMemberSerializer
+    pagination_class = StandardResultsSetPagination
+    
+    ##Filter by commitee type wise commitee
+    def get_queryset(self):
+        committee_type = self.request.query_params.get('type')
+        if committee_type:
+            queryset = CommitteeMember.objects.filter(committee_type=committee_type).order_by('-id')
+        else:
+            queryset = CommitteeMember.objects.all().order_by('-id')
+        return queryset
