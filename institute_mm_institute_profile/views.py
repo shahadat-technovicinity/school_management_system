@@ -24,3 +24,31 @@ class InstitutiondetailsListCreateView(generics.ListCreateAPIView):
 class InstitutionDetailpageView(generics.RetrieveUpdateDestroyAPIView):
     queryset = InstitutionDetails.objects.all()
     serializer_class = InstitutionDetailsSerializer
+
+
+
+#########Institute bank
+class InstitutionBankListCreateView(generics.ListCreateAPIView):
+    queryset = InstituteInfoBank.objects.all()
+    serializer_class = InstituteBankSerializer
+
+
+class Institutebankupdatedelete(generics.RetrieveUpdateDestroyAPIView):
+    queryset = InstituteInfoBank.objects.all()
+    serializer_class = InstituteBankSerializer
+
+
+
+#########Institute others
+class InstitutionothersListCreateView(generics.ListCreateAPIView):
+    queryset = InstituteOthers.objects.all()
+    serializer_class = InstituteOthersSerializer
+
+
+class Instituteothersupdatedelete(generics.RetrieveUpdateDestroyAPIView):
+    queryset = InstituteOthers.objects.all()
+    serializer_class = InstituteOthersSerializer
+
+
+
+

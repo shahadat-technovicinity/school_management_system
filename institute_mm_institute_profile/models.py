@@ -113,6 +113,11 @@ class InstitutionDetails(models.Model):
     ]
     
     # Institute Information
+    institute = models.ForeignKey(
+        Institution, 
+        on_delete=models.CASCADE, 
+        related_name='details'
+    )
     date_of_establishment = models.DateField()
     subjects = models.JSONField(default=list)  # ['BANGLA', 'ENGLISH']
     academic_levels = models.JSONField(default=list)  # ['Junior', 'Secondary']
@@ -141,3 +146,54 @@ class InstitutionDetails(models.Model):
     
     def __str__(self):
         return f"Institution Details - {self.date_of_establishment}"
+    
+
+
+#Institute info Bank Details
+class InstituteInfoBank(models.Model):
+    institute = models.ForeignKey(
+        Institution, 
+        on_delete=models.CASCADE, 
+        related_name='banks'
+    )
+    bank_name = models.CharField(max_length=255, verbose_name="Bank")
+    branch_name = models.CharField(max_length=255, verbose_name="Branch")
+    routing_number = models.CharField(max_length=20, verbose_name="Routing Number")
+    
+    ACCOUNT_TYPE_CHOICES = [
+        ('savings', 'Savings'),
+        ('current', 'Current'),
+    ]
+    account_type = models.CharField(
+        max_length=50, 
+        choices=ACCOUNT_TYPE_CHOICES,
+        verbose_name="Type of Account"
+    )
+    
+    account_holder_name = models.CharField(max_length=255, verbose_name="Account Holder Name")
+    account_number = models.CharField(max_length=50, verbose_name="Account Number")
+    
+    purpose_of_account = models.TextField(blank=True, null=True, verbose_name="Purpose of Account")
+
+    def __str__(self):
+        return f"{self.account_holder_name} - {self.bank_name}"
+    
+
+
+
+class InstituteOthers(models.Model):
+    institute = models.ForeignKey(
+        Institution, 
+        on_delete=models.CASCADE, 
+        related_name='others'
+    )
+    nationalization_date = models.DateField(null=True, blank=True)
+    administrative_unit = models.CharField(max_length=100, null=True, blank=True)
+    admin_unit_distance = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    location_type = models.CharField(max_length=50, null=True, blank=True)
+    geographic_location_type = models.CharField(max_length=100, null=True, blank=True)
+    is_in_enclave = models.CharField(max_length=10, default='No')
+    any_case_in_institute = models.CharField(max_length=10, default='No')
+
+    def __str__(self):
+        return f"Details of {self.administrative_unit}"
