@@ -89,6 +89,7 @@ urlpatterns = [
     ##### institute info Management
     path("institute_mm_institute_profile/", include('institute_mm_institute_profile.urls')),
     path("institute_mm_facilities/", include('institute_mm_facilities.urls')),
+    path("institute_mm_academic_calender/", include('institute_mm_academic_calender.urls')),
 
 
     # Swagger

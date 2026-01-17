@@ -202,6 +202,7 @@ INSTALLED_APPS = [
     ## Institute info management
     'institute_mm_institute_profile',
     'institute_mm_facilities',
+    'institute_mm_academic_calender',
 
 
 
