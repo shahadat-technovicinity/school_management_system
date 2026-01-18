@@ -203,6 +203,7 @@ INSTALLED_APPS = [
     'institute_mm_institute_profile',
     'institute_mm_facilities',
     'institute_mm_academic_calender',
+    'institute_mm_school_archive',
 
 
 
