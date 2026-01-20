@@ -43,9 +43,53 @@ schema_view = get_schema_view(
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    # path("admin/", admin.site.urls),
     # your app APIs
     path("blog/", include("blog.urls")),
+
+    ######### Mehedi##########
+    path("auth/", include("userauthentication.urls")),
+
+    #####addmission
+    path("stdadmission/", include("student_admission.urls")),
+    path("admissionexam/", include("admission_exam.urls")),
+
+    ## Academic Management
+    path("academic_class_routine/", include("academic_class_routine.urls")),
+    path("academic_online_class/", include("academic_online_class.urls")),
+
+    ### Student Management
+    path("student_profile_create_all/", include("student_profile.urls")),
+
+
+
+    ######## Exam Management
+    path("exam_management_exam_setup/", include("exam_mm_exam_setup.urls")),
+    path("exam_mm_exmroutine_exmadmit/", include("exam_mm_exmroutine_exmadmit.urls")),
+    path("exam_mm_question_bank/", include("exam_mm_question_bank.urls")),
+    path("exam_mm_result_archive/", include("exam_mm_result_archive.urls")),
+
+
+    ######## account Management
+    path("account_mm_stipend_student/", include('account_mm_std_stipent.urls')),
+    path("account_mm_income/", include('account_mm_income.urls')),
+    path("account_mm_voucher_generate/", include('account_mm_voucher_generate.urls')),
+    path("account_mm_create_fee/", include('account_mm_create_fee.urls')),
+
+
+    ##### Teacher Management
+    path("teacher_mmss_workdistribute/", include('teacher_mm_workdistribute.urls')),
+    path("teacher_mmm_comitee/", include('teacher_mm_comitee.urls')),
+    path("teacher_mmm_teacher/", include('teacher_mm_teacher.urls')),
+    path("teacher_mmm_teacher_leave/", include('teacher_mm_teacher_leave.urls')),
+
+
+
+
+    ##### institute info Management
+    path("institute_mm_institute_profile/", include('institute_mm_institute_profile.urls')),
+    path("institute_mm_facilities/", include('institute_mm_facilities.urls')),
+
 
     # Swagger
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
