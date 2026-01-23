@@ -206,6 +206,10 @@ INSTALLED_APPS = [
     'institute_mm_school_archive',
 
 
+    ### Library Management
+    'library_mm_book_list',
+    'library_mm_book_distribution',
+
 
 
     # Third-party
