@@ -62,7 +62,6 @@ urlpatterns = [
     path("student_profile_create_all/", include("student_profile.urls")),
 
 
-
     ######## Exam Management
     path("exam_management_exam_setup/", include("exam_mm_exam_setup.urls")),
     path("exam_mm_exmroutine_exmadmit/", include("exam_mm_exmroutine_exmadmit.urls")),
