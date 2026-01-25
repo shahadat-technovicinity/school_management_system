@@ -92,6 +92,11 @@ urlpatterns = [
     path("institute_mm_school_archive/", include('institute_mm_school_archive.urls')),
 
 
+    ### Library Management
+    path("library_mm_book_list/", include('library_mm_book_list.urls')),
+    path("library_mm_book_distrubution/", include('library_mm_book_distrubution.urls')),
+
+
     # Swagger
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
