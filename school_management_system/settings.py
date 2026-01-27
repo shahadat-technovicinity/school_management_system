@@ -211,6 +211,8 @@ INSTALLED_APPS = [
     'library_mm_book_distrubution',
 
 
+    ### Event & student life management
+    'event_mm_picnic_mm',
 
 
     # Third-party
