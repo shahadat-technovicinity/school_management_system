@@ -96,6 +96,9 @@ urlpatterns = [
     path("library_mm_book_list/", include('library_mm_book_list.urls')),
     path("library_mm_book_distrubution/", include('library_mm_book_distrubution.urls')),
 
+    ### Event & student life management
+    path("event_mm_picnic_mm/", include('event_mm_picnic_mm.urls')),
+
 
     # Swagger
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
