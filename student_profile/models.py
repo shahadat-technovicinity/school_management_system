@@ -138,8 +138,6 @@ class StudentPersonalInfo(models.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name or ''}".strip()
 
-
-
 class StudentGurdianInfo(models.Model):
     student = models.OneToOneField(StudentPersonalInfo, on_delete=models.CASCADE, related_name='guardian_info')
 
@@ -200,7 +198,6 @@ class StudentGurdianInfo(models.Model):
 
     def __str__(self):
         return f"Guardian Info of {self.student.first_name} {self.student.last_name or ''}"
-
 
 class StudentAdditionalInfo(models.Model):
     student = models.OneToOneField(StudentPersonalInfo, on_delete=models.CASCADE, related_name='additional_info')
