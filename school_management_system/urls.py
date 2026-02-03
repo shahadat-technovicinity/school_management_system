@@ -98,6 +98,7 @@ urlpatterns = [
 
     ### Event & student life management
     path("event_mm_picnic_mm/", include('event_mm_picnic_mm.urls')),
+    path("event_mm_photo_gallery/", include('event_mm_photo_gallery.urls')),
 
 
     # Swagger
