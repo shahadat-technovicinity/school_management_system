@@ -101,6 +101,10 @@ urlpatterns = [
     path("event_mm_photo_gallery/", include('event_mm_photo_gallery.urls')),
 
 
+    ### home page
+    path("homepage/", include('homepage.urls')),
+
+
     # Swagger
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
