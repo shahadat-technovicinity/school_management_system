@@ -22,3 +22,43 @@ class MessageListCreateView(generics.ListCreateAPIView):
 class MessageRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
+
+
+
+## Admission Notice Views
+class AdmissionNoticeListCreateView(generics.ListCreateAPIView):
+    queryset = AdmissionNotice.objects.all()
+    serializer_class = AdmissionNoticeSerializer
+
+
+class AdmissionNoticeRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = AdmissionNotice.objects.all()
+    serializer_class = AdmissionNoticeSerializer
+    lookup_field = 'pk'
+
+
+
+
+# Contact Message Views
+class ContactMessageListCreateView(generics.ListCreateAPIView):
+    queryset = ContactMessage.objects.all()
+    serializer_class = ContactMessageSerializer
+
+
+class ContactMessageRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ContactMessage.objects.all()
+    serializer_class = ContactMessageSerializer
+    lookup_field = 'pk'
+
+
+
+# Letter Info Views
+class LetterInfoListCreateView(generics.ListCreateAPIView):
+    queryset = LetterInfo.objects.all()
+    serializer_class = LatterSerializer
+
+
+class LetterInfoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = LetterInfo.objects.all()
+    serializer_class = LatterSerializer
+    lookup_field = 'pk'
