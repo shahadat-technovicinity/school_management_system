@@ -216,6 +216,10 @@ INSTALLED_APPS = [
     'event_mm_photo_gallery',
 
 
+    ### home page
+    'homepage',
+
+
     # Third-party
     "corsheaders",
     "rest_framework",
