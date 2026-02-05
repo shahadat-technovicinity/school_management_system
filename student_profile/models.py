@@ -11,6 +11,7 @@ def student_photo_upload_path(instance, filename):
     adm = instance.admission_number or 'unknown'
     return f"students/{year}/{adm}_{filename}"
 
+
 class StudentPersonalInfo(models.Model):
     STATUS_CHOICES = [
         ("active", "Active"),
