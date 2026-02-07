@@ -99,6 +99,8 @@ urlpatterns = [
     ### Event & student life management
     path("event_mm_picnic_mm/", include('event_mm_picnic_mm.urls')),
     path("event_mm_photo_gallery/", include('event_mm_photo_gallery.urls')),
+    path("event_mm_teachers_diary/", include('event_mm_teachers_diary.urls')),
+    path("event_mm_top_students/", include('event_mm_top_students.urls')),
 
 
     ### home page
