@@ -214,6 +214,8 @@ INSTALLED_APPS = [
     ### Event & student life management
     'event_mm_picnic_mm',
     'event_mm_photo_gallery',
+    'event_mm_teachers_diary',
+    'event_mm_top_students',
 
 
     ### home page
