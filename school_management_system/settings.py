@@ -217,6 +217,7 @@ INSTALLED_APPS = [
     'event_mm_teachers_diary',
     'event_mm_top_students',
     'event_mm_achivements',
+    'event_mm_training_mm',
 
 
     ### home page
