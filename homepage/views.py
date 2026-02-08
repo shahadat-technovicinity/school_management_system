@@ -1,15 +1,18 @@
 from rest_framework import generics
 from .models import *
 from .serializers import *
+from rest_framework.parsers import MultiPartParser, FormParser
 
 class Home_Page_SliderListCreateView(generics.ListCreateAPIView):
     queryset = Home_Page_Slider.objects.all()
     serializer_class = Home_Page_SliderSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
 class Home_Page_SliderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Home_Page_Slider.objects.all()
     serializer_class = Home_Page_SliderSerializer
     lookup_field = 'pk' 
+    parser_classes = (MultiPartParser, FormParser)
 
 
 
@@ -56,9 +59,11 @@ class ContactMessageRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIV
 class LetterInfoListCreateView(generics.ListCreateAPIView):
     queryset = LetterInfo.objects.all()
     serializer_class = LatterSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
 
 class LetterInfoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = LetterInfo.objects.all()
     serializer_class = LatterSerializer
     lookup_field = 'pk'
+    parser_classes = (MultiPartParser, FormParser)
