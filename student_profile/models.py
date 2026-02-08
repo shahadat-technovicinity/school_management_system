@@ -26,7 +26,7 @@ class StudentPersonalInfo(models.Model):
         ("section D", "Section D"),
 
     ]
-
+    
     CLASS_NAME_CHOICES = [
         ("class 6", "Class 6"),
         ("class 7", "Class 7"),
