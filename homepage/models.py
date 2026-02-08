@@ -1,8 +1,14 @@
 from django.db import models
+from django.core.validators import RegexValidator, EmailValidator
+from django.utils import timezone
+from django.core.validators import FileExtensionValidator
 
 class Home_Page_Slider(models.Model):
     title = models.CharField(max_length=200, blank=True, null=True)
-    image = models.ImageField(upload_to='sliders/')
+    image = models.ImageField(upload_to='sliders/',
+                              validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
+                              help_text="Upload a slider image (JPG or PNG, Max 1MB)",
+                              verbose_name="Slider Image (1080x720)")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -70,7 +76,10 @@ class LetterInfo(models.Model):
     
     later_type = models.CharField(max_length=20, choices=later_type_choices)
     title = models.CharField(max_length=200)
-    image = models.ImageField(upload_to='letters/')
+    image = models.ImageField(upload_to='letters/',
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
+        help_text="Upload a later (JPG or PNG, Max 1MB)",
+        verbose_name="Later Picture (1080x1080)")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
