@@ -24,7 +24,6 @@ class Section(models.Model):
     def __str__(self):
         return self.name
 
-# from apps.users.models import Teacher
 
 class ClassSection(models.Model):
     class_room = models.ForeignKey(Class, on_delete=models.CASCADE)
