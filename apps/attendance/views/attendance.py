@@ -1,3 +1,4 @@
+from apps.attendance.serializers.attendance import BulkAttendanceRequestSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -6,15 +7,29 @@ from apps.academics.models import ClassSection
 
 class BulkAttendanceAPIView(APIView):
     def post(self, request):
+        serializer = BulkAttendanceRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+
         class_section = ClassSection.objects.get(
-            id=request.data['class_section']
+            id=data["class_section"]
         )
 
-        bulk_mark_attendance(
+        result = bulk_mark_attendance(
             class_section=class_section,
-            date=request.data['date'],
-            records=request.data['records'],
-            teacher=request.user.teacher
+            date=data["date"],
+            records=data["records"],
+            teacher=data["marked_by"],  
         )
 
-        return Response({"status": "ok"}, status=201)
+        return Response(
+            {
+                "message": "Attendance processed",
+                "created": result["created"],
+                "skipped": result["skipped"],
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+        
