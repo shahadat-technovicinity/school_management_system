@@ -1,4 +1,5 @@
 from apps.common.pagination.standard_pagination import StandardPagination
+from apps.common.views.basemodelview import BaseModelViewSet
 from apps.enrollments.serializers.enrollments import EnrollmentSerializer
 from rest_framework import viewsets, permissions, filters
 from rest_framework.pagination import LimitOffsetPagination
@@ -11,7 +12,7 @@ from apps.enrollments.models import Enrollment
 
 
 
-class EnrollmentViewSet(viewsets.ModelViewSet):
+class EnrollmentViewSet(BaseModelViewSet):
     """
     CRUD API for Enrollment.
     Supports filtering, search and ordering via query params.
