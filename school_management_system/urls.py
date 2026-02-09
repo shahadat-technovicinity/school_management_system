@@ -109,6 +109,11 @@ urlpatterns = [
     path("homepage/", include('homepage.urls')),
 
 
+    path("academics/", include("apps.academics.urls")),
+    path("enrollments/", include("apps.enrollments.urls")),
+    path("attendance/", include("apps.attendance.urls")),
+
+
     # Swagger
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
