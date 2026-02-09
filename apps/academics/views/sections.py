@@ -3,7 +3,7 @@ from apps.common.views.basemodelview import BaseModelViewSet
 from apps.academics.models import ClassSection
 from apps.academics.serializers.class_section import ClassSectionSerializer
 
-class ClassSectionViewSet(BaseModelViewSet):
+class SectionViewSet(BaseModelViewSet):
     queryset = ClassSection.objects.select_related(
         'class_room', 'section', 'academic_year'
     )
