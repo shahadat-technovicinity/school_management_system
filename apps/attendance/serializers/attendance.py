@@ -49,3 +49,30 @@ class BulkAttendanceSerializer(serializers.Serializer):
             attendances.append(obj)
 
         return attendances
+
+
+class AttendancePatchSerializer(serializers.Serializer):
+    student = serializers.PrimaryKeyRelatedField(
+        queryset=StudentPersonalInfo.objects.all()
+    )
+    class_section = serializers.PrimaryKeyRelatedField(
+        queryset=ClassSection.objects.all()
+    )
+    date = serializers.DateField()
+    status = serializers.ChoiceField(
+        choices=Attendance.STATUS_CHOICES
+    )
+
+
+
+
+class AttendanceListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attendance
+        fields = [
+            'id',
+            'date',
+            'class_section',
+            'status',
+            'marked_by'
+        ]
