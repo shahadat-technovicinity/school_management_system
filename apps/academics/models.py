@@ -13,7 +13,7 @@ class AcademicYear(models.Model):
 
 class Class(models.Model):
     name = models.CharField(max_length=20)      # Class 5
-    level = models.PositiveIntegerField(unique=True)
+    level = models.PositiveIntegerField(unique=True,null=True, blank=True)  # 5, 6, 7
 
     def __str__(self):
         return self.name

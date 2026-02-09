@@ -1,4 +1,3 @@
-# attendance/serializers.py
 
 from apps.attendance.models import Attendance
 from rest_framework import serializers
