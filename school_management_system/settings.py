@@ -224,6 +224,13 @@ INSTALLED_APPS = [
     'homepage',
 
 
+    ### apps
+
+    'apps.academics',
+    'apps.attendance',
+    'apps.enrollments',
+
+
     # Third-party
     "corsheaders",
     "rest_framework",
