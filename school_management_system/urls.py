@@ -95,6 +95,7 @@ urlpatterns = [
     path("event_mm_achivements/", include('event_mm_achivements.urls')),
     path("event_mm_training_mm/", include('event_mm_training_mm.urls')),
     path("event_mm_top_student/", include('event_mm_top_student.urls')),
+    path("event_mm_magazine/", include('event_mm_magazine.urls')),
 
 
     ### Library Management
