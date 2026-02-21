@@ -34,10 +34,10 @@ class Top_Student(models.Model):
     religion = models.CharField(max_length=50)
     village = models.CharField(max_length=255)
     mobile_no = models.CharField(max_length=15)
-    photo = models.ImageField(upload_to='student_photos/', null=True, blank=True,
+    photo = models.ImageField(upload_to='student_photos/',
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
         help_text="Upload a later (JPG or PNG, Max 1MB)",
         verbose_name="Later Picture (1080x1080)")
-
+    
     def __str__(self):
         return f"{self.student_name} ({self.roll})"
