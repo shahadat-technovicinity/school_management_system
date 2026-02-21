@@ -92,10 +92,6 @@ urlpatterns = [
     path("institute_mm_facilities/", include('institute_mm_facilities.urls')),
     path("institute_mm_academic_calender/", include('institute_mm_academic_calender.urls')),
     path("institute_mm_school_archive/", include('institute_mm_school_archive.urls')),
-    path("event_mm_achivements/", include('event_mm_achivements.urls')),
-    path("event_mm_training_mm/", include('event_mm_training_mm.urls')),
-    path("event_mm_top_student/", include('event_mm_top_student.urls')),
-    path("event_mm_magazine/", include('event_mm_magazine.urls')),
 
 
     ### Library Management
@@ -106,7 +102,11 @@ urlpatterns = [
     path("event_mm_picnic_mm/", include('event_mm_picnic_mm.urls')),
     path("event_mm_photo_gallery/", include('event_mm_photo_gallery.urls')),
     path("event_mm_teachers_diary/", include('event_mm_teachers_diary.urls')),
-    path("event_mm_top_students/", include('event_mm_top_students.urls')),
+    path("event_mm_achivements/", include('event_mm_achivements.urls')),
+    path("event_mm_training_mm/", include('event_mm_training_mm.urls')),
+    path("event_mm_top_student/", include('event_mm_top_student.urls')),
+    path("event_mm_magazine/", include('event_mm_magazine.urls')),
+
 
 
     ### home page
