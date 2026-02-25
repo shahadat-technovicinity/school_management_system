@@ -3,7 +3,7 @@ from .views import StudentIDCardViewSet,task_status
 from django.urls import path, include
 
 router = DefaultRouter()
-router.register(r'id-cards', StudentIDCardViewSet, basename='id-cards')
+router.register(r'', StudentIDCardViewSet, basename='id-cards')
 
 urlpatterns = [
     path('', include(router.urls)),
