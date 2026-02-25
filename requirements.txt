@@ -21,3 +21,4 @@ whitenoise==6.8.2
 django-filter
 celery
 redis
+django-celery-results
