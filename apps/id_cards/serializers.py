@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from academic_class_routine.models import StudentPersonalInfo
+from student_profile.models import StudentPersonalInfo
 from .models import GeneratedIDCard, IDCardTemplate
 
 class IDCardStatusSerializer(serializers.Serializer):

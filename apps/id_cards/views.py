@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 
-from academic_class_routine.models import StudentPersonalInfo
+from student_profile.models import StudentPersonalInfo
+
 from .models import GeneratedIDCard, IDCardTemplate
 from .serializers import StudentIDCardSerializer, GenerateCardRequestSerializer
 from .services import generate_card_image_service # We will write this next

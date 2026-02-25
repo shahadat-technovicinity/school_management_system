@@ -230,6 +230,7 @@ INSTALLED_APPS = [
     'apps.academics',
     'apps.attendance',
     'apps.enrollments',
+    'apps.id_cards',
 
 
     # Third-party
