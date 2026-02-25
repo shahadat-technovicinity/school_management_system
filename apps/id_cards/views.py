@@ -81,3 +81,31 @@ class StudentIDCardViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_202_ACCEPTED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+from celery.result import AsyncResult
+from rest_framework.decorators import api_view
+
+@api_view(['GET'])
+def task_status(request, task_id):
+    """
+    API to check the status of a Celery task.
+    """
+    task_result = AsyncResult(task_id)
+    
+    response_data = {
+        'task_id': task_id,
+        'status': task_result.status,
+        'progress': 0
+    }
+    
+    if task_result.status == 'PROGRESS':
+        response_data['progress'] = task_result.info.get('current', 0)
+        response_data['total'] = task_result.info.get('total', 0)
+    elif task_result.status == 'SUCCESS':
+        response_data['result'] = task_result.result
+    elif task_result.status == 'FAILED':
+        response_data['error'] = str(task_result.result)
+    
+    return Response(response_data)
