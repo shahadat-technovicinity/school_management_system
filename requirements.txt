@@ -22,3 +22,4 @@ django-filter
 celery
 redis
 django-celery-results
+django-extensions
