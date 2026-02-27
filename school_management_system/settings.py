@@ -221,6 +221,10 @@ INSTALLED_APPS = [
     'event_mm_magazine',
 
 
+    ### Communication Center
+    'communication_center_general_notice',
+
+
     ### home page
     'homepage',
 
