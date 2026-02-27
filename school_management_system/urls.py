@@ -109,6 +109,11 @@ urlpatterns = [
 
 
 
+    ### Communication Center
+    path("communication_center/", include('communication_center_general_notice.urls')),
+
+
+
     ### home page
     path("homepage/", include('homepage.urls')),
 
