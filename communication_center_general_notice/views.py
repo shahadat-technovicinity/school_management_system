@@ -51,32 +51,20 @@ class LetterIssueListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = LetterIssueSerializer
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
     
-    # def get_queryset(self):
-    #     queryset = LetterIssue.objects.all().order_by('-created_at')
-        
-    #     # ট্যাব অনুযায়ী ফিল্টারিং লজিক
-    #     tab = self.request.query_params.get('tab')
-    #     if tab == 'pending':
-    #         queryset = queryset.filter(status='pending')
-    #     elif tab == 'approved':
-    #         queryset = queryset.filter(status='approved')
-            
-    #     return queryset
     def get_queryset(self):
-        # সব লেটার লেটেস্ট অনুযায়ী নিয়ে আসবে
+        # All letters ordered by creation date (newest first)
         return LetterIssue.objects.all().order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         
-        # ১. 'all_letters': সব ডেটা একসাথে (image_fa4d59.png এ যা দেখছো)
         all_letters_data = self.get_serializer(queryset, many=True).data
 
-        # ২. স্ট্যাটাস অনুযায়ী আলাদা ফিল্টারিং (image_061e47.png এর ট্যাবগুলোর জন্য)
+        # status filtering
         pending_letters = queryset.filter(status='pending')
         approved_letters = queryset.filter(status='approved')
 
-        # ৩. কাস্টম রেসপন্স ফরম্যাট
+        # response format
         return Response({
             "all_letters": all_letters_data,
             "pending_letters": self.get_serializer(pending_letters, many=True).data,
@@ -84,3 +72,7 @@ class LetterIssueListCreateAPIView(generics.ListCreateAPIView):
         })
 
 
+class LetterIssueDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = LetterIssue.objects.all()
+    serializer_class = LetterIssueSerializer
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
