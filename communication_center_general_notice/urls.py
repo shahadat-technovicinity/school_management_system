@@ -8,5 +8,6 @@ urlpatterns = [
 
     ### Letter Issue URLs for Communication Center
     path('letters/', LetterIssueListCreateAPIView.as_view(), name='letter-issue-list-create'),
+    path('letters/<int:pk>/', LetterIssueDetailAPIView.as_view(), name='letter-issue-detail'),
 
 ]
