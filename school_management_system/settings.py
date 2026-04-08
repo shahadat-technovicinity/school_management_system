@@ -209,6 +209,7 @@ INSTALLED_APPS = [
     ### Library Management
     'library_mm_book_list',
     'library_mm_book_distrubution',
+    'library_mm_attendance',
 
 
     ### Event & student life management
