@@ -35,6 +35,8 @@ class HolidayListCreateView(generics.ListCreateAPIView):
 
         return Response(custom_data)
     
+    
+    
 
 class HolidayRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Holiday.objects.all()
