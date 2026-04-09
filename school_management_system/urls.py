@@ -109,7 +109,6 @@ urlpatterns = [
     path("event_mm_magazine/", include('event_mm_magazine.urls')),
 
 
-
     ### Communication Center
     path("communication_center/", include('communication_center_general_notice.urls')),
 
