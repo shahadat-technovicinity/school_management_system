@@ -111,7 +111,11 @@ urlpatterns = [
 
     ### Communication Center
     path("communication_center/", include('communication_center_general_notice.urls')),
+    path("communication_canter_sms_template/", include('communication_canter_sms_template.urls')),
 
+
+    ### Document management
+    path("document_mm_document_storage/", include('document_mm_document_storage.urls')),
 
 
     ### home page
