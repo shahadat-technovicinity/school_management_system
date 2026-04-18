@@ -76,6 +76,7 @@ urlpatterns = [
     path("account_mm_income/", include('account_mm_income.urls')),
     path("account_mm_voucher_generate/", include('account_mm_voucher_generate.urls')),
     path("account_mm_create_fee/", include('account_mm_create_fee.urls')),
+    path("account_mm_expence/", include('account_mm_expence.urls')),
 
 
     ##### Teacher Management
