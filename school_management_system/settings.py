@@ -224,10 +224,15 @@ INSTALLED_APPS = [
 
     ### Communication Center
     'communication_center_general_notice',
+    'communication_canter_sms_template',
 
 
     ### home page
     'homepage',
+
+
+    ### Document management
+    'document_mm_document_storage',
 
 
     ### apps
