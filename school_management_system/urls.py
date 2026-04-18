@@ -129,6 +129,11 @@ urlpatterns = [
     path("id_cards/", include("apps.id_cards.urls")),
 
 
+
+    #### Registration management
+    path("reg_mm_stock_event/", include('reg_mm_stock_event.urls')),
+
+
     # Swagger
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
