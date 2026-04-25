@@ -1,6 +1,6 @@
 from django.db import models
 from apps.common.models_audit import AuditModel
-from .setup import ExamSetup
+from apps.exams.models.setup import ExamSetup
 
 class StudentResult(AuditModel):
     exam_setup = models.ForeignKey(ExamSetup, on_delete=models.CASCADE)
