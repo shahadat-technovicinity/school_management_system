@@ -70,18 +70,7 @@ class StudentAdmission(models.Model):
     
     sibling_identification_number = models.CharField(max_length=50, blank=True, null=True)
     additional_comments = models.TextField(blank=True, null=True)
-    # status = models.CharField(max_length=50, default='pending', verbose_name="Admission Status")
 
-    class Meta:
-        verbose_name = "Student Admission Form"
-        verbose_name_plural = "Student Admission Forms"
-        ordering = ['-admission_date']
-        db_table = 'student_admission_studentadmission'
-
-########## Gurdian information ################################
-########## Gurdian information ################################
-########## Gurdian information ################################
-########## Gurdian information ################################
     # Father's Information
     father_name_en = models.CharField(max_length=255)
     father_name_bn = models.CharField(max_length=255)
@@ -95,12 +84,6 @@ class StudentAdmission(models.Model):
     mother_is_deceased = models.BooleanField(default=False)
     
    
-
-#########  Contact info................... ############################
-#########  Contact info................... ############################
-#########  Contact info................... ############################
-#########  Contact info................... ############################
-#########  Contact info................... ############################
     # Contact Information
     mobile_number = models.CharField(max_length=20)
     whatsapp_available = models.BooleanField(default=False)
@@ -128,3 +111,9 @@ class StudentAdmission(models.Model):
 
     def __str__(self):
         return f"{self.student_name_english} - Admission"
+    
+    class Meta:
+        verbose_name = "Student Admission Form"
+        verbose_name_plural = "Student Admission Forms"
+        ordering = ['-admission_date']
+        db_table = 'student_admission_studentadmission'
