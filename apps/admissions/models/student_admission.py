@@ -4,12 +4,6 @@ from django.db import models
 from django.core.validators import FileExtensionValidator
 
 class StudentAdmission(models.Model):
-    desired_class_CHOICES = [
-        ('class 6', 'class 6'),
-        ('class 9', 'class 9'),
-        ('other', 'Other'),
-    ]
-
     GENDER_CHOICES = [
         ('male', 'Male'),
         ('female', 'Female'),
@@ -25,7 +19,12 @@ class StudentAdmission(models.Model):
         ('not_specified', 'Not Specified'),
     ]
 
-    desired_class = models.CharField(max_length=100, choices=desired_class_CHOICES, verbose_name="Desired Class for Admission")
+    desired_class = models.ForeignKey(
+        'academics.Class', 
+        on_delete=models.SET_NULL, 
+        null=True,
+        verbose_name="Desired Class for Admission"
+    )
 
     student_name_english = models.CharField(max_length=255, verbose_name="Student's Name (English)")
     student_name_bangla = models.CharField(max_length=255, verbose_name="Student's Name (Bangla)", blank=True, null=True)
