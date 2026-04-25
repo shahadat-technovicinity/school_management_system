@@ -248,6 +248,7 @@ INSTALLED_APPS = [
     'apps.academics',
     'apps.attendance',
     'apps.enrollments',
+    'apps.exams',
     'apps.id_cards',
 
 

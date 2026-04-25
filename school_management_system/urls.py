@@ -133,6 +133,7 @@ urlpatterns = [
     path("admissions/", include("apps.admissions.urls")),
     path("students/", include("apps.students.urls")),
     path("documents/", include("apps.documents.urls")),
+    path("exams/", include("apps.exams.urls")),
 
 
 
