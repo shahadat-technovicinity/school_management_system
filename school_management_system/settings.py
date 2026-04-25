@@ -174,6 +174,8 @@ INSTALLED_APPS = [
     'apps.admissions',
     'apps.students',
     'apps.documents',
+    'apps.staff',
+    'apps.common',
 
 
      ## Teacher Management
@@ -248,6 +250,7 @@ INSTALLED_APPS = [
     'apps.academics',
     'apps.attendance',
     'apps.enrollments',
+    'apps.exams',
     'apps.id_cards',
 
 
