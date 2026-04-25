@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.students.models import Student, GuardianDetails, AdditionalDetails
+from apps.students.models import Student, GuardianDetails, AdditionalDetails, StudentDiscipline
 from apps.academics.models import Class, Section
 
 class GuardianDetailsSerializer(serializers.ModelSerializer):
@@ -12,9 +12,19 @@ class AdditionalDetailsSerializer(serializers.ModelSerializer):
         model = AdditionalDetails
         exclude = ('student',)
 
+class StudentDisciplineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentDiscipline
+        fields = '__all__'
+
 class StudentManagementSerializer(serializers.ModelSerializer):
     guardian_info = GuardianDetailsSerializer(required=False)
     additional_info = AdditionalDetailsSerializer(required=False)
+    disciplinary_records = StudentDisciplineSerializer(many=True, read_only=True)
+    
+    # Summary fields for UI display
+    attendance_percentage = serializers.SerializerMethodField()
+    disciplinary_status = serializers.SerializerMethodField()
     
     # Read-only labels for the UI grid/list
     class_label = serializers.CharField(source='class_name_static', read_only=True)
@@ -24,6 +34,15 @@ class StudentManagementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = '__all__'
+
+    def get_attendance_percentage(self, obj):
+        # Placeholder for real attendance calculation logic from attendance app
+        return 85.5 
+
+    def get_disciplinary_status(self, obj):
+        if obj.disciplinary_records.filter(severity='high').exists():
+            return "At Risk"
+        return "Good Standing"
 
     def create(self, validated_data):
         guardian_data = validated_data.pop('guardian_info', None)
