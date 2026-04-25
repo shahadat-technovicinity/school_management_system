@@ -175,6 +175,7 @@ INSTALLED_APPS = [
     'apps.students',
     'apps.documents',
     'apps.staff',
+    'apps.common',
 
 
      ## Teacher Management
