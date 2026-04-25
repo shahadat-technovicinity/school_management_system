@@ -25,9 +25,16 @@ class StaffListSerializer(serializers.ModelSerializer):
             'designation', 'phone', 'joining_date', 'status'
         ]
 
+class LeaveBalanceSerializer(serializers.ModelSerializer):
+    leave_type_name = serializers.CharField(source='leave_type.name', read_only=True)
+    class Meta:
+        model = LeaveBalance
+        fields = ['id', 'leave_type_name', 'total_allocated', 'used', 'remaining', 'academic_year']
+
 class StaffProfileDetailSerializer(serializers.ModelSerializer):
     user = UserShortSerializer(read_only=True)
     payroll = StaffPayrollSerializer(required=False)
+    leave_balances = LeaveBalanceSerializer(many=True, read_only=True)
     
     class Meta:
         model = StaffProfile

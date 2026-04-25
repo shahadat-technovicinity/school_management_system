@@ -3,17 +3,18 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from ..models import StaffProfile, LeaveApplication, WorkAssignment, CommitteeMember
+from ..models import StaffProfile, LeaveApplication, WorkAssignment, CommitteeMember, LeaveBalance
 from ..serializers.staff_serializers import (
     StaffListSerializer, 
     StaffProfileDetailSerializer,
     LeaveApplicationSerializer,
     WorkAssignmentSerializer,
-    CommitteeMemberSerializer
+    CommitteeMemberSerializer,
+    LeaveBalanceSerializer
 )
 
 class StaffProfileViewSet(viewsets.ModelViewSet):
-    queryset = StaffProfile.objects.all().select_related('user', 'payroll')
+    queryset = StaffProfile.objects.all().select_related('user', 'payroll').prefetch_related('leave_balances')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['role', 'status', 'department']
     search_fields = ['employee_id', 'user__first_name', 'user__last_name', 'phone']

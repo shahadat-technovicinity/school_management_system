@@ -36,11 +36,31 @@ class StaffProfile(models.Model):
     qualification = models.TextField(blank=True)
     experience = models.TextField(blank=True)
     previous_school = models.CharField(max_length=255, blank=True)
+    previous_school_address = models.TextField(blank=True)
+    previous_school_phone = models.CharField(max_length=20, blank=True)
     
     # Contact
     address = models.TextField()
     permanent_address = models.TextField()
     
+    # Transport & Hostel
+    vehicle_number = models.CharField(max_length=50, blank=True)
+    pickup_point = models.CharField(max_length=100, blank=True)
+    hostel_name = models.CharField(max_length=100, blank=True)
+    room_no = models.CharField(max_length=20, blank=True)
+
+    # Social Media
+    facebook_url = models.URLField(blank=True)
+    instagram_url = models.URLField(blank=True)
+    linkedin_url = models.URLField(blank=True)
+    youtube_url = models.URLField(blank=True)
+    twitter_url = models.URLField(blank=True)
+
+    # Other info
+    mother_tongue = models.CharField(max_length=50, blank=True)
+    languages_known = models.CharField(max_length=255, blank=True) # Comma separated
+    notes = models.TextField(blank=True)
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     
     # Documents
@@ -55,8 +75,21 @@ class StaffPayroll(models.Model):
     basic_salary = models.DecimalField(max_digits=10, decimal_places=2)
     contract_type = models.CharField(max_length=50) # e.g., Permanent, Contract
     work_shift = models.CharField(max_length=50) # e.g., Morning, Day
+    work_location = models.CharField(max_length=100, blank=True)
+    date_of_leaving = models.DateField(null=True, blank=True)
     
+    # Allowances
+    housing_allowance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    transport_allowance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    medical_allowance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Deductions
+    income_tax = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    pension_fund = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    health_insurance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
     # Bank Details
+    payment_method = models.CharField(max_length=50, default='Direct Deposit')
     bank_name = models.CharField(max_length=100)
     account_number = models.CharField(max_length=50)
     ifsc_code = models.CharField(max_length=20)

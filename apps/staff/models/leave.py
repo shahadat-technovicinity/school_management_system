@@ -33,3 +33,20 @@ class LeaveApplication(models.Model):
 
     def __str__(self):
         return f"{self.staff.employee_id} - {self.leave_type.name} ({self.start_date})"
+
+class LeaveBalance(models.Model):
+    staff = models.ForeignKey(StaffProfile, on_delete=models.CASCADE, related_name='leave_balances')
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    total_allocated = models.PositiveIntegerField(default=0)
+    used = models.PositiveIntegerField(default=0)
+    academic_year = models.CharField(max_length=20) # e.g. "2024-2025"
+
+    class Meta:
+        unique_together = ('staff', 'leave_type', 'academic_year')
+
+    @property
+    def remaining(self):
+        return self.total_allocated - self.used
+
+    def __str__(self):
+        return f"{self.staff.employee_id} - {self.leave_type.name} ({self.academic_year})"
