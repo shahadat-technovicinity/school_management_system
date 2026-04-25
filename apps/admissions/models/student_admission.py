@@ -76,7 +76,7 @@ class StudentAdmission(models.Model):
         verbose_name = "Student Admission Form"
         verbose_name_plural = "Student Admission Forms"
         ordering = ['-admission_date']
-
+        db_table = 'student_admission_studentadmission'
 
 ########## Gurdian information ################################
 ########## Gurdian information ################################
