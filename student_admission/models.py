@@ -47,6 +47,29 @@ class StudentAdmission(models.Model):
 
     admission_date = models.DateField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
+    
+    # New fields for System Design
+    application_number = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    admin_form_number = models.CharField(max_length=50, null=True, blank=True)  # For pre-lottery assignment
+    
+    ADMISSION_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('interview', 'Interview'),
+        ('selected', 'Selected'),
+        ('rejected', 'Rejected'),
+        ('enrolled', 'Enrolled'),
+    ]
+    admission_status = models.CharField(max_length=20, choices=ADMISSION_STATUS_CHOICES, default='pending', verbose_name="Admission Status")
+    
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+    ]
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    
+    sibling_identification_number = models.CharField(max_length=50, blank=True, null=True)
+    additional_comments = models.TextField(blank=True, null=True)
     # status = models.CharField(max_length=50, default='pending', verbose_name="Admission Status")
 
     class Meta:
