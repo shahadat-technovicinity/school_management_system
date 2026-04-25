@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ExamSetup, ExamType, Subject, ExamRoutine, TeacherDuty, StudentResult
+from ..models import ExamSetup, ExamType, Subject, ExamRoutine, TeacherDuty, StudentResult
 
 class ExamTypeSerializer(serializers.ModelSerializer):
     class Meta:
