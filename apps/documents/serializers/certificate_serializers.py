@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models.certificates import CertificateApplication, DocumentAttachment
+from ..models.certificates import CertificateApplication, DocumentAttachment
 from apps.students.serializers.management_serializers import StudentManagementSerializer
 
 class DocumentAttachmentSerializer(serializers.ModelSerializer):
