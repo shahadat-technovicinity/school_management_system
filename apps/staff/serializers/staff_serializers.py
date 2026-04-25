@@ -27,11 +27,35 @@ class StaffListSerializer(serializers.ModelSerializer):
 
 class StaffProfileDetailSerializer(serializers.ModelSerializer):
     user = UserShortSerializer(read_only=True)
-    payroll = StaffPayrollSerializer(read_only=True)
+    payroll = StaffPayrollSerializer(required=False)
     
     class Meta:
         model = StaffProfile
         fields = '__all__'
+
+    def create(self, validated_data):
+        payroll_data = validated_data.pop('payroll', None)
+        profile = StaffProfile.objects.create(**validated_data)
+        if payroll_data:
+            StaffPayroll.objects.create(staff=profile, **payroll_data)
+        return profile
+
+    def update(self, instance, validated_data):
+        payroll_data = validated_data.pop('payroll', None)
+        
+        # Update Profile fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update or Create Payroll
+        if payroll_data:
+            payroll_instance, created = StaffPayroll.objects.get_or_create(staff=instance)
+            for attr, value in payroll_data.items():
+                setattr(payroll_instance, attr, value)
+            payroll_instance.save()
+            
+        return instance
 
 class LeaveApplicationSerializer(serializers.ModelSerializer):
     staff_name = serializers.CharField(source='staff.user.get_full_name', read_only=True)

@@ -13,7 +13,7 @@ from ..serializers.staff_serializers import (
 )
 
 class StaffProfileViewSet(viewsets.ModelViewSet):
-    queryset = StaffProfile.objects.all()
+    queryset = StaffProfile.objects.all().select_related('user', 'payroll')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['role', 'status', 'department']
     search_fields = ['employee_id', 'user__first_name', 'user__last_name', 'phone']
@@ -23,6 +23,12 @@ class StaffProfileViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return StaffListSerializer
         return StaffProfileDetailSerializer
+
+    def perform_destroy(self, instance):
+        # Cleanup user if needed, or just mark inactive
+        # Here we do a hard delete as requested for CRUD fulfillment
+        instance.user.delete() 
+        instance.delete()
 
     @action(detail=False, methods=['get'])
     def teachers(self, request):
