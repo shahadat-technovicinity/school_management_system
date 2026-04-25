@@ -128,6 +128,7 @@ urlpatterns = [
     path("attendance/", include("apps.attendance.urls")),
     path("id_cards/", include("apps.id_cards.urls")),
     path("admissions/", include("apps.admissions.urls")),
+    path("students/", include("apps.students.urls")),
 
 
 
