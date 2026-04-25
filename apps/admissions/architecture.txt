@@ -1,0 +1,8 @@
+/api/admissions/forms/                 [GET, POST, PATCH]
+/api/admissions/bulk-import/           [POST]
+/api/admissions/lottery/               [GET, POST]
+/api/admissions/lottery/stats/
+/api/admissions/lottery/assign_numbers/
+/api/admissions/lottery/execute/
+/api/admissions/completion/            [GET, POST]
+/api/admissions/completion/{id}/finalize/
