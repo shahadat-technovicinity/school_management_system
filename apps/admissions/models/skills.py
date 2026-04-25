@@ -1,5 +1,5 @@
 from django.db import models
-from student_admission.models import StudentAdmission
+from apps.admissions.models import StudentAdmission
 
 class AdmissionSkill(models.Model):
     name = models.CharField(max_length=50, unique=True)

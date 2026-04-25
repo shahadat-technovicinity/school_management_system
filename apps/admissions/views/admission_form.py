@@ -2,14 +2,14 @@ from rest_framework import viewsets, filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from student_admission.models import StudentAdmission
+from apps.admissions.models import StudentAdmission
 from apps.admissions.serializers.form_serializers import StudentAdmissionSerializer
 
 class AdmissionFormViewSet(viewsets.ModelViewSet):
     """
     ViewSet for handling New Student Admission Form (Create) and Forms Management (List/Patch)
     """
-    queryset = StudentAdmission.objects.all().order_sequence() # Using default sorting or ordering
+    queryset = StudentAdmission.objects.all().order_by('-admission_date') # Using default sorting or ordering
     serializer_class = StudentAdmissionSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     

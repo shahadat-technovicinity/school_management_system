@@ -1,5 +1,5 @@
 from django.db import models
-from student_admission.models import StudentAdmission
+from apps.admissions.models import StudentAdmission
 
 class PreviousAcademicRecord(models.Model):
     admission = models.OneToOneField(StudentAdmission, on_delete=models.CASCADE, related_name='previous_academic_record')

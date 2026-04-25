@@ -1,5 +1,5 @@
 from django.db import models
-from student_admission.models import StudentAdmission
+from apps.admissions.models import StudentAdmission
 
 class AdmissionDocument(models.Model):
     admission = models.ForeignKey(StudentAdmission, on_delete=models.CASCADE, related_name='documents')

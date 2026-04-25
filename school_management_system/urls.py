@@ -53,7 +53,7 @@ urlpatterns = [
     path("auth/", include("userauthentication.urls")),
 
     #####addmission
-    path("stdadmission/", include("student_admission.urls")),
+    path("stdadmission/", include("apps.admissions.urls_student_admission")),
     path("admissionexam/", include("admission_exam.urls")),
 
     ## Academic Management

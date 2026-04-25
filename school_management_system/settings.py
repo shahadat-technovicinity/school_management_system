@@ -169,7 +169,7 @@ INSTALLED_APPS = [
     'userauthentication',
 
     ## student admission
-    'student_admission',
+    # 'student_admission',
     'admission_exam',
     'apps.admissions',
 

@@ -1,10 +1,10 @@
 from django.shortcuts import render
 from rest_framework.generics import ListAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView
 from rest_framework import viewsets
-from .models import *
-from .serializers import *
+from apps.admissions.models import *
+from apps.admissions.serializers.student_admission_serializers import *
 from rest_framework.parsers import MultiPartParser, FormParser
-# from .serializers import StudentAdmissionMainSerializer
+# from apps.admissions.serializers.student_admission_serializers import StudentAdmissionMainSerializer
 
 
 ##############  create method  #########################

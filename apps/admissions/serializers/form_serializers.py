@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from student_admission.models import StudentAdmission
+from apps.admissions.models import StudentAdmission
 from apps.admissions.models import PreviousAcademicRecord, AdmissionSkill, AdmissionSkillLink
 
 class PreviousAcademicRecordSerializer(serializers.ModelSerializer):

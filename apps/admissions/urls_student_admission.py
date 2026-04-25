@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import *
+from .views.student_admission_views import stident_info_createapiview, student_info_get
 
 
 urlpatterns = [

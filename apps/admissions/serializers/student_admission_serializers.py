@@ -1,7 +1,7 @@
 # admissions/serializers.py
 
 from rest_framework import serializers
-from .models import *
+from apps.admissions.models import *
 
 class StudentInfoSerializer(serializers.ModelSerializer):
     class Meta:
