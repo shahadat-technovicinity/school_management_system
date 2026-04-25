@@ -4,10 +4,10 @@ from .models import *
 from .serializers import *
 
 class StudentProfileCreate(ListCreateAPIView):
-    queryset = StudentPersonalInfo.objects.all()
+    queryset = Student.objects.all()
     serializer_class = StudentFullSerializer
 
 
 class StudentProfileUpdateDelete(RetrieveUpdateDestroyAPIView):
-    queryset = StudentPersonalInfo.objects.all()
+    queryset = Student.objects.all()
     serializer_class = StudentFullSerializer  

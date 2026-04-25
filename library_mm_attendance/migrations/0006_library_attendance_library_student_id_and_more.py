@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('library_mm_attendance', '0005_remove_library_attendance_library_student_id_and_more'),
-        ('student_profile', '0002_alter_studentadditionalinfo_student_and_more'),
+        ('students', '0001_initial'),
     ]
 
     operations = [
@@ -21,6 +21,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='library_attendance',
             name='student',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attendances', to='student_profile.studentpersonalinfo'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attendances', to='students.student'),
         ),
     ]

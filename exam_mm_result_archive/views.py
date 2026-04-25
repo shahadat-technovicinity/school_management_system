@@ -1,5 +1,5 @@
 from rest_framework import generics, status
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 from rest_framework.response import Response
 from .models import *
 from .serializers import *
@@ -9,7 +9,7 @@ class StudentFilterView(generics.ListAPIView):
     serializer_class = StudentInfoFilterSerializer
 
     def get_queryset(self):
-        queryset = StudentPersonalInfo.objects.all()
+        queryset = Student.objects.all()
         class_name = self.request.query_params.get('class_name')
         section = self.request.query_params.get('section')
 
@@ -53,8 +53,8 @@ class FinalResultView(generics.ListAPIView):
     serializer_class = FinalResultSerializer # FinalResultSerializer ব্যবহার হবে
 
     def get_queryset(self):
-        # StudentPersonalInfo মডেল ধরে ছাত্রদের তালিকা তৈরি করা হবে
-        queryset = StudentPersonalInfo.objects.all() 
+        # Student মডেল ধরে ছাত্রদের তালিকা তৈরি করা হবে
+        queryset = Student.objects.all() 
         
         class_name = self.request.query_params.get('class_name')
         section = self.request.query_params.get('section')

@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='StudentPersonalInfo',
+            name='Student',
             fields=[
                 ('roll_number', models.IntegerField(primary_key=True, serialize=False, verbose_name='Roll Number')),
                 ('frist_name', models.CharField(max_length=50, verbose_name='First Name')),

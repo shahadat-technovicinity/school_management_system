@@ -1,11 +1,11 @@
 from django.db import transaction
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 from apps.admissions.models import StudentAdmission, AdmissionDocument
 
 @transaction.atomic
 def finalize_admission(admission_id, uploaded_files_dict):
     """
-    Transfers a 'Selected' admission to a permanent 'StudentPersonalInfo' profile
+    Transfers a 'Selected' admission to a permanent 'Student' profile
     and saves uploaded documents.
     """
     admission = StudentAdmission.objects.get(id=admission_id)
@@ -21,9 +21,9 @@ def finalize_admission(admission_id, uploaded_files_dict):
             file=file_obj
         )
 
-    # 2. Transfer data to Core Profile (student_profile.StudentPersonalInfo)
-    # Mapping based on StudentPersonalInfo fields seen earlier
-    student_profile = StudentPersonalInfo.objects.create(
+    # 2. Transfer data to Core Profile (student_profile.Student)
+    # Mapping based on Student fields seen earlier
+    student_profile = Student.objects.create(
         academic_year="2025-2026", # Example mapping
         admission_number=f"ADM-{admission.id}",
         admission_date=admission.admission_date,

@@ -37,6 +37,6 @@ class Migration(migrations.Migration):
             name='StudentMark',
         ),
         migrations.DeleteModel(
-            name='StudentPersonalInfo',
+            name='Student',
         ),
     ]

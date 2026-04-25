@@ -6,7 +6,7 @@
 
 # # তোর অ্যাপের নাম অনুযায়ী মডেল ও সিরিয়ালাইজার ইমপোর্ট করবি
 # from .models import Library_Attendance
-# from student_profile.models import StudentPersonalInfo 
+# from apps.students.models import Student 
 # from .serializers import AttendanceSerializer
 
 # class AttendanceListCreate(generics.ListCreateAPIView):
@@ -42,7 +42,7 @@
 
 #         try:
 #             # ডাটাবেজের Primary Key (৩ বা ৫) দিয়ে স্টুডেন্ট প্রোফাইল খোঁজা
-#             student_obj = StudentPersonalInfo.objects.get(id=int(sid))
+#             student_obj = Student.objects.get(id=int(sid))
             
 #             # নতুন অ্যাটেনডেন্স রেকর্ড তৈরি
 #             attendance = Library_Attendance.objects.create(
@@ -54,7 +54,7 @@
 #             serializer = self.get_serializer(attendance)
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)
             
-#         except StudentPersonalInfo.DoesNotExist:
+#         except Student.DoesNotExist:
 #             return Response({"error": f"ID {sid} এর কোনো স্টুডেন্ট পাওয়া যায়নি!"}, status=status.HTTP_404_NOT_FOUND)
 #         except ValueError:
 #             return Response({"error": "ID অবশ্যই একটি সংখ্যা হতে হবে"}, status=status.HTTP_400_BAD_REQUEST)

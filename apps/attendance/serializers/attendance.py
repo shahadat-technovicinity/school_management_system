@@ -2,13 +2,13 @@
 from apps.attendance.models import Attendance
 from rest_framework import serializers
 from apps.academics.models import ClassSection
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 from teacher_mm_teacher.models import Teacher
 
 
 class AttendanceRecordSerializer(serializers.Serializer):
     student = serializers.PrimaryKeyRelatedField(
-        queryset=StudentPersonalInfo.objects.all()
+        queryset=Student.objects.all()
     )
     status = serializers.ChoiceField(
         choices=Attendance.STATUS_CHOICES
@@ -53,7 +53,7 @@ class BulkAttendanceSerializer(serializers.Serializer):
 
 class AttendancePatchSerializer(serializers.Serializer):
     student = serializers.PrimaryKeyRelatedField(
-        queryset=StudentPersonalInfo.objects.all()
+        queryset=Student.objects.all()
     )
     class_section = serializers.PrimaryKeyRelatedField(
         queryset=ClassSection.objects.all()

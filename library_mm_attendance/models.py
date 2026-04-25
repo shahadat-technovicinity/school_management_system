@@ -1,9 +1,9 @@
 # from django.db import models
-# from student_profile.models import StudentPersonalInfo
+# from apps.students.models import Student
 
 # # Create your models here.
 # class Library_Attendance(models.Model):
-#     student = models.ForeignKey(StudentPersonalInfo, on_delete=models.CASCADE, related_name='attendances')
+#     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='attendances')
 #     Library_student_id = models.CharField(max_length=20) # Figma-r 'Student ID' column
 #     book_name = models.CharField(max_length=200, blank=True, null=True) # Figma-r 'Book' column
     

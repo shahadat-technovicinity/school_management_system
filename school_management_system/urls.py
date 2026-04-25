@@ -61,7 +61,7 @@ urlpatterns = [
     path("academic_online_class/", include("academic_online_class.urls")),
 
     ### Student Management
-    path("student_profile_create_all/", include("student_profile.urls")),
+    #path("student_profile_create_all/", include("student_profile.urls")),
 
 
     ######## Exam Management

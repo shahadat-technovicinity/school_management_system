@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('student_profile', '0002_alter_studentadditionalinfo_student_and_more'),
+        ('students', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                 ('snapshot_data', models.JSONField(default=dict)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('generated_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='student_profile.studentpersonalinfo')),
+                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='students.student')),
                 ('template', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='id_cards.idcardtemplate')),
             ],
             options={

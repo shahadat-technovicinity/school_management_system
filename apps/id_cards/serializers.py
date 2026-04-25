@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 from .models import GeneratedIDCard, IDCardTemplate
 
 class IDCardStatusSerializer(serializers.Serializer):
@@ -20,7 +20,7 @@ class StudentIDCardSerializer(serializers.ModelSerializer):
     id_card_status = serializers.SerializerMethodField()
 
     class Meta:
-        model = StudentPersonalInfo
+        model = Student
         fields = [
             'id', 'admission_number', 'roll_number', 'full_name', 
             'class_label', 'section_label', 'blood_group', 'photo', 

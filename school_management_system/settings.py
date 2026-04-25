@@ -172,6 +172,7 @@ INSTALLED_APPS = [
     # 'student_admission',
     'admission_exam',
     'apps.admissions',
+    'apps.students',
 
 
      ## Teacher Management
@@ -191,7 +192,7 @@ INSTALLED_APPS = [
     'exam_mm_result_archive',
 
     ## student management
-    'student_profile',
+    # 'student_profile',
 
     ## account management
     'account_mm_std_stipent',

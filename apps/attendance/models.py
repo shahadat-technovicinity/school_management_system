@@ -2,7 +2,7 @@ from django.db import models
 
 from academic_class_routine.models import Teacher
 from apps.academics.models import ClassSection
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 
 class Attendance(models.Model):
     PRESENT = 'P'
@@ -13,7 +13,7 @@ class Attendance(models.Model):
         (ABSENT, 'Absent'),
     ]
 
-    student = models.ForeignKey(StudentPersonalInfo, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
     class_section = models.ForeignKey(ClassSection, on_delete=models.CASCADE)
     date = models.DateField()
     status = models.CharField(max_length=1, choices=STATUS_CHOICES)

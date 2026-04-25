@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 
 class IDCardTemplate(models.Model):
     """
@@ -25,7 +25,7 @@ class GeneratedIDCard(models.Model):
     If a record exists here, the UI shows "Generated". 
     If not, it shows "Not Generated".
     """
-    student = models.ForeignKey(StudentPersonalInfo, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
     template = models.ForeignKey(IDCardTemplate, on_delete=models.SET_NULL, null=True)
     generated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     

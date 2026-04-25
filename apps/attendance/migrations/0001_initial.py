@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('academic_class_routine', '0002_alter_classroutine_teacher_teacher'),
         ('academics', '0001_initial'),
-        ('student_profile', '0002_alter_studentadditionalinfo_student_and_more'),
+        ('students', '0001_initial'),
     ]
 
     operations = [
@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 ('status', models.CharField(choices=[('P', 'Present'), ('A', 'Absent')], max_length=1)),
                 ('class_section', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='academics.classsection')),
                 ('marked_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='academic_class_routine.teacher')),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='student_profile.studentpersonalinfo')),
+                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='students.student')),
             ],
             options={
                 'indexes': [models.Index(fields=['class_section', 'date'], name='attendance__class_s_860ff4_idx'), models.Index(fields=['student', 'date'], name='attendance__student_76a8d7_idx')],
