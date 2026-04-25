@@ -1,8 +1,21 @@
 from django.contrib import admin
-from .models import StudentAdmission, Parent, Contact, AcademicBackground, AdditionalInfo
+from .models import (
+    StudentAdmission,
+    PreviousAcademicRecord,
+    AdmissionSkill,
+    AdmissionSkillLink,
+    LotterySession,
+    AdmissionDocument
+)
 
-admin.site.register(StudentAdmission)
-admin.site.register(Parent)
-admin.site.register(Contact)
-admin.site.register(AcademicBackground)
-admin.site.register(AdditionalInfo)
+@admin.register(StudentAdmission)
+class StudentAdmissionAdmin(admin.ModelAdmin):
+    list_display = ('student_name_english', 'application_number', 'desired_class', 'admission_status')
+    search_fields = ('student_name_english', 'application_number', 'mobile_number')
+    list_filter = ('admission_status', 'desired_class', 'gender')
+
+admin.site.register(PreviousAcademicRecord)
+admin.site.register(AdmissionSkill)
+admin.site.register(AdmissionSkillLink)
+admin.site.register(LotterySession)
+admin.site.register(AdmissionDocument)
