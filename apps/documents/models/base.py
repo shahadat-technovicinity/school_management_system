@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from apps.common.models import BaseModel # Assuming common utils exist
 import uuid
 
 class DocumentStatus(models.TextChoices):

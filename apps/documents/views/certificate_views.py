@@ -2,8 +2,9 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from .models.certificates import CertificateApplication, DocumentStatus
-from .serializers.certificate_serializers import CertificateApplicationSerializer
+from ..models.certificates import CertificateApplication
+from ..models.base import DocumentStatus
+from ..serializers.certificate_serializers import CertificateApplicationSerializer
 
 class CertificateApplicationViewSet(viewsets.ModelViewSet):
     queryset = CertificateApplication.objects.all().select_related('student', 'reviewed_by').prefetch_related('attachments')
