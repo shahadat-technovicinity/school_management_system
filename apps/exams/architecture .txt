@@ -1,0 +1,31 @@
+1. Exam Configuration & Setup
+Method	Endpoint	UI Purpose
+GET	/exams/setup/	Display the list of all created exams in the table.
+POST	/exams/setup/	"Create New Exam" modal submission.
+POST	/exams/setup/{id}/publish/	Finalize exam to show on Student/Parent dashboards.
+GET	/exams/types/	Dropdown for "Exam Type" (Midterm, Final, etc.).
+GET	/exams/subjects/	Dropdown for "Subject Selection" during setup.
+
+2. Routine & Schedule
+Method	Endpoint	UI Purpose
+GET	/exams/routines/	Fetch time slots, dates, and room numbers.
+GET	/exams/setup/{id}/full_routine/	Displays the specialized Routine Table Builder view.
+POST	/exams/routines/	Save individual slot mapping in the Routine Builder.
+
+3. Exam Logistics (Admit Cards & Seating)
+Method	Endpoint	UI Purpose
+POST	/exams/admit-cards/generate-bulk/	"Generate All Admit Cards" button for a class.
+GET	/exams/admit-cards/{id}/	View/Print a specific student's Admit Card.
+GET	/exams/seat-plans/room_visualization/	Feed data to the Room Grid Visualization (Seat selection UI).
+GET	/exams/teacher-duties/	"Duty Archive" and "Assign Exam Duty" management.
+
+4. Results & Performance Analytics
+Method	Endpoint	UI Purpose
+GET	/exams/results/	Table view of "Results Archive" with filtering.
+GET	/exams/results/statistics/	Data for Dashboard Charts (Avg Score, Pass/Fail Trends).
+GET	/exams/results/{id}/transcript/	Generates the official Printable Marksheet / Academic Transcript.
+
+5. Question Bank
+Method	Endpoint	UI Purpose
+GET	/exams/questions/	List and search "Question Repository".
+POST	/exams/questions/	"Create New Question" modal (MCQ, Short, Long).
