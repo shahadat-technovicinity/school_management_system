@@ -91,6 +91,11 @@ class Student(models.Model):
 
     scholarship = models.CharField(max_length=25, choices=SCHOLARSHIP_CHOICES)
 
+    # Identifiers & Security (Matching UI QR/Code features)
+    student_id_card_code = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    qr_code_data = models.TextField(null=True, blank=True) 
+    is_id_card_generated = models.BooleanField(default=False)
+
     photo = models.ImageField(
         upload_to=student_photo_upload_path,  # Use callable
         blank=True,
