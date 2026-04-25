@@ -12,7 +12,7 @@ def student_photo_upload_path(instance, filename):
     return f"students/{year}/{adm}_{filename}"
 
 
-class StudentPersonalInfo(models.Model):
+class Student(models.Model):
     STATUS_CHOICES = [
         ("active", "Active"),
         ("inactive", "Inactive"),
@@ -139,8 +139,8 @@ class StudentPersonalInfo(models.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name or ''}".strip()
 
-class StudentGurdianInfo(models.Model):
-    student = models.OneToOneField(StudentPersonalInfo, on_delete=models.CASCADE, related_name='guardian_info')
+class GuardianDetails(models.Model):
+    student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='guardian_info')
 
     # Father's Info
     father_photo = models.ImageField(upload_to='student_profile_pictures/',
@@ -200,8 +200,8 @@ class StudentGurdianInfo(models.Model):
     def __str__(self):
         return f"Guardian Info of {self.student.first_name} {self.student.last_name or ''}"
 
-class StudentAdditionalInfo(models.Model):
-    student = models.OneToOneField(StudentPersonalInfo, on_delete=models.CASCADE, related_name='additional_info')
+class AdditionalDetails(models.Model):
+    student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='additional_info')
 
     # Transport Information
     route = models.CharField(max_length=100, blank=True, null=True)

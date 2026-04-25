@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 from .models import *
 
 class StudentInfoFilterSerializer(serializers.ModelSerializer):
     class Meta:
-        model = StudentPersonalInfo
+        model = Student
         fields = ['roll_number', 'full_name', 'class_name', 'section']
 
     def get_full_name(self, obj):
@@ -41,9 +41,9 @@ class MarkSubmissionSerializer(serializers.Serializer):
         score_objects = []
         for mark_data in marks_data_list:
             try:
-                # StudentPersonalInfo মডেল থেকে roll_number ধরে ছাত্র খুঁজে বের করা
-                student_obj = StudentPersonalInfo.objects.get(roll_number=mark_data['student_roll_number'])
-            except StudentPersonalInfo.DoesNotExist:
+                # Student মডেল থেকে roll_number ধরে ছাত্র খুঁজে বের করা
+                student_obj = Student.objects.get(roll_number=mark_data['student_roll_number'])
+            except Student.DoesNotExist:
                 raise serializers.ValidationError({"error": f"Student with roll number {mark_data['student_roll_number']} not found."})
 
             total_marks = self.calculate_total(mark_data)
@@ -72,7 +72,7 @@ class MarkSubmissionSerializer(serializers.Serializer):
 
 # --- MarksSerializer (GET/LIST এর জন্য) ---
 class MarksSerializer(serializers.ModelSerializer):
-    # student_roll_number এবং full_name StudentPersonalInfo থেকে নেওয়া হচ্ছে
+    # student_roll_number এবং full_name Student থেকে নেওয়া হচ্ছে
     student_name = serializers.CharField(source='student.full_name', read_only=True)
     student_roll_number = serializers.CharField(source='student.roll_number', read_only=True)
     student_class_name = serializers.CharField(source='student.class_name', read_only=True)
@@ -100,7 +100,7 @@ class FinalResultSerializer(serializers.ModelSerializer):
     # Note: grade, pass/fail লজিকগুলো আপনার প্রতিষ্ঠানের নিয়ম অনুযায়ী গেট মেথডে হিসাব হবে।
 
     class Meta:
-        model = StudentPersonalInfo
+        model = Student
         # this field showing finall result
         fields = ('student_roll_number', 'student_name', 'all_subjects_marks', 
                   'grand_total', 'percentage', 'pass_fail_status')

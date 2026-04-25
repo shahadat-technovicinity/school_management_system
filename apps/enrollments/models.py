@@ -1,10 +1,10 @@
 from django.db import models
 
 from apps.academics.models import ClassSection, AcademicYear
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 
 class Enrollment(models.Model):
-    student = models.ForeignKey(StudentPersonalInfo, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
     class_section = models.ForeignKey(ClassSection, on_delete=models.CASCADE)
     academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
     roll_no = models.PositiveIntegerField()

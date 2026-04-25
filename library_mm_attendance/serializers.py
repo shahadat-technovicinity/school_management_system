@@ -2,7 +2,7 @@
 # from .models import Library_Attendance
 
 # class AttendanceSerializer(serializers.ModelSerializer):
-#     # StudentPersonalInfo থেকে নির্দিষ্ট ডাটা টেনে আনা
+#     # Student থেকে নির্দিষ্ট ডাটা টেনে আনা
 #     student_name = serializers.ReadOnlyField(source='student.first_name') # অথবা full_name থাকলে সেটা
 #     roll = serializers.ReadOnlyField(source='student.roll_number')
 #     class_name = serializers.ReadOnlyField(source='student.class_name')

@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('exam_mm_result_archive', '0004_alter_marks_unique_together_alter_marks_total_and_more'),
-        ('student_profile', '0002_alter_studentadditionalinfo_student_and_more'),
+        ('students', '0001_initial'),
     ]
 
     operations = [
@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('total', models.IntegerField(default=0, editable=False)),
                 ('status', models.CharField(choices=[('saved', 'Saved'), ('pending', 'Pending'), ('failed', 'Failed')], default='pending', max_length=10)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='student_profile.studentpersonalinfo')),
+                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='students.student')),
             ],
         ),
         migrations.DeleteModel(

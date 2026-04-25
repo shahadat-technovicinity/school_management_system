@@ -53,7 +53,7 @@ urlpatterns = [
     path("auth/", include("userauthentication.urls")),
 
     #####addmission
-    path("stdadmission/", include("student_admission.urls")),
+    # path("stdadmission/", include("student_admission.urls")), # Removed during refactor
     path("admissionexam/", include("admission_exam.urls")),
 
     ## Academic Management
@@ -61,7 +61,7 @@ urlpatterns = [
     path("academic_online_class/", include("academic_online_class.urls")),
 
     ### Student Management
-    path("student_profile_create_all/", include("student_profile.urls")),
+    #path("student_profile_create_all/", include("student_profile.urls")),
 
 
     ######## Exam Management
@@ -127,6 +127,7 @@ urlpatterns = [
     path("enrollments/", include("apps.enrollments.urls")),
     path("attendance/", include("apps.attendance.urls")),
     path("id_cards/", include("apps.id_cards.urls")),
+    path("admissions/", include("apps.admissions.urls")),
 
 
 

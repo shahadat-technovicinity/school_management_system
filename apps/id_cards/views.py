@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 
 from .models import GeneratedIDCard, IDCardTemplate
 from .serializers import StudentIDCardSerializer, GenerateCardRequestSerializer
@@ -15,7 +15,7 @@ class StudentIDCardViewSet(viewsets.ModelViewSet):
     """
     Handles the Dashboard List and Single Generation
     """
-    queryset = StudentPersonalInfo.objects.all()
+    queryset = Student.objects.all()
     serializer_class = StudentIDCardSerializer
     permission_classes = [IsAuthenticated]
 

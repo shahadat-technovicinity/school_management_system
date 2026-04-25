@@ -1,6 +1,6 @@
 from celery import shared_task
 from django_celery_results.models import TaskResult
-from .models import StudentPersonalInfo, GeneratedIDCard
+from .models import Student, GeneratedIDCard
 from .services import generate_card_image_service
 
 @shared_task(bind=True)
@@ -20,7 +20,7 @@ def batch_generate_cards_task(self, student_ids, template_id, user_id):
                 meta={'current': i + 1, 'total': total}
             )
             
-            student = StudentPersonalInfo.objects.get(id=sid)
+            student = Student.objects.get(id=sid)
             
             # Generate Image
             image_file = generate_card_image_service(student, template_id)

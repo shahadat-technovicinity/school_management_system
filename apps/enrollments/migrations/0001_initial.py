@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('academics', '0001_initial'),
-        ('student_profile', '0002_alter_studentadditionalinfo_student_and_more'),
+        ('students', '0001_initial'),
     ]
 
     operations = [
@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('roll_no', models.PositiveIntegerField()),
                 ('academic_year', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='academics.academicyear')),
                 ('class_section', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='academics.classsection')),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='student_profile.studentpersonalinfo')),
+                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='students.student')),
             ],
             options={
                 'unique_together': {('student', 'academic_year')},

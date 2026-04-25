@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('library_mm_book_list', '0001_initial'),
-        ('student_profile', '0002_alter_studentadditionalinfo_student_and_more'),
+        ('students', '0001_initial'),
     ]
 
     operations = [
@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                 ('return_date', models.DateField(blank=True, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('book_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='library_mm_book_list.book_model')),
-                ('student_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='student_profile.studentpersonalinfo')),
+                ('student_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='students.student')),
             ],
         ),
         migrations.CreateModel(
@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ('content', models.TextField()),
                 ('status', models.CharField(choices=[('Pending', 'Pending'), ('Sent', 'Sent'), ('Acknowledged', 'Acknowledged')], default='Pending', max_length=20)),
                 ('date_sent', models.DateField(auto_now_add=True)),
-                ('student_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='student_profile.studentpersonalinfo')),
+                ('student_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='students.student')),
             ],
         ),
     ]

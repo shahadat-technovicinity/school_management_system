@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('library_mm_attendance', '0002_libraryattendance_delete_library_attendance'),
-        ('student_profile', '0002_alter_studentadditionalinfo_student_and_more'),
+        ('students', '0001_initial'),
     ]
 
     operations = [
@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('book_name', models.CharField(blank=True, max_length=200, null=True)),
                 ('entry_time', models.DateTimeField(auto_now_add=True)),
                 ('exit_time', models.DateTimeField(auto_now=True)),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attendances', to='student_profile.studentpersonalinfo')),
+                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attendances', to='students.student')),
             ],
         ),
         migrations.DeleteModel(

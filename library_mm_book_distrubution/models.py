@@ -1,10 +1,10 @@
 from django.db import models
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 from library_mm_book_list.models import Book_model
 
 # Create your models here.
 class BookDistributionModel(models.Model):
-    student_id = models.ForeignKey(StudentPersonalInfo, on_delete=models.CASCADE)
+    student_id = models.ForeignKey(Student, on_delete=models.CASCADE)
     book_id = models.ForeignKey(Book_model, on_delete=models.CASCADE)
     issue_date = models.DateField()
     return_date = models.DateField(blank=True, null=True)
@@ -32,7 +32,7 @@ class LetterDistribution(models.Model):
 
     letter_type = models.CharField(max_length=50, choices=LETTER_TYPES)
     recipient = models.CharField(max_length=100) 
-    student_id = models.ForeignKey(StudentPersonalInfo, on_delete=models.CASCADE)
+    student_id = models.ForeignKey(Student, on_delete=models.CASCADE)
     subject = models.CharField(max_length=255)
     content = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS, default='Pending') 

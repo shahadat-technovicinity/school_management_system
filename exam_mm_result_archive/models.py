@@ -1,5 +1,5 @@
 from django.db import models
-from student_profile.models import StudentPersonalInfo
+from apps.students.models import Student
 
 
 class ExamMark(models.Model):
@@ -15,7 +15,7 @@ class ExamMark(models.Model):
         ('failed', 'Failed'),
     ]
 
-    student = models.ForeignKey(StudentPersonalInfo, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
     subject = models.CharField(max_length=100)
     exam_type = models.CharField(max_length=10, choices=EXAM_TYPES)
     writing = models.IntegerField(default=0)
