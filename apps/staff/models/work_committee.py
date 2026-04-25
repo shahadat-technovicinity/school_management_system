@@ -45,3 +45,33 @@ class CommitteeMember(models.Model):
 
     def __str__(self):
         return f"{self.full_name or self.staff.user.get_full_name()} - {self.committee_type}"
+
+class CommitteeNotice(models.Model):
+    committee_type = models.CharField(max_length=50, choices=CommitteeMember.COMMITTEE_TYPE_CHOICES)
+    session_number = models.CharField(max_length=50) # e.g., "Session #5"
+    date = models.DateField()
+    time = models.TimeField()
+    agenda_items = models.TextField() # Markdown/HTML from UI editor
+    attachment = models.FileField(upload_to='committee/notices/', null=True, blank=True)
+    include_member_list = models.BooleanField(default=True)
+    status = models.CharField(max_length=20, default='Sent') # Sent, Draft
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.committee_type} Notice - {self.session_number}"
+
+class CommitteeCommunication(models.Model):
+    TYPE_CHOICES = [
+        ('Meeting Reminder', 'Meeting Reminder'),
+        ('Meeting Cancellation', 'Meeting Cancellation'),
+        ('General Announcement', 'General Announcement'),
+    ]
+    committee_type = models.CharField(max_length=50, choices=CommitteeMember.COMMITTEE_TYPE_CHOICES)
+    recipients = models.CharField(max_length=100) # e.g., "All PTA Members"
+    message_type = models.CharField(max_length=50, choices=TYPE_CHOICES)
+    content = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+    request_confirmation = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.message_type} to {self.recipients}"
