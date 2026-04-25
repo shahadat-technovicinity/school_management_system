@@ -1,0 +1,27 @@
+1. Staff & Teacher Management
+Method	Endpoint	UI Functionality	Key Features
+GET	/api/staff/profiles/	Staff/Teacher List	Supports searching (Name/ID) and filtering (Role/Dept).
+GET	/api/staff/profiles/teachers/	Teacher Specialized List	Pre-filtered list specifically for the Teacher view.
+POST	/api/staff/profiles/	Add New Teacher	Atomic creation: Saves Profile + Payroll + Documents.
+GET	/api/staff/profiles/{id}/	Teacher Details Page	Returns all info including Leaves, Finance, and Routine.
+PATCH	/api/staff/profiles/{id}/	Update Teacher	Updates only changed fields (e.g., updating Salary or Phone).
+DELETE	/api/staff/profiles/{id}/	Remove Teacher	Full cleanup of staff record and associated User account.
+
+2. Leave Management
+Method	Endpoint	UI Functionality	Key Features
+GET	/api/staff/leaves/	Leave Application List	Shows all pending/approved/rejected leaves.
+POST	/api/staff/leaves/	Apply for Leave	Submits new application with Reason and Dates.
+POST	/api/staff/leaves/{id}/approve/	Approve Leave Action	Admin approval with comments (Custom Business Logic).
+GET	/api/staff/leave-balances/	Leave Status Tab	Shows remaining days (e.g., "Medical: 5/10").
+
+3. Committee Dashboard
+Method	Endpoint	UI Functionality	Key Features
+GET	/api/staff/committees/	Committee Overview	Shows PTA, MMC, and Cabinet member lists.
+POST	/api/staff/committee-notices/	Generate Notice Form	Saves Session #, Agenda Items, and File Attachments.
+GET	/api/staff/committee-notices/	Recent Notices Table	List of all sent notices for the dashboard table.
+GET	/api/staff/committee-communications/	Message History	Log of all SMS/Email notifications sent to members.
+
+4. Work & Tasks
+Method	Endpoint	UI Functionality	Key Features
+GET	/api/staff/work/	App Work List	Shows all tasks assigned to teachers.
+POST	/api/staff/work/	Assign New Work	Distributes tasks with Priority levels and Deadlines.
