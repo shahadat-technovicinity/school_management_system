@@ -1,7 +1,6 @@
 from django.db import models
 from apps.common.models_audit import AuditModel
 from apps.exams.models.setup import ExamSetup
-from teacher_mm_teacher.models import Teacher
 
 class ExamAdmitCard(AuditModel):
     exam_setup = models.ForeignKey(ExamSetup, on_delete=models.CASCADE)
@@ -21,7 +20,7 @@ class ExamSeatPlan(AuditModel):
 
 class TeacherDuty(AuditModel):
     exam_setup = models.ForeignKey(ExamSetup, on_delete=models.CASCADE)
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
+    teacher = models.ForeignKey('staff.StaffProfile', on_delete=models.CASCADE, limit_choices_to={'role': 'teacher'})
     room_number = models.CharField(max_length=50)
     duty_start_time = models.TimeField()
     duty_end_time = models.TimeField()
