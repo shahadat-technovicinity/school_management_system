@@ -1,5 +1,6 @@
-from .core import (
-    ExamType, Subject, ExamSetup, ExamRoutine, 
-    ExamAdmitCard, ExamSeatPlan, TeacherDuty, 
-    QuestionBank, QuestionType, StudentResult
+from .setup import (
+    ExamType, Subject, ExamSetup, 
+    ExamRoutine, QuestionType, QuestionBank
 )
+from .logistics import ExamAdmitCard, ExamSeatPlan, TeacherDuty
+from .results import StudentResult
