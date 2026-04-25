@@ -120,54 +120,8 @@ class StudentAdmission(models.Model):
     permanent_address_sub_district = models.CharField(max_length=255)
     permanent_address_district = models.CharField(max_length=255)
 
-    
-
-
-
-###########   Academic Background..............   ################
-###########   Academic Background..............   ################
-###########   Academic Background..............   ################
-###########   Academic Background..............   ################
-###########   Academic Background..............   ################
-
-
-
-    school_name = models.CharField(max_length=255)
-    School_address = models.CharField(max_length=255)
-    passing_class = models.CharField(max_length=50)
-    roll = models.IntegerField()
-    gpa = models.FloatField()
-    passing_year = models.IntegerField()
-    sibling_id_number = models.CharField(max_length=255, blank=True, null=True)
-
-    
-
-
-################   Special skills #####################
-
-    # Special Skills using CharField with multiple choices
-    SPECIAL_SKILLS_CHOICES = [
-        ('Cricket', 'Cricket'),
-        ('Football', 'Football'),
-        ('Dance', 'Dance'),
-        ('Singing', 'Singing'),
-        ('Ham/Naat', 'Ham/Naat'),
-        ('Qirat', 'Qirat'),
-        ('Chess', 'Chess'),
-        ('Badminton', 'Badminton'),
-        ('Shot Put', 'Shot Put'),
-        ('Swimming', 'Swimming'),
-    ]
-
-   
-    special_skills = models.CharField(
-        max_length=255,
-        choices=SPECIAL_SKILLS_CHOICES,
-        blank=True,
-        null=True
-    )
-
-    additional_comments = models.TextField(blank=True, null=True)
+    # Note: Academic Records and Special Skills are now structurally managed 
+    # via the connected Priority Models (PreviousAcademicRecord & AdmissionSkillLink)
     
     # Agreement checkbox
     agreed_to_terms = models.BooleanField(default=False)
