@@ -1,0 +1,6 @@
+#API Endpoints Summary
+Method	Endpoint	Purpose
+GET	/api/documents/certificates/	List all TC/Certificate applications (Filter by Status/Student).
+POST	/api/documents/certificates/	Create a new application with attachments.
+POST	/api/documents/certificates/{id}/approve/	Approve the application and update the timeline.
+GET	/api/documents/certificates/{id}/preview_tc/	Generate data for the "Transfer Certificate Preview"

@@ -1,0 +1,15 @@
+1. Core Management (CRUD)
+Base URL: /api/students/management/
+Endpoints:
+GET /: List students with filters (Search, Class, Section).
+POST /: Bulk-create student profiles (handles nested Personal, Guardian, and Additional info).
+GET /{id}/: Retrieve deep-nested profile details.
+PUT/PATCH /{id}/: Update specific sections (e.g., updating only Emergency Contact).
+DELETE /{id}/: Soft or hard delete student records.
+2. Student 360-Degree Profile (Analytics)
+Base URL: /api/students/profile/
+Endpoints:
+GET /{id}/: Master record view for the UI dashboard.
+GET /{id}/academic_performance/: Returns GPA, Rank, and Improvement metrics.
+GET /{id}/attendance_summary/: Aggregated attendance percentages.
+GET /{id}/discipline_history/: Detailed log of behavioral incidents.
