@@ -33,9 +33,15 @@ class EnrollmentViewSet(BaseModelViewSet):
     ordering_fields = ['created_at', 'updated_at', 'start_date', 'end_date']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Enrollment.objects.none()
+        
         # allow limiting to current user's school if Enrollment has that relation
         qs = super().get_queryset()
         user = self.request.user
+        if user.is_anonymous:
+            return Enrollment.objects.none()
+            
         if not user.is_staff:
             # attempt common patterns: school relation on enrollment or student
             if hasattr(qs.model, "school"):

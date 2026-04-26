@@ -11,19 +11,19 @@ from .views.results import StudentResultViewSet
 
 router = DefaultRouter()
 # Setup
-router.register(r'setup', ExamSetupViewSet)
-router.register(r'types', ExamTypeViewSet)
-router.register(r'subjects', SubjectViewSet)
-router.register(r'routines', ExamRoutineViewSet)
-router.register(r'questions', QuestionBankViewSet)
+router.register(r'setup', ExamSetupViewSet, basename='exam-setup')
+router.register(r'types', ExamTypeViewSet, basename='exam-type')
+router.register(r'subjects', SubjectViewSet, basename='subjects')
+router.register(r'routines', ExamRoutineViewSet, basename='routines')
+router.register(r'questions', QuestionBankViewSet, basename='questions')
 
 # Logistics
-router.register(r'admit-cards', ExamAdmitCardViewSet)
-router.register(r'seat-plans', ExamSeatPlanViewSet)
-router.register(r'teacher-duties', TeacherDutyViewSet)
+router.register(r'admit-cards', ExamAdmitCardViewSet, basename='admit-cards')
+router.register(r'seat-plans', ExamSeatPlanViewSet, basename='seat-plans')
+router.register(r'teacher-duties', TeacherDutyViewSet, basename='teacher-duties')
 
 # Results
-router.register(r'results', StudentResultViewSet)
+router.register(r'results', StudentResultViewSet, basename='results')
 
 urlpatterns = [
     path('', include(router.urls)),
