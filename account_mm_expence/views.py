@@ -83,6 +83,7 @@ class CategoryAccountSummaryView(generics.ListAPIView):
 #### Api for monthly income and expense summary for dashboard cards (if needed in future)
 class MonthlyReportListView(generics.ListAPIView):
     queryset = Expense.objects.all()
+    serializer_class = ExpenseSerializer
 
     def list(self, request, *args, **kwargs):
         try:

@@ -7,6 +7,8 @@ class DiaryListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return TeacherDiary.objects.none()
         return TeacherDiary.objects.filter(teacher=self.request.user)
 
     def perform_create(self, serializer):
@@ -17,4 +19,6 @@ class DiaryDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return TeacherDiary.objects.none()
         return TeacherDiary.objects.filter(teacher=self.request.user)

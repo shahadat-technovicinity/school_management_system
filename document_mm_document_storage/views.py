@@ -181,7 +181,11 @@ class DocumentHistoryView(generics.ListAPIView):
     serializer_class = LocationMoveLogSerializer
 
     def get_queryset(self):
-        pk = self.kwargs['pk']
+        if getattr(self, 'swagger_fake_view', False):
+            return LocationMoveLog.objects.none()
+        pk = self.kwargs.get('pk')
+        if pk is None:
+            return LocationMoveLog.objects.none()
         if not Document.objects.filter(pk=pk).exists():
             raise NotFound(detail='Document পাওয়া যায়নি।')
         return LocationMoveLog.objects.filter(document__pk=pk)
