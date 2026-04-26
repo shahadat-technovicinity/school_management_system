@@ -74,6 +74,9 @@ class CommitteeMemberListView(generics.ListAPIView):
     
     ##Filter by commitee type wise commitee
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return CommitteeMember.objects.none()
+            
         committee_type = self.request.query_params.get('type')
         if committee_type:
             queryset = CommitteeMember.objects.filter(committee_type=committee_type).order_by('-id')

@@ -9,6 +9,8 @@ class StudentFilterView(generics.ListAPIView):
     serializer_class = StudentInfoFilterSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Student.objects.none()
         queryset = Student.objects.all()
         class_name = self.request.query_params.get('class_name')
         section = self.request.query_params.get('section')
@@ -53,6 +55,9 @@ class FinalResultView(generics.ListAPIView):
     serializer_class = FinalResultSerializer # FinalResultSerializer ব্যবহার হবে
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Student.objects.none()
+            
         # Student মডেল ধরে ছাত্রদের তালিকা তৈরি করা হবে
         queryset = Student.objects.all() 
         

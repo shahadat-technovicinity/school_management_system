@@ -23,6 +23,9 @@ class StudentIDCardViewSet(viewsets.ModelViewSet):
         """
         Filter based on UI Dropdowns: Class, Section, Year
         """
+        if getattr(self, "swagger_fake_view", False):
+            return Student.objects.none()
+            
         qs = super().get_queryset()
         class_name = self.request.query_params.get('class_name')
         section = self.request.query_params.get('section')

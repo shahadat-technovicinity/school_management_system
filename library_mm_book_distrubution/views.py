@@ -12,6 +12,9 @@ class BookDistributionCreate_get_api(generics.ListCreateAPIView):
     pagination_class = MyPagination
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return BookDistributionModel.objects.none()
+            
         # Default bhabe shob data nibe ar order korbe
         queryset = BookDistributionModel.objects.all().order_by('-created_at')
 

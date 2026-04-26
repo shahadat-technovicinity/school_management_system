@@ -7,7 +7,7 @@ User = get_user_model()
 class UserShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email']
+        fields = ['id', 'name', 'username']
 
 class StaffPayrollSerializer(serializers.ModelSerializer):
     class Meta:
@@ -71,7 +71,7 @@ User = get_user_model()
 class UserShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email']
+        fields = ['id', 'name', 'username']
 
 class StaffPayrollSerializer(serializers.ModelSerializer):
     class Meta:

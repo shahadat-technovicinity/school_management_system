@@ -16,6 +16,9 @@ class NoticeListCreateAPIView(generics.ListCreateAPIView):
         return communication_center_notice.objects.all().order_by('-created_at')
     
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return communication_center_notice.objects.none()
+            
         today = timezone.now().date()
         is_archive_request = self.request.query_params.get('tab') == 'archive'
         
