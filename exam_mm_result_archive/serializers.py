@@ -5,7 +5,7 @@ from .models import *
 class StudentInfoFilterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
-        fields = ['roll_number', 'full_name', 'class_name', 'section']
+        fields = ['roll_number', 'full_name', 'class_name_static', 'section_static']
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}"

@@ -16,6 +16,9 @@ class TeacherStaffListView(generics.ListAPIView):
     serializer_class = TeacherStaffListSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return User.objects.none()
+            
         # Ekhon filtering logic-ti method-er modhye dynamically kaaj korche
         return User.objects.filter(
             Q(role='Teacher') | Q(role='Staff'), # Teacher OR Staff

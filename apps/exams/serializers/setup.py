@@ -29,3 +29,4 @@ class QuestionBankSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuestionBank
         fields = '__all__'
+        ref_name = 'AppsExamsQuestionBankSerializer'

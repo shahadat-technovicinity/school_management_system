@@ -5,6 +5,7 @@ class CommitteeMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = CommitteeMember
         fields = '__all__'
+        ref_name = 'AppsStaffCommitteeMemberSerializer'
 
 class CommitteeNoticeSerializer(serializers.ModelSerializer):
     class Meta:

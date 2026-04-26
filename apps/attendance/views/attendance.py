@@ -50,7 +50,13 @@ class StudentAttendanceListAPIView(ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        student_id = self.kwargs['student_id']
+        if getattr(self, 'swagger_fake_view', False):
+            return Attendance.objects.none()
+        
+        student_id = self.kwargs.get('student_id')
+        if student_id is None:
+            return Attendance.objects.none()
+        
         queryset = Attendance.objects.filter(student_id=student_id)
 
         class_section = self.request.query_params.get('class_section')

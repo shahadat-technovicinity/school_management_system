@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from apps.enrollments.views.enrollments import EnrollmentViewSet
 
 router = DefaultRouter()
-router.register("enrollments", EnrollmentViewSet)
+router.register("enrollments", EnrollmentViewSet, basename="enrollment")
 
 urlpatterns = [
     path("", include(router.urls)),

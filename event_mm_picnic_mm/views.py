@@ -5,6 +5,8 @@ from .serializers import *
 class PicnicListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = PicnicSerializer
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Picnic.objects.none()
         queryset = Picnic.objects.all().order_by('-date')
         status = self.request.query_params.get('status')
         if status:

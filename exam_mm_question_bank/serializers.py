@@ -7,6 +7,7 @@ class QuestionBankSerializer(serializers.ModelSerializer):
         model = ExmQuestionBank
         fields = '__all__'
         read_only_fields = ['id', 'date_created', 'uploaded_by'] 
+        ref_name = 'ExmQuestionBankSerializer'
 
     def validate_pdf_file(self, value):
         if not value:
