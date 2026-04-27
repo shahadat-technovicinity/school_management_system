@@ -12,7 +12,7 @@ class LotteryExamViewSet(ViewSet):
     @action(detail=False, methods=['get'])
     def stats(self, request):
         class_name = request.query_params.get('class', 'class 6')
-        apps = StudentAdmission.objects.filter(desired_class=class_name)
+        apps = StudentAdmission.objects.filter(desired_class__name__iexact=class_name)
         
         return Response({
             "total_applications": apps.count(),
