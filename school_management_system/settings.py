@@ -179,7 +179,6 @@ INSTALLED_APPS = [
 
 
      ## Teacher Management
-    'teacher_mm_add_salary',
     'teacher_mm_workdistribute',
     'teacher_mm_comitee',
     'teacher_mm_teacher',
