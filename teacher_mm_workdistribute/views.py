@@ -29,11 +29,11 @@ class TeacherStaffListView(generics.ListAPIView):
 
 class TeacherStaffWorkView(generics.ListCreateAPIView):
     queryset = WorkAssignment.objects.all()
-    serializer_class = WorkAssignmentSerializer
+    serializer_class = TeacherWorkAssignmentSerializer
 
 
 #get, put, patch, delete
 class TeacherStaffWorkUpdateDelete(generics.RetrieveUpdateDestroyAPIView):
     queryset = WorkAssignment.objects.all()
-    serializer_class = WorkAssignmentSerializer  
+    serializer_class = TeacherWorkAssignmentSerializer  
 

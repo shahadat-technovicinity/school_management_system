@@ -83,10 +83,11 @@ urlpatterns = [
     path("api/staff/", include('apps.staff.urls')),
 
     ##### Teacher Management (Legacy)
-    # path("teacher_mmss_workdistribute/", include('teacher_mm_workdistribute.urls')),
+    path("teacher_mmss_workdistribute/", include('teacher_mm_workdistribute.urls')),
     path("teacher_mmm_comitee/", include('teacher_mm_comitee.urls')),
     path("teacher_mmm_teacher/", include('teacher_mm_teacher.urls')),
     path("teacher_mmm_teacher_leave/", include('teacher_mm_teacher_leave.urls')),
+    path("teacher_mm_add_salary/", include('teacher_mm_add_salary.urls')),
 
 
 

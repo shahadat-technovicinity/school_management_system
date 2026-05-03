@@ -13,7 +13,7 @@ class TeacherStaffListSerializer(serializers.ModelSerializer):
 
 
 
-class WorkAssignmentSerializer(serializers.ModelSerializer):
+class TeacherWorkAssignmentSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.name', read_only=True)
     
     class Meta:
