@@ -204,6 +204,7 @@ INSTALLED_APPS = [
     'account_mm_voucher_generate',
     'account_mm_create_fee',
     'account_mm_expence',
+    'account_mm_collect_fee',
 
 
 
@@ -244,6 +245,17 @@ INSTALLED_APPS = [
 
     ### Registration management
     'reg_mm_stock_event',
+
+
+
+    'report_centre_student_age',
+    'report_centre_attendance_report',
+    'report_centre_exam_reports',
+    'report_centre_visiting_report',
+    'report_centre_crime_report',
+    'report_centre_ims',
+    'report_centre_banbeis',
+    'report_centre_feeandsalary',
 
 
     ### apps

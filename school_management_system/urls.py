@@ -77,6 +77,8 @@ urlpatterns = [
     path("account_mm_voucher_generate/", include('account_mm_voucher_generate.urls')),
     path("account_mm_create_fee/", include('account_mm_create_fee.urls')),
     path("account_mm_expence/", include('account_mm_expence.urls')),
+    path("account_mm_collect_fee/", include('account_mm_collect_fee.urls')),
+
 
 
     ##### Teacher & Staff (Consolidated)
@@ -121,6 +123,23 @@ urlpatterns = [
 
     ### Document management
     path("document_mm_document_storage/", include('document_mm_document_storage.urls')),
+
+
+
+    ### Report Centre
+    path("report_centre_student_age/", include('report_centre_student_age.urls')),
+    path("report_centre_attendance_report/", include('report_centre_attendance_report.urls')),
+    path("report_centre_exam_reports/", include('report_centre_exam_reports.urls')),
+    path("report_centre_visiting_report/", include('report_centre_visiting_report.urls')),
+    path("report_centre_crime_report/", include('report_centre_crime_report.urls')),
+    path("report_centre_ims/", include('report_centre_ims.urls')),
+    path("report_centre_banbeis/", include('report_centre_banbeis.urls')),
+    path("report_centre_feeandsalary/", include('report_centre_feeandsalary.urls')),
+
+    
+
+
+
 
 
     ### home page
