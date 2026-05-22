@@ -234,6 +234,11 @@ INSTALLED_APPS = [
     ### Communication Center
     'communication_center_general_notice',
     'communication_canter_sms_template',
+
+
+
+
+    #### Document & Certificate centre
     'document_mm_document_storage',
 
 
@@ -344,7 +349,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Dhaka'
 USE_I18N = True
 USE_TZ = True
 

@@ -104,7 +104,7 @@ urlpatterns = [
     ### Library Management
     path("library_mm_book_list/", include('library_mm_book_list.urls')),
     path("library_mm_book_distrubution/", include('library_mm_book_distrubution.urls')),
-    # path("library_mm_attendance/", include('library_mm_attendance.urls')),
+    path("library_mm_attendance/", include('library_mm_attendance.urls')),
 
     ### Event & student life management
     path("event_mm_picnic_mm/", include('event_mm_picnic_mm.urls')),
@@ -123,6 +123,7 @@ urlpatterns = [
 
     ### Document management
     path("document_mm_document_storage/", include('document_mm_document_storage.urls')),
+
 
 
 
