@@ -7,7 +7,7 @@ from .serializers import StockInventorySerializer
 class StockListCreateAPIView(generics.ListCreateAPIView):
     queryset = StockInventory.objects.all().order_by('-created_at')
     serializer_class = StockInventorySerializer
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['category', 'location_or_sub_category']
@@ -16,4 +16,4 @@ class StockListCreateAPIView(generics.ListCreateAPIView):
 class StockDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = StockInventory.objects.all()
     serializer_class = StockInventorySerializer
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]

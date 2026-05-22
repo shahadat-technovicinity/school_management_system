@@ -13,7 +13,7 @@ class VisitingReportListCreateView(generics.ListCreateAPIView):
     queryset = VisitingReport.objects.all()
     serializer_class = VisitingReportSerializer
     pagination_class = VisitingReportPagination
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
     filter_backends = [filters.SearchFilter]
     search_fields = ['officer_name', 'designation', 'office', 'remarks']
 
@@ -21,4 +21,4 @@ class VisitingReportListCreateView(generics.ListCreateAPIView):
 class VisitingReportDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = VisitingReport.objects.all()
     serializer_class = VisitingReportSerializer
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]

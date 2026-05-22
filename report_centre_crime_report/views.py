@@ -13,7 +13,7 @@ class CrimeReportListCreateView(generics.ListCreateAPIView):
     queryset = CrimeReport.objects.all()
     serializer_class = CrimeReportSerializer
     pagination_class = CrimeReportPagination
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
     filter_backends = [filters.SearchFilter]
     search_fields = ['case_number', 'plaintiff', 'defendant', 'subject']
 
@@ -21,4 +21,4 @@ class CrimeReportListCreateView(generics.ListCreateAPIView):
 class CrimeReportDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CrimeReport.objects.all()
     serializer_class = CrimeReportSerializer
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
