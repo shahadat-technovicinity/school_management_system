@@ -215,3 +215,5 @@ class FinancialSummaryReportView(generics.GenericAPIView):
             },
             'monthly_summary': monthly_data,
         })
+    
+
