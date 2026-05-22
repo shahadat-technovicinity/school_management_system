@@ -113,7 +113,7 @@ class StudentFeeSearchView(generics.GenericAPIView):
 class FeeCollectionListCreateView(generics.ListCreateAPIView):
     serializer_class = FeeCollectionSerializer
     pagination_class = FeePagination
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
     filter_backends = [filters.SearchFilter]
     search_fields = ['student__first_name', 'student__last_name', 'status']
 
@@ -216,4 +216,4 @@ class FeeCollectionListCreateView(generics.ListCreateAPIView):
 class FeeCollectionDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = FeeCollection.objects.all().select_related('student')
     serializer_class = FeeCollectionSerializer
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
