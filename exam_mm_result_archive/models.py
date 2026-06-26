@@ -26,8 +26,8 @@ class ExamMark(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # Automatically calculate total before saving
         self.total = (self.writing or 0) + (self.practical or 0) + (self.mcq or 0)
+        self.status = 'saved' if self.total > 0 else 'pending'
         super().save(*args, **kwargs)
 
     def __str__(self):

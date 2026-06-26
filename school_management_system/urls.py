@@ -59,6 +59,8 @@ urlpatterns = [
     ## Academic Management
     path("academic_class_routine/", include("academic_class_routine.urls")),
     path("academic_online_class/", include("academic_online_class.urls")),
+    path("academic_create_subject/", include("academic_create_subject.urls")),
+
 
     ### Student Management
     #path("student_profile_create_all/", include("student_profile.urls")),
@@ -119,6 +121,11 @@ urlpatterns = [
     ### Communication Center
     path("communication_center/", include('communication_center_general_notice.urls')),
     path("communication_canter_sms_template/", include('communication_canter_sms_template.urls')),
+    path("communication_center_sentsms/", include('communication_center_sentsms.urls')),
+    path("communication_center_sentemail/", include('communication_center_sentemail.urls')),
+
+
+
 
 
     ### Document management
