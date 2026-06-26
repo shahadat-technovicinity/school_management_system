@@ -13,7 +13,7 @@ class SMSTemplateListCreateView(generics.ListCreateAPIView):
     serializer_class = SMSTemplateSerializer
     pagination_class = SMSTemplatePagination
 
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     
     filter_backends = [filters.SearchFilter]
@@ -24,4 +24,4 @@ class SMSTemplateListCreateView(generics.ListCreateAPIView):
 class SMSTemplateDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = SMSTemplate.objects.all()
     serializer_class = SMSTemplateSerializer
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]

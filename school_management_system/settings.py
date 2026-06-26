@@ -188,6 +188,7 @@ INSTALLED_APPS = [
     ## academic management
     'academic_class_routine',
     'academic_online_class',
+    'academic_create_subject',
 
     ## exam management
     'exam_mm_exam_setup',
@@ -234,6 +235,8 @@ INSTALLED_APPS = [
     ### Communication Center
     'communication_center_general_notice',
     'communication_canter_sms_template',
+    'communication_center_sentsms',
+    'communication_center_sentemail',
 
 
 
@@ -462,3 +465,34 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per task
 
 
 CELERY_RESULT_EXTENDED = True
+
+
+
+###SmsKey
+
+SMS_API_KEY = 'CoD2roZcc3X3eFY4q69WRL43PS7n7kbFzmy3r84R'
+SMS_API_ENDPOINT = 'https://api.sms.net.bd/sendsms'
+SMS_BALANCE_ENDPOINT = 'https://api.sms.net.bd/user/balance/'
+SMS_REPORT_ENDPOINT = 'https://api.sms.net.bd/report/request/'
+
+
+
+
+# ================================================================
+#  EMAIL / SMTP CONFIGURATION
+# ================================================================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+# আপনার জিমেইল এবং অ্যাপ পাসওয়ার্ড এখানে দিন
+EMAIL_HOST_USER = 'mehedihhasan809@gmail.com'  
+EMAIL_HOST_PASSWORD = 'your-16-digit-app-password'  
+DEFAULT_FROM_EMAIL = 'Harikhali High School <harikhalihs@gmail.com>'
+
+# গ্লোবাল পেজিনেশন (ফিগমার নিচে থাকা < 1 2 3 > পেজিং এর জন্য)
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,  # প্রতি পেজে কয়টি মেইল দেখাবে
+}

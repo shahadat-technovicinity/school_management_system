@@ -1,6 +1,7 @@
 # class_routine/models.py
 from django.db import models
 from django.conf import settings
+from academic_create_subject.models import Subject_Name
 
 
 #####    Teacher fetch    ########
@@ -43,7 +44,7 @@ class ClassRoutine(models.Model):
 
     class_name = models.CharField(max_length=10, choices=CLASS_CHOICES)
     section = models.CharField(max_length=10, choices=SECTION_CHOICES)
-    subject = models.CharField(max_length=100)
+    subject = models.ForeignKey('academic_create_subject.Subject_Name', on_delete=models.PROTECT)
     day = models.CharField(max_length=10, choices=DAY_CHOICES)
     start_time = models.TimeField()
     end_time = models.TimeField()
