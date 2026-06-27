@@ -1,0 +1,44 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync files to VPS
+        uses: burnett01/rsync-deployments@6.0.0
+        with:
+          # Added venv, __pycache__, and *.pyc to excludes so your server's virtual env isn't overwritten!
+          switches: -avzr --delete --exclude=".env" --exclude="venv" --exclude="__pycache__" --exclude=".git" --exclude="*.pyc"
+          path: ./
+          remote_path: /var/www/school_management_system/school_management_system/
+          remote_host: ${{ secrets.VPS_HOST }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Migrate and Restart Application
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /var/www/school_management_system/school_management_system
+            
+            source venv/bin/activate
+            
+            pip install -r requirements.txt
+            
+            python manage.py migrate
+            
+            python manage.py collectstatic --noinput
+            
+            sudo systemctl restart school_management
