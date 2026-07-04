@@ -10,7 +10,7 @@ class CertificateApplicationViewSet(viewsets.ModelViewSet):
     queryset = CertificateApplication.objects.all().select_related('student', 'reviewed_by').prefetch_related('attachments')
     serializer_class = CertificateApplicationSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['student__first_name', 'student__last_name', 'student__admission_no', 'certificate_type']
+    search_fields = ['student__first_name', 'student__last_name', 'student__admission_number', 'certificate_type']
 
     def perform_create(self, serializer):
         # Initial timeline entry

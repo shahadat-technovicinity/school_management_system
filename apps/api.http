@@ -1,0 +1,1066 @@
+### ============================================================
+###  School Management System — apps/ REST Client
+###  Compatible with: VS Code REST Client · JetBrains HTTP Client
+### ============================================================
+
+@baseUrl = http://127.0.0.1:8000
+@contentType = application/json
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  ACADEMICS  →  /academics/
+###  Router: class-sections | sections | academic-years | class-rooms
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# @name listAcademicYears
+GET {{baseUrl}}/academics/academic-years/
+Content-Type: {{contentType}}
+
+###
+
+# @name createAcademicYear
+POST {{baseUrl}}/academics/academic-years/
+Content-Type: {{contentType}}
+
+{
+  "name": "2025-2026",
+  "start_date": "2025-01-01",
+  "end_date": "2025-12-31",
+  "is_current": true
+}
+
+###
+
+# @name getAcademicYear
+GET {{baseUrl}}/academics/academic-years/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateAcademicYear
+PATCH {{baseUrl}}/academics/academic-years/1/
+Content-Type: {{contentType}}
+
+{
+  "is_current": false
+}
+
+###
+
+# @name deleteAcademicYear
+DELETE {{baseUrl}}/academics/academic-years/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name listClassRooms
+GET {{baseUrl}}/academics/class-rooms/
+Content-Type: {{contentType}}
+
+###
+
+# @name createClassRoom
+POST {{baseUrl}}/academics/class-rooms/
+Content-Type: {{contentType}}
+
+{
+  "name": "Class 6",
+  "capacity": 40
+}
+
+###
+
+# @name listSections
+GET {{baseUrl}}/academics/sections/
+Content-Type: {{contentType}}
+
+###
+
+# @name createSection
+POST {{baseUrl}}/academics/sections/
+Content-Type: {{contentType}}
+
+{
+  "name": "A"
+}
+
+###
+
+# @name listClassSections
+GET {{baseUrl}}/academics/class-sections/
+Content-Type: {{contentType}}
+
+###
+
+# @name createClassSection
+POST {{baseUrl}}/academics/class-sections/
+Content-Type: {{contentType}}
+
+{
+  "class_room": 1,
+  "section": 1,
+  "academic_year": 1
+}
+
+###
+
+# @name getClassSection
+GET {{baseUrl}}/academics/class-sections/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateClassSection
+PATCH {{baseUrl}}/academics/class-sections/1/
+Content-Type: {{contentType}}
+
+{
+  "section": 2
+}
+
+###
+
+# @name deleteClassSection
+DELETE {{baseUrl}}/academics/class-sections/1/
+Content-Type: {{contentType}}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  ADMISSIONS  →  /admissions/
+###  Router: forms | lottery | completion
+###  Custom: bulk-import/
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# @name listAdmissionForms
+# Filter params: admission_status | desired_class | payment_status
+# Search:        student_name_english | application_number | mobile_number
+GET {{baseUrl}}/admissions/forms/?admission_status=pending
+Content-Type: {{contentType}}
+
+###
+
+# @name createAdmissionForm
+POST {{baseUrl}}/admissions/forms/
+Content-Type: {{contentType}}
+
+{
+  "student_name_english": "Rahim Uddin",
+  "mobile_number": "01712345678",
+  "desired_class": 1,
+  "admission_status": "pending",
+  "payment_status": "unpaid"
+}
+
+###
+
+# @name getAdmissionForm
+GET {{baseUrl}}/admissions/forms/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateAdmissionForm
+PATCH {{baseUrl}}/admissions/forms/1/
+Content-Type: {{contentType}}
+
+{
+  "payment_status": "paid"
+}
+
+###
+
+# @name deleteAdmissionForm
+DELETE {{baseUrl}}/admissions/forms/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name changeAdmissionStatus
+# Custom action: PATCH /admissions/forms/{id}/change_status/
+PATCH {{baseUrl}}/admissions/forms/1/change_status/
+Content-Type: {{contentType}}
+
+{
+  "status": "selected"
+}
+
+###
+
+# @name bulkImportAdmissions
+# Accepts multipart: file (CSV/Excel) + class_id + section_id
+POST {{baseUrl}}/admissions/bulk-import/
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="file"; filename="students.csv"
+Content-Type: text/csv
+
+< ./students_sample.csv
+------Boundary
+Content-Disposition: form-data; name="class_id"
+
+class 6
+------Boundary
+Content-Disposition: form-data; name="section_id"
+
+A
+------Boundary--
+
+###
+### ── Lottery ──────────────────────────────────────────────
+
+# @name lotteryStats
+# Query param: class (default "class 6")
+GET {{baseUrl}}/admissions/lottery/stats/?class=class%206
+Content-Type: {{contentType}}
+
+###
+
+# @name lotteryAssignNumbers
+POST {{baseUrl}}/admissions/lottery/assign_numbers/
+Content-Type: {{contentType}}
+
+{
+  "class": "class 6"
+}
+
+###
+
+# @name lotteryExecute
+POST {{baseUrl}}/admissions/lottery/execute/
+Content-Type: {{contentType}}
+
+{
+  "class": "class 6",
+  "seats": 100
+}
+
+###
+### ── Completion ───────────────────────────────────────────
+
+# @name listSelectedApplicants
+# Shows only applicants with status = 'selected'
+GET {{baseUrl}}/admissions/completion/
+Content-Type: {{contentType}}
+
+###
+
+# @name getCompletion
+GET {{baseUrl}}/admissions/completion/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name finalizeAdmission
+# Multipart: Provide TC / NID / Photo files
+POST {{baseUrl}}/admissions/completion/1/finalize/
+Content-Type: multipart/form-data; boundary=----FileBoundary
+
+------FileBoundary
+Content-Disposition: form-data; name="tc"; filename="tc.pdf"
+Content-Type: application/pdf
+
+< ./tc.pdf
+------FileBoundary--
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  ATTENDANCE  →  /attendance/
+###  Endpoints: bulk/ | patch/ | student/{id}/
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# @name bulkMarkAttendance
+# Auth required
+POST {{baseUrl}}/attendance/bulk/
+Content-Type: {{contentType}}
+
+{
+  "class_section": 1,
+  "date": "2025-07-04",
+  "records": [
+    { "student": 1, "status": "present" },
+    { "student": 2, "status": "absent" },
+    { "student": 3, "status": "late" }
+  ]
+}
+
+###
+
+# @name patchAttendanceByKey
+# Patch a single record identified by student + class_section + date
+PATCH {{baseUrl}}/attendance/patch/
+Content-Type: {{contentType}}
+
+{
+  "student": 1,
+  "class_section": 1,
+  "date": "2025-07-04",
+  "status": "present"
+}
+
+###
+
+# @name studentAttendanceList
+# Query params: class_section | marked_by | date
+GET {{baseUrl}}/attendance/student/1/?date=2025-07-04
+Content-Type: {{contentType}}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  DOCUMENTS  →  /documents/
+###  Router: certificates
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# @name listCertificates
+# Search: student first_name | last_name | admission_no | certificate_type
+GET {{baseUrl}}/documents/certificates/?search=Rahim
+Content-Type: {{contentType}}
+
+###
+
+# @name createCertificateApplication
+POST {{baseUrl}}/documents/certificates/
+Content-Type: {{contentType}}
+
+{
+  "student": 1,
+  "certificate_type": "leaving_certificate",
+  "reason": "Transfer to another school"
+}
+
+###
+
+# @name getCertificate
+GET {{baseUrl}}/documents/certificates/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateCertificate
+PATCH {{baseUrl}}/documents/certificates/1/
+Content-Type: {{contentType}}
+
+{
+  "reason": "Updated reason"
+}
+
+###
+
+# @name deleteCertificate
+DELETE {{baseUrl}}/documents/certificates/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name approveCertificate
+POST {{baseUrl}}/documents/certificates/1/approve/
+Content-Type: {{contentType}}
+
+{
+  "note": "Verified by principal on 2025-07-04"
+}
+
+###
+
+# @name denyCertificate
+POST {{baseUrl}}/documents/certificates/1/deny/
+Content-Type: {{contentType}}
+
+{
+  "note": "Insufficient documentation provided"
+}
+
+###
+
+# @name previewTC
+# Returns data for the printable Transfer Certificate template
+GET {{baseUrl}}/documents/certificates/1/preview_tc/
+Content-Type: {{contentType}}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  ENROLLMENTS  →  /enrollments/
+###  Router: enrollments
+###  Auth required. Methods: GET | POST | PATCH | DELETE
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# @name listEnrollments
+# Filter: student | course | status | term
+# Search: student__first_name | student__last_name | course__title
+# Order:  created_at | updated_at | start_date | end_date
+GET {{baseUrl}}/enrollments/enrollments/?status=active&ordering=-created_at
+Content-Type: {{contentType}}
+
+###
+
+# @name createEnrollment
+POST {{baseUrl}}/enrollments/enrollments/
+Content-Type: {{contentType}}
+
+{
+  "student": 1,
+  "course": 1,
+  "status": "active",
+  "term": "2025-1",
+  "start_date": "2025-01-15",
+  "end_date": "2025-06-30"
+}
+
+###
+
+# @name getEnrollment
+GET {{baseUrl}}/enrollments/enrollments/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateEnrollment
+PATCH {{baseUrl}}/enrollments/enrollments/1/
+Content-Type: {{contentType}}
+
+{
+  "status": "completed"
+}
+
+###
+
+# @name deleteEnrollment
+DELETE {{baseUrl}}/enrollments/enrollments/1/
+Content-Type: {{contentType}}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  EXAMS  →  /exams/
+###  Router: setup | types | subjects | routines | questions
+###           admit-cards | seat-plans | teacher-duties | results
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### ── Setup ────────────────────────────────────────────────
+
+# @name listExamSetups
+GET {{baseUrl}}/exams/setup/
+Content-Type: {{contentType}}
+
+###
+
+# @name createExamSetup
+POST {{baseUrl}}/exams/setup/
+Content-Type: {{contentType}}
+
+{
+  "name": "Annual Exam 2025",
+  "exam_type": 1,
+  "academic_year": 1,
+  "start_date": "2025-11-01",
+  "end_date": "2025-11-30"
+}
+
+###
+
+# @name getExamSetup
+GET {{baseUrl}}/exams/setup/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateExamSetup
+PATCH {{baseUrl}}/exams/setup/1/
+Content-Type: {{contentType}}
+
+{
+  "name": "Annual Final Exam 2025"
+}
+
+###
+
+# @name deleteExamSetup
+DELETE {{baseUrl}}/exams/setup/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name publishExam
+POST {{baseUrl}}/exams/setup/1/publish/
+Content-Type: {{contentType}}
+
+###
+
+# @name examFullRoutine
+GET {{baseUrl}}/exams/setup/1/full_routine/
+Content-Type: {{contentType}}
+
+###
+### ── Types ────────────────────────────────────────────────
+
+# @name listExamTypes
+GET {{baseUrl}}/exams/types/
+Content-Type: {{contentType}}
+
+###
+
+# @name createExamType
+POST {{baseUrl}}/exams/types/
+Content-Type: {{contentType}}
+
+{
+  "name": "Annual",
+  "description": "End of year exam"
+}
+
+###
+### ── Subjects ─────────────────────────────────────────────
+
+# @name listSubjects
+GET {{baseUrl}}/exams/subjects/
+Content-Type: {{contentType}}
+
+###
+
+# @name createSubject
+POST {{baseUrl}}/exams/subjects/
+Content-Type: {{contentType}}
+
+{
+  "name": "Mathematics",
+  "code": "MATH-101",
+  "class_room": 1,
+  "full_marks": 100,
+  "pass_marks": 33
+}
+
+###
+### ── Routines ─────────────────────────────────────────────
+
+# @name listExamRoutines
+GET {{baseUrl}}/exams/routines/
+Content-Type: {{contentType}}
+
+###
+
+# @name createExamRoutine
+POST {{baseUrl}}/exams/routines/
+Content-Type: {{contentType}}
+
+{
+  "exam_setup": 1,
+  "subject": 1,
+  "class_room": 1,
+  "date": "2025-11-05",
+  "start_time": "09:00:00",
+  "end_time": "12:00:00"
+}
+
+###
+### ── Question Bank ────────────────────────────────────────
+
+# @name listQuestions
+GET {{baseUrl}}/exams/questions/
+Content-Type: {{contentType}}
+
+###
+
+# @name createQuestion
+POST {{baseUrl}}/exams/questions/
+Content-Type: {{contentType}}
+
+{
+  "subject": 1,
+  "question_text": "What is 2 + 2?",
+  "question_type": "mcq",
+  "marks": 5
+}
+
+###
+### ── Admit Cards ──────────────────────────────────────────
+
+# @name listAdmitCards
+GET {{baseUrl}}/exams/admit-cards/
+Content-Type: {{contentType}}
+
+###
+
+# @name createAdmitCard
+POST {{baseUrl}}/exams/admit-cards/
+Content-Type: {{contentType}}
+
+{
+  "exam_setup": 1,
+  "student": 1,
+  "roll_number": "2025-001"
+}
+
+###
+
+# @name bulkGenerateAdmitCards
+POST {{baseUrl}}/exams/admit-cards/generate-bulk/
+Content-Type: {{contentType}}
+
+{
+  "exam_setup": 1,
+  "class_id": 1
+}
+
+###
+### ── Seat Plans ───────────────────────────────────────────
+
+# @name listSeatPlans
+GET {{baseUrl}}/exams/seat-plans/
+Content-Type: {{contentType}}
+
+###
+
+# @name createSeatPlan
+POST {{baseUrl}}/exams/seat-plans/
+Content-Type: {{contentType}}
+
+{
+  "exam_setup": 1,
+  "room": "Room-A",
+  "student": 1,
+  "seat_number": "A-01"
+}
+
+###
+
+# @name roomVisualization
+# Query param: room
+GET {{baseUrl}}/exams/seat-plans/room_visualization/?room=Room-A
+Content-Type: {{contentType}}
+
+###
+### ── Teacher Duties ──────────────────────────────────────
+
+# @name listTeacherDuties
+GET {{baseUrl}}/exams/teacher-duties/
+Content-Type: {{contentType}}
+
+###
+
+# @name createTeacherDuty
+POST {{baseUrl}}/exams/teacher-duties/
+Content-Type: {{contentType}}
+
+{
+  "exam_setup": 1,
+  "teacher": 1,
+  "room": "Room-A",
+  "date": "2025-11-05",
+  "shift": "morning"
+}
+
+###
+### ── Results ──────────────────────────────────────────────
+
+# @name listResults
+GET {{baseUrl}}/exams/results/
+Content-Type: {{contentType}}
+
+###
+
+# @name createResult
+POST {{baseUrl}}/exams/results/
+Content-Type: {{contentType}}
+
+{
+  "exam_setup": 1,
+  "student": 1,
+  "subject": 1,
+  "marks_obtained": 85,
+  "full_marks": 100
+}
+
+###
+
+# @name getResult
+GET {{baseUrl}}/exams/results/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateResult
+PATCH {{baseUrl}}/exams/results/1/
+Content-Type: {{contentType}}
+
+{
+  "marks_obtained": 90
+}
+
+###
+
+# @name deleteResult
+DELETE {{baseUrl}}/exams/results/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name resultStatistics
+# Query param: exam_setup
+GET {{baseUrl}}/exams/results/statistics/?exam_setup=1
+Content-Type: {{contentType}}
+
+###
+
+# @name resultTranscript
+GET {{baseUrl}}/exams/results/1/transcript/
+Content-Type: {{contentType}}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  ID CARDS  →  /id_cards/
+###  Router: StudentIDCardViewSet (Student list w/ card ops)
+###  Custom: task-status/{task_id}/
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# @name listStudentsForIDCards
+# Query params: class_name | section | academic_year
+GET {{baseUrl}}/id_cards/?class_name=Class%206&section=A&academic_year=2025
+Content-Type: {{contentType}}
+
+###
+
+# @name getStudentIDCard
+GET {{baseUrl}}/id_cards/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name generateSingleIDCard
+POST {{baseUrl}}/id_cards/1/generate_single/
+Content-Type: {{contentType}}
+
+{
+  "template_id": 1
+}
+
+###
+
+# @name batchGenerateIDCards
+POST {{baseUrl}}/id_cards/batch_generate/
+Content-Type: {{contentType}}
+
+{
+  "student_ids": [1, 2, 3, 4, 5],
+  "template_id": 1
+}
+
+###
+
+# @name checkIDCardTaskStatus
+# Check Celery task progress — use task_id from batch_generate response
+GET {{baseUrl}}/id_cards/task-status/abc123-task-id-here/
+Content-Type: {{contentType}}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  STAFF  →  /api/staff/
+###  Router: profiles | leaves | committees | committee-notices
+###           committee-communications | work
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### ── Staff Profiles ──────────────────────────────────────
+
+# @name listStaffProfiles
+# Filter:  role | status | department
+# Search:  employee_id | first_name | last_name | phone
+# Order:   joining_date | employee_id
+GET {{baseUrl}}/api/staff/profiles/?role=teacher&status=active
+Content-Type: {{contentType}}
+
+###
+
+# @name createStaffProfile
+POST {{baseUrl}}/api/staff/profiles/
+Content-Type: {{contentType}}
+
+{
+  "employee_id": "EMP-001",
+  "role": "teacher",
+  "status": "active",
+  "department": "Science",
+  "phone": "01711111111",
+  "joining_date": "2023-01-15"
+}
+
+###
+
+# @name getStaffProfile
+GET {{baseUrl}}/api/staff/profiles/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateStaffProfile
+PATCH {{baseUrl}}/api/staff/profiles/1/
+Content-Type: {{contentType}}
+
+{
+  "department": "Mathematics"
+}
+
+###
+
+# @name deleteStaffProfile
+DELETE {{baseUrl}}/api/staff/profiles/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name listTeachersOnly
+# Custom action: GET /api/staff/profiles/teachers/
+GET {{baseUrl}}/api/staff/profiles/teachers/
+Content-Type: {{contentType}}
+
+###
+### ── Leave Applications ───────────────────────────────────
+
+# @name listLeaveApplications
+# Filter: status | staff | leave_type
+GET {{baseUrl}}/api/staff/leaves/?status=pending
+Content-Type: {{contentType}}
+
+###
+
+# @name createLeaveApplication
+POST {{baseUrl}}/api/staff/leaves/
+Content-Type: {{contentType}}
+
+{
+  "staff": 1,
+  "leave_type": "sick",
+  "start_date": "2025-07-10",
+  "end_date": "2025-07-12",
+  "reason": "Medical appointment"
+}
+
+###
+
+# @name getLeaveApplication
+GET {{baseUrl}}/api/staff/leaves/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateLeaveApplication
+PATCH {{baseUrl}}/api/staff/leaves/1/
+Content-Type: {{contentType}}
+
+{
+  "reason": "Updated reason"
+}
+
+###
+
+# @name deleteLeaveApplication
+DELETE {{baseUrl}}/api/staff/leaves/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name approveLeave
+POST {{baseUrl}}/api/staff/leaves/1/approve/
+Content-Type: {{contentType}}
+
+{
+  "comments": "Approved by Head of Department"
+}
+
+###
+### ── Committees ────────────────────────────────────────────
+
+# @name listCommittees
+GET {{baseUrl}}/api/staff/committees/
+Content-Type: {{contentType}}
+
+###
+
+# @name createCommitteeMember
+POST {{baseUrl}}/api/staff/committees/
+Content-Type: {{contentType}}
+
+{
+  "staff": 1,
+  "committee_type": "academic",
+  "role_in_committee": "chairman"
+}
+
+###
+
+# @name listCommitteeNotices
+# Filter: committee_type | status
+GET {{baseUrl}}/api/staff/committee-notices/?committee_type=academic&status=active
+Content-Type: {{contentType}}
+
+###
+
+# @name createCommitteeNotice
+POST {{baseUrl}}/api/staff/committee-notices/
+Content-Type: {{contentType}}
+
+{
+  "committee_type": "academic",
+  "title": "Monthly Meeting",
+  "content": "Meeting scheduled for July 15",
+  "status": "active"
+}
+
+###
+
+# @name listCommitteeCommunications
+# Filter: committee_type | message_type
+GET {{baseUrl}}/api/staff/committee-communications/?committee_type=academic
+Content-Type: {{contentType}}
+
+###
+
+# @name createCommitteeCommunication
+POST {{baseUrl}}/api/staff/committee-communications/
+Content-Type: {{contentType}}
+
+{
+  "committee_type": "academic",
+  "message_type": "announcement",
+  "subject": "Agenda for July Meeting",
+  "body": "Please review the attached agenda."
+}
+
+###
+### ── Work Assignments ─────────────────────────────────────
+
+# @name listWorkAssignments
+GET {{baseUrl}}/api/staff/work/
+Content-Type: {{contentType}}
+
+###
+
+# @name createWorkAssignment
+POST {{baseUrl}}/api/staff/work/
+Content-Type: {{contentType}}
+
+{
+  "staff": 1,
+  "title": "Class 6 Math",
+  "class_section": 1,
+  "subject": "Mathematics",
+  "hours_per_week": 5
+}
+
+###
+
+# @name getWorkAssignment
+GET {{baseUrl}}/api/staff/work/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateWorkAssignment
+PATCH {{baseUrl}}/api/staff/work/1/
+Content-Type: {{contentType}}
+
+{
+  "hours_per_week": 6
+}
+
+###
+
+# @name deleteWorkAssignment
+DELETE {{baseUrl}}/api/staff/work/1/
+Content-Type: {{contentType}}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  STUDENTS  →  /students/
+###  Router: management | profile (read-only)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### ── Management (Full CRUD) ──────────────────────────────
+
+# @name listStudents
+# Filter:  status | academic_year | gender | blood_group
+# Search:  first_name | last_name | admission_number | roll_number | primary_contact_number
+# Order:   created_at | admission_date | first_name
+GET {{baseUrl}}/students/management/?status=active&gender=male&ordering=-created_at
+Content-Type: {{contentType}}
+
+###
+
+# @name createStudent
+POST {{baseUrl}}/students/management/
+Content-Type: {{contentType}}
+
+{
+  "first_name": "Karim",
+  "last_name": "Hossain",
+  "admission_number": "ADM-2025-001",
+  "roll_number": "101",
+  "gender": "male",
+  "blood_group": "O+",
+  "status": "active",
+  "academic_year": 1,
+  "admission_date": "2025-01-15",
+  "primary_contact_number": "01712345678"
+}
+
+###
+
+# @name getStudent
+GET {{baseUrl}}/students/management/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name updateStudent
+PATCH {{baseUrl}}/students/management/1/
+Content-Type: {{contentType}}
+
+{
+  "status": "inactive"
+}
+
+###
+
+# @name deleteStudent
+DELETE {{baseUrl}}/students/management/1/
+Content-Type: {{contentType}}
+
+###
+### ── Profile (360° View — Read Only) ─────────────────────
+
+# @name listStudentProfiles
+GET {{baseUrl}}/students/profile/
+Content-Type: {{contentType}}
+
+###
+
+# @name getStudentProfile
+GET {{baseUrl}}/students/profile/1/
+Content-Type: {{contentType}}
+
+###
+
+# @name studentAcademicPerformance
+GET {{baseUrl}}/students/profile/1/academic_performance/
+Content-Type: {{contentType}}
+
+###
+
+# @name studentAttendanceSummary
+GET {{baseUrl}}/students/profile/1/attendance_summary/
+Content-Type: {{contentType}}
+
+###
+
+# @name studentDisciplineHistory
+GET {{baseUrl}}/students/profile/1/discipline_history/
+Content-Type: {{contentType}}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+###  SWAGGER / REDOC  (for quick interactive browsing)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# @name swagger
+GET {{baseUrl}}/swagger/
+
+###
+
+# @name redoc
+GET {{baseUrl}}/redoc/
