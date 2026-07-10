@@ -5,8 +5,10 @@ from apps.students.models import Student
 
 class Enrollment(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    class_section = models.ForeignKey(ClassSection, on_delete=models.CASCADE)
-    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+    # class_section = models.ForeignKey(ClassSection, on_delete=models.CASCADE)
+    # academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+    class_section = models.CharField(max_length=256)
+    academic_year = models.CharField(max_length=256)
     roll_no = models.PositiveIntegerField()
 
     class Meta:
