@@ -5,10 +5,7 @@ from rest_framework import viewsets, permissions, filters
 from rest_framework.pagination import LimitOffsetPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.enrollments.models import Enrollment
-
-
-
-
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 
@@ -31,6 +28,9 @@ class EnrollmentViewSet(BaseModelViewSet):
     filterset_fields = ['student', 'course', 'status', 'term']
     search_fields = ['student__first_name', 'student__last_name', 'course__title']
     ordering_fields = ['created_at', 'updated_at', 'start_date', 'end_date']
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
