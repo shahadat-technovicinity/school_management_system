@@ -1,7 +1,8 @@
 from django.db import models
 
 class LotterySession(models.Model):
-    academic_year = models.ForeignKey('academics.AcademicYear', on_delete=models.CASCADE, related_name='lottery_sessions')
+    # academic_year = models.ForeignKey('academics.AcademicYear', on_delete=models.CASCADE, related_name='lottery_sessions')
+    academic_year = models.CharField(max_length=100) # Choices
     target_class = models.CharField(max_length=100) # Choices
     total_seats = models.PositiveIntegerField()
     lottery_date = models.DateField()

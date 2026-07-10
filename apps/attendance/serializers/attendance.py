@@ -55,9 +55,8 @@ class AttendancePatchSerializer(serializers.Serializer):
     student = serializers.PrimaryKeyRelatedField(
         queryset=Student.objects.all()
     )
-    class_section = serializers.PrimaryKeyRelatedField(
-        queryset=ClassSection.objects.all()
-    )
+    classname = serializers.CharField(max_length=256)
+    section = serializers.CharField(max_length=256)
     date = serializers.DateField()
     status = serializers.ChoiceField(
         choices=Attendance.STATUS_CHOICES

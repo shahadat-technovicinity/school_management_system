@@ -24,9 +24,9 @@ class Attendance(models.Model):
     )
 
     class Meta:
-        unique_together = ('student', 'class_section', 'date')
+        unique_together = ('student', 'classname', 'section', 'date')
         indexes = [
-            models.Index(fields=['class_section', 'date']),
+            models.Index(fields=['classname', 'section', 'date']),
             models.Index(fields=['student', 'date']),
         ]
 

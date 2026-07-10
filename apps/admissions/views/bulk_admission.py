@@ -12,8 +12,8 @@ class BulkImportAPIView(APIView):
 
     def post(self, request, *args, **kwargs):
         file_obj = request.FILES.get('file')
-        class_name = request.data.get('class_id', 'class 6')
-        section = request.data.get('section_id', 'A')
+        class_name = request.data.get('class_name', 'class 6')
+        section = request.data.get('section', 'A')
 
         if not file_obj:
             return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
