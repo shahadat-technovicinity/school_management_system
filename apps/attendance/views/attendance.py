@@ -48,7 +48,7 @@ from rest_framework.generics import ListAPIView
 
 class StudentAttendanceListAPIView(ListAPIView):
     serializer_class = AttendanceListSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -60,12 +60,17 @@ class StudentAttendanceListAPIView(ListAPIView):
         
         queryset = Attendance.objects.filter(student_id=student_id)
 
-        class_section = self.request.query_params.get('class_section')
+        class_name = self.request.query_params.get('classname')
+        section = self.request.query_params.get('section')
+
         marked_by = self.request.query_params.get('marked_by')
         date = self.request.query_params.get('date')
 
-        if class_section:
-            queryset = queryset.filter(class_section_id=class_section)
+        if class_name:
+            queryset = queryset.filter(classname=class_name)
+
+        if section:
+            queryset = queryset.filter(section=section)
 
         if marked_by:
             queryset = queryset.filter(marked_by_id=marked_by)
