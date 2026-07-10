@@ -51,6 +51,7 @@ urlpatterns = [
 
     ######### Mehedi##########
     path("auth/", include("userauthentication.urls")),
+    path("auth-roles-permissions/", include("user_auth_roles_permissions.urls")),
 
     #####addmission
     # path("stdadmission/", include("student_admission.urls")), # Removed during refactor

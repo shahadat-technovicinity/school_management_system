@@ -167,6 +167,7 @@ INSTALLED_APPS = [
     # Mehedi
     ## user authentication
     'userauthentication',
+    'user_auth_roles_permissions',
 
     ## student admission
     # 'student_admission',
