@@ -31,7 +31,8 @@ class AttendancePatchByKeyAPIView(APIView):
         attendance = get_object_or_404(
             Attendance,
             student=data['student'],
-            class_section=data['class_section'],
+            classname=data['classname'],
+            section=data['section'],
             date=data['date']
         )
 
