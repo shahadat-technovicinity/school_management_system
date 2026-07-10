@@ -16,9 +16,7 @@ class AttendanceRecordSerializer(serializers.Serializer):
 
 
 class BulkAttendanceSerializer(serializers.Serializer):
-    class_section = serializers.PrimaryKeyRelatedField(
-        queryset=ClassSection.objects.all()
-    )
+
     date = serializers.DateField()
     records = AttendanceRecordSerializer(many=True)
     marked_by = serializers.PrimaryKeyRelatedField(
@@ -30,7 +28,8 @@ class BulkAttendanceSerializer(serializers.Serializer):
         UPSERT logic: create or update attendance
         """
         teacher = validated_data['marked_by']
-        class_section = validated_data['class_section']
+        classname = validated_data['classname']
+        section = validated_data['section']
         date = validated_data['date']
         records = validated_data['records']
 
@@ -39,7 +38,8 @@ class BulkAttendanceSerializer(serializers.Serializer):
         for record in records:
             obj, _ = Attendance.objects.update_or_create(
                 student=record['student'],
-                class_section=class_section,
+                classname=classname,
+                section=section,
                 date=date,
                 defaults={
                     'status': record['status'],
@@ -72,7 +72,8 @@ class AttendanceListSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'date',
-            'class_section',
+            'classname',
+            'section',
             'status',
             'marked_by'
         ]

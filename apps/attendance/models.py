@@ -14,7 +14,9 @@ class Attendance(models.Model):
     ]
 
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    class_section = models.ForeignKey(ClassSection, on_delete=models.CASCADE)
+    # class_section = models.ForeignKey(ClassSection, on_delete=models.CASCADE)
+    classname = models.CharField(max_length=256)
+    section = models.CharField(max_length=256)
     date = models.DateField()
     status = models.CharField(max_length=1, choices=STATUS_CHOICES)
     marked_by = models.ForeignKey(
