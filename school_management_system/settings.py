@@ -402,7 +402,13 @@ REST_FRAMEWORK = {
 # Swagger: make it public
 SWAGGER_SETTINGS = {
     'USE_SESSION_AUTH': False,
-    'SECURITY_DEFINITIONS': None,
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
     'LOGIN_URL': None,
     'LOGOUT_URL': None,
 }
