@@ -32,23 +32,23 @@ class EnrollmentViewSet(BaseModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return Enrollment.objects.none()
+    # def get_queryset(self):
+    #     if getattr(self, 'swagger_fake_view', False):
+    #         return Enrollment.objects.none()
         
-        # allow limiting to current user's school if Enrollment has that relation
-        qs = super().get_queryset()
-        user = self.request.user
-        if user.is_anonymous:
-            return Enrollment.objects.none()
+    #     # allow limiting to current user's school if Enrollment has that relation
+    #     qs = super().get_queryset()
+    #     user = self.request.user
+    #     if user.is_anonymous:
+    #         return Enrollment.objects.none()
             
-        if not user.is_staff:
-            # attempt common patterns: school relation on enrollment or student
-            if hasattr(qs.model, "school"):
-                qs = qs.filter(school=getattr(user, "school", None))
-            elif hasattr(qs.model, "student") and hasattr(user, "school"):
-                qs = qs.filter(student__school=getattr(user, "school", None))
-        return qs
+    #     if not user.is_staff:
+    #         # attempt common patterns: school relation on enrollment or student
+    #         if hasattr(qs.model, "school"):
+    #             qs = qs.filter(school=getattr(user, "school", None))
+    #         elif hasattr(qs.model, "student") and hasattr(user, "school"):
+    #             qs = qs.filter(student__school=getattr(user, "school", None))
+    #     return qs
 
     # def get_permissions(self):
     #     """
