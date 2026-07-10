@@ -25,7 +25,7 @@ class EnrollmentViewSet(BaseModelViewSet):
     pagination_class = StandardPagination
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['student', 'course', 'status', 'term']
+    # filterset_fields = ['student', 'course', 'status', 'term']
     search_fields = ['student__first_name', 'student__last_name', 'course__title']
     ordering_fields = ['created_at', 'updated_at', 'start_date', 'end_date']
 
