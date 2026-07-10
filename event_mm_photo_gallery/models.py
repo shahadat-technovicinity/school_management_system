@@ -13,7 +13,6 @@ class PhotoGallery(models.Model):
 
 class VideoGallery(models.Model):
     video_title = models.CharField(max_length=255)
-    poster_image = models.ImageField(upload_to='video_posters/')
     video_url = models.URLField()  
     created_at = models.DateTimeField(auto_now_add=True)
 
