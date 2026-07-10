@@ -83,8 +83,7 @@ urlpatterns = [
 
 
 
-    ##### Teacher & Staff (Consolidated)
-    path("api/staff/", include('apps.staff.urls')),
+    
 
     ##### Teacher Management (Legacy)
     path("teacher_mmss_workdistribute/", include('teacher_mm_workdistribute.urls')),
@@ -154,14 +153,16 @@ urlpatterns = [
     path("homepage/", include('homepage.urls')),
 
 
-    path("academics/", include("apps.academics.urls")),
+    # path("academics/", include("apps.academics.urls")),
+    # path("exams/", include("apps.exams.urls")),
+
     path("enrollments/", include("apps.enrollments.urls")),
     path("attendance/", include("apps.attendance.urls")),
     path("id_cards/", include("apps.id_cards.urls")),
     path("admissions/", include("apps.admissions.urls")),
     path("students/", include("apps.students.urls")),
     path("documents/", include("apps.documents.urls")),
-    path("exams/", include("apps.exams.urls")),
+    path("api/staff/", include('apps.staff.urls')),
 
 
 
