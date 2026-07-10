@@ -1,6 +1,5 @@
 # attendance/views.py
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from apps.attendance.models import Attendance
 from apps.attendance.serializers.attendance import AttendanceListSerializer, AttendancePatchSerializer, BulkAttendanceSerializer
 from rest_framework.generics import CreateAPIView
@@ -48,7 +47,7 @@ from rest_framework.generics import ListAPIView
 
 class StudentAttendanceListAPIView(ListAPIView):
     serializer_class = AttendanceListSerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
