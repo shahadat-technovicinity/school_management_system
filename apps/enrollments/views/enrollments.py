@@ -49,3 +49,15 @@ class EnrollmentViewSet(BaseModelViewSet):
             elif hasattr(qs.model, "student") and hasattr(user, "school"):
                 qs = qs.filter(student__school=getattr(user, "school", None))
         return qs
+
+    # def get_permissions(self):
+    #     """
+    #     GET/List: Anyone can see.
+    #     POST/PUT/DELETE: Only authenticated users.
+    #     """
+    #     if self.action in ['list', 'retrieve']:
+    #         permission_classes = [permissions.AllowAny]
+    #     else:
+    #         permission_classes = [permissions.IsAuthenticated]
+        
+    #     return [permission() for permission in permission_classes]
