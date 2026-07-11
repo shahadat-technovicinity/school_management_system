@@ -47,7 +47,7 @@ from rest_framework.generics import ListAPIView
 
 class StudentAttendanceListAPIView(ListAPIView):
     serializer_class = AttendanceListSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
