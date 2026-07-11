@@ -3,6 +3,7 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 from .models import *
@@ -11,11 +12,13 @@ from .serializers import *
 class CommitteeMemberViewCreate(generics.ListCreateAPIView):
     queryset = CommitteeMember.objects.all()
     serializer_class = CommitteeMemberSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
 
 class CommitteeMemberDelUp(generics.RetrieveUpdateDestroyAPIView):
     queryset = CommitteeMember.objects.all()
     serializer_class = CommitteeMemberSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
 
 
@@ -62,24 +65,19 @@ class CommitteeDashboardView(APIView):
 
 
 
-# ১০ জনের জন্য কাস্টম প্যাজিনেশন ক্লাস
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
 
-class CommitteeMemberListView(generics.ListAPIView):
-    serializer_class = CommitteeMemberSerializer
-    pagination_class = StandardResultsSetPagination
-    
-    ##Filter by commitee type wise commitee
-    def get_queryset(self):
-        if getattr(self, "swagger_fake_view", False):
-            return CommitteeMember.objects.none()
-            
-        committee_type = self.request.query_params.get('type')
-        if committee_type:
-            queryset = CommitteeMember.objects.filter(committee_type=committee_type).order_by('-id')
-        else:
-            queryset = CommitteeMember.objects.all().order_by('-id')
-        return queryset
+class CommitteeMemberListView(APIView):
+    def get(self, request):
+        mmc_members = CommitteeMember.objects.filter(committee_type='MMC').order_by('-id')
+        pta_members = CommitteeMember.objects.filter(committee_type='PTA').order_by('-id')
+        cabinet_members = CommitteeMember.objects.filter(committee_type='CABINET').order_by('-id')
+        
+        return Response({
+            "managing_committee": CommitteeMemberSerializer(mmc_members, many=True).data,
+            "pta_committee": CommitteeMemberSerializer(pta_members, many=True).data,
+            "cabinet_committee": CommitteeMemberSerializer(cabinet_members, many=True).data
+        })

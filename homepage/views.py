@@ -67,3 +67,4 @@ class LetterInfoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
     serializer_class = LatterSerializer
     lookup_field = 'pk'
     parser_classes = (MultiPartParser, FormParser)
+
