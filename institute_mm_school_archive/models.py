@@ -3,6 +3,11 @@ from django.contrib.auth.models import User
 
 class School_Archive_Document(models.Model):
     # Category choices definition
+    DOC_TYPE_CHOICES = [
+        ('PDF', 'PDF'),
+        ('Excel', 'Excel'),
+        ('docx', 'DOCX'),
+    ]
     CATEGORY_CHOICES = [
         ('student records', 'Student Records'),
         ('academic history', 'Academic History'),
@@ -13,7 +18,7 @@ class School_Archive_Document(models.Model):
 
     title = models.CharField(max_length=255)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES) # No extra model needed!
-    doc_type = models.CharField(max_length=100) # e.g., PDF, Excel
+    doc_type = models.CharField(max_length=100, choices=DOC_TYPE_CHOICES) # e.g., PDF, Excel
     file = models.FileField(upload_to='documents/', blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     tags = models.CharField(max_length=255, blank=True, null=True)  # Comma-separated tags
