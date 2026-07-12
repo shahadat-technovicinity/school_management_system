@@ -3,11 +3,13 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import School_Archive_Document
 from .serializers import SchoolArchiveDocumentSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
 
 # Dashboard-er main list ebং Modal theke document create korar jonno
 class DocumentListCreateView(generics.ListCreateAPIView):
     queryset = School_Archive_Document.objects.all().order_by('-updated_at')
     serializer_class = SchoolArchiveDocumentSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
     def list(self, request, *args, **kwargs):
         # 1. Prothome normal queryset-ta niye asha
@@ -39,3 +41,6 @@ class DocumentListCreateView(generics.ListCreateAPIView):
 class DocumentDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = School_Archive_Document.objects.all()
     serializer_class = SchoolArchiveDocumentSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+
