@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from .models import User
 
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6)
+    password = serializers.CharField(write_only=True, min_length=6, required=False)
 
     class Meta:
         model = User
@@ -14,3 +15,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+
+    def update(self, instance, validated_data):
+        validated_data.pop('password', None)
+        return super().update(instance, validated_data)
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, min_length=6)
+    confirm_password = serializers.CharField(write_only=True)
