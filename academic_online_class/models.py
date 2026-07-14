@@ -30,7 +30,8 @@ class academiconlineclass(models.Model):
     Class_Topic = models.CharField(max_length=255)
     Class_Date = models.DateField()
     Class_Time = models.TimeField()
-    Password = models.CharField(max_length=255)
+    Password = models.CharField(max_length=255, blank=True, null=True)
+    Class_Link = models.URLField(max_length=500, blank=True, null=True)
     notify_parents = models.BooleanField(default=False)
     Notification_Type = models.CharField(max_length=50, choices=NOTIFICATION_CHOICES)
 
@@ -41,3 +42,6 @@ class academiconlineclass(models.Model):
     class Meta:
         verbose_name = "Class_Topic"
         verbose_name_plural = "Class_Topics"
+
+
+
