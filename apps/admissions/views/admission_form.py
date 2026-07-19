@@ -4,6 +4,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from apps.admissions.models import StudentAdmission
 from apps.admissions.serializers.form_serializers import StudentAdmissionSerializer,ChangeStatusSerializer
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class AdmissionFormViewSet(viewsets.ModelViewSet):
     """
@@ -21,6 +23,13 @@ class AdmissionFormViewSet(viewsets.ModelViewSet):
         # Override to enable dynamic optimization (e.g. prefetch related data)
         return StudentAdmission.objects.prefetch_related('skills__skill', 'previous_academic_record').all()
 
+    @swagger_auto_schema(
+        request_body=ChangeStatusSerializer,
+        responses={
+            200: openapi.Response("Status updated", ChangeStatusSerializer),
+            400: "Invalid status provided",
+        },
+    )
     @action(detail=True, methods=['patch'])
     def change_status(self, request, pk=None):
         """
