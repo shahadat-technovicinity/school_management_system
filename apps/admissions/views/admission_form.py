@@ -3,7 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from apps.admissions.models import StudentAdmission
-from apps.admissions.serializers.form_serializers import StudentAdmissionSerializer
+from apps.admissions.serializers.form_serializers import StudentAdmissionSerializer,ChangeStatusSerializer
 
 class AdmissionFormViewSet(viewsets.ModelViewSet):
     """
@@ -24,12 +24,15 @@ class AdmissionFormViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'])
     def change_status(self, request, pk=None):
         """
-        API for quickly updating the application status
+        API for manually updating the application status to any valid value.
         """
+        serializer = ChangeStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         admission = self.get_object()
-        new_status = request.data.get('status')
-        if new_status in [choice[0] for choice in StudentAdmission.ADMISSION_STATUS_CHOICES]:
-            admission.admission_status = new_status
-            admission.save()
-            return Response({'message': f'Status updated to {new_status}'})
-        return Response({'error': 'Invalid status provided'}, status=status.HTTP_400_BAD_REQUEST)
+        admission.admission_status = serializer.validated_data['status']
+        admission.save()
+        return Response({
+            'message': f'Status updated to {admission.admission_status}',
+            'status': admission.admission_status,
+        })

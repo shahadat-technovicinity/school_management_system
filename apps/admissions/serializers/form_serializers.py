@@ -73,3 +73,13 @@ class StudentAdmissionSerializer(serializers.ModelSerializer):
                 AdmissionSkillLink.objects.create(admission=instance, skill=skill_obj)
 
         return instance
+
+class ChangeStatusSerializer(serializers.Serializer):
+    """Validate the manual status change payload for AdmissionFormViewSet.change_status."""
+    STATUS_CHOICES = StudentAdmission.ADMISSION_STATUS_CHOICES
+
+    status = serializers.ChoiceField(
+        choices=STATUS_CHOICES,
+        help_text="Manually set the admission status "
+                  "(pending, interview, selected, rejected, enrolled).",
+    )
