@@ -1,5 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -24,6 +25,7 @@ class AdmissionCompletionViewSet(viewsets.ReadOnlyModelViewSet):
         ).prefetch_related('skills__skill', 'previous_academic_record')
 
     @swagger_auto_schema(
+        parser_classes=[MultiPartParser, FormParser],
         manual_parameters=[
             openapi.Parameter(
                 'tc', openapi.IN_FORM, description="Transfer Certificate (file)",
@@ -48,7 +50,7 @@ class AdmissionCompletionViewSet(viewsets.ReadOnlyModelViewSet):
             400: "No documents / not selectable",
         },
     )
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def finalize(self, request, pk=None):
         uploaded_files = request.FILES.dict()
 
