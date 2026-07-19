@@ -21,7 +21,7 @@ class TeacherStaffListView(generics.ListAPIView):
             
         # Ekhon filtering logic-ti method-er modhye dynamically kaaj korche
         return User.objects.filter(
-            Q(role='Teacher') | Q(role='Staff'), # Teacher OR Staff
+            Q(role__name='Teacher') | Q(role__name='Staff'), # Teacher OR Staff
             # is_active=True # AND active
         )
 

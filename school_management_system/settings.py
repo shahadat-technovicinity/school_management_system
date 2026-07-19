@@ -508,8 +508,3 @@ EMAIL_HOST_USER = 'mehedihhasan809@gmail.com'
 EMAIL_HOST_PASSWORD = 'your-16-digit-app-password'  
 DEFAULT_FROM_EMAIL = 'Harikhali High School <harikhalihs@gmail.com>'
 
-# গ্লোবাল পেজিনেশন (ফিগমার নিচে থাকা < 1 2 3 > পেজিং এর জন্য)
-REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,  # প্রতি পেজে কয়টি মেইল দেখাবে
-}

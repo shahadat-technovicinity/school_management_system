@@ -5,7 +5,7 @@ from .serializers import *
 # from .serializers import StudentAdmissionMainSerializer
 
 
-##############  create method  #########################
+######################  create method  #########################
 class Onlineclass(ListCreateAPIView):
     queryset = academiconlineclass.objects.all()
     serializer_class = AOCSerializer
@@ -25,6 +25,3 @@ class onlineclassdelete(DestroyAPIView):
     lookup_field = 'id'  
 
 
-# class StdExmRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
-#     queryset = student_admission_exam.objects.all()
-#     serializer_class = Student_admission_exam_serializer  

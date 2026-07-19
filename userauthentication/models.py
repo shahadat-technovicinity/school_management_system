@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 from .managers import UserManager
+from user_auth_roles_permissions.models import Role
 
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
@@ -13,7 +14,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     name = models.CharField(max_length=255, blank=True)
     username = models.CharField(max_length=150, unique=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, blank=True)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, blank=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     
     

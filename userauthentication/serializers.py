@@ -1,9 +1,14 @@
 from rest_framework import serializers
 from .models import User
+from user_auth_roles_permissions.models import Role
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6, required=False)
+    role = serializers.SlugRelatedField(
+        slug_field='name',
+        queryset=Role.objects.all()
+    )
 
     class Meta:
         model = User
