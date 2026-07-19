@@ -19,13 +19,6 @@ class StudentAdmission(models.Model):
         ('not_specified', 'Not Specified'),
     ]
 
-    # desired_class = models.ForeignKey(
-    #     'academics.Class', 
-    #     on_delete=models.SET_NULL, 
-    #     null=True,
-    #     verbose_name="Desired Class for Admission"
-    # )
-
     desired_class = models.CharField(max_length=100, verbose_name="Desired Class for Admission")  # Choices
 
     student_name_english = models.CharField(max_length=255, verbose_name="Student's Name (English)")
