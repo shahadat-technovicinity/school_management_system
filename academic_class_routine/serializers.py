@@ -19,7 +19,7 @@ class TeacherListSerializer(serializers.ModelSerializer):
 
 class ClassRoutineSerializer(serializers.ModelSerializer):
     teacher = serializers.SlugRelatedField(
-        queryset=User.objects.filter(role='Teacher'),
+        queryset=User.objects.filter(role__name='Teacher'),
         slug_field='name'
     )
     subject = serializers.PrimaryKeyRelatedField(

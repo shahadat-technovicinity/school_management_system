@@ -22,9 +22,9 @@ def get_phone_numbers(group):
     numbers = []
 
     if group == 'all_teachers':
-        numbers = list(User.objects.filter(role='Teacher').values_list('phone_number', flat=True))
+        numbers = list(User.objects.filter(role__name='Teacher').values_list('phone_number', flat=True))
     elif group == 'all_staff':
-        numbers = list(User.objects.filter(role='Staff').values_list('phone_number', flat=True))
+        numbers = list(User.objects.filter(role__name='Staff').values_list('phone_number', flat=True))
     elif group == 'all_students':
         numbers = list(Student.objects.values_list('primary_contact_number', flat=True))
     elif group == 'all_parents':

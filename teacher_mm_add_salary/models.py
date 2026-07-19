@@ -34,7 +34,7 @@ class SalaryRecord(models.Model):
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        limit_choices_to={'role__in': ['Teacher', 'Staff']}
+        limit_choices_to={'role__name__in': ['Teacher', 'Staff']}
     )
     department = models.CharField(max_length=100, choices=DEPARTMENT_CHOICES, default='Teaching')
     position = models.CharField(max_length=100, choices=POSITION_CHOICES)

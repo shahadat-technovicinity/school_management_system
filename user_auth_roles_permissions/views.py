@@ -3,11 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import Role, Feature, RolePermission
+from .models import Role, RolePermission
 from .serializers import (
-    RoleSerializer, FeatureSerializer,
-    RolePermissionSerializer, RoleFeaturePermissionSerializer,
-    BulkPermissionSerializer
+    RoleSerializer,
+    RolePermissionGridSerializer
 )
 
 
@@ -26,75 +25,48 @@ class RoleRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     # permission_classes = [IsAdminUser]
 
 
-# Feature List
-class FeatureListView(generics.ListAPIView):
-    queryset = Feature.objects.all()
-    serializer_class = FeatureSerializer
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAdminUser]
+class AvailableFeaturesAPIView(APIView):
+    """
+    settings.INSTALLED_APPS এবং APP_FEATURES থেকে জেনারেট হওয়া 
+    সব অ্যাপ ও ফিচারের কমপ্লিট লিস্ট গ্রিড UI রেন্ডার করার জন্য পাঠাবে।
+    """
+    def get(self, request, *args, **kwargs):
+        features_data = RolePermission.get_all_app_features()
+        return Response(features_data, status=status.HTTP_200_OK)
 
 
-# একটা Role এর সব Feature permission একসাথে দেখাবে
-class RolePermissionAllView(APIView):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAdminUser]
+# ২. নির্দিষ্ট রোলের আন্ডারে অ্যাপ ভিত্তিক ফিচারের পারমিশন সেট বা বাল্ক আপডেট করার API
+class AssignFeaturePermissionsAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        role_name = request.data.get('role_name')
+        permissions_data = request.data.get('permissions', [])
 
-    def get(self, request, role_id):
-        try:
-            role = Role.objects.get(id=role_id)
-        except Role.DoesNotExist:
-            return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+        if not role_name:
+            return Response({"error": "role_name is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # সব feature নাও
-        all_features = Feature.objects.all()
+        role_obj, _ = Role.objects.get_or_create(name=role_name.strip().capitalize())
 
-        # এই role এর existing permissions
-        existing_perms = RolePermission.objects.filter(role=role)
-        perm_map = {p.feature_id: p for p in existing_perms}
-
-        result = []
-        for feature in all_features:
-            perm = perm_map.get(feature.id)
-            result.append({
-                'feature_id': feature.id,
-                'feature_name': feature.name,
-                'display_name': feature.display_name,
-                'can_view': perm.can_view if perm else False,
-                'can_create': perm.can_create if perm else False,
-                'can_edit': perm.can_edit if perm else False,
-                'can_delete': perm.can_delete if perm else False,
-            })
-
-        serializer = RoleFeaturePermissionSerializer(result, many=True)
-        return Response(serializer.data)
-
-
-# Bulk update — Admin checkbox tick করে একসাথে save করবে
-class RolePermissionBulkUpdateView(APIView):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAdminUser]
-
-    def post(self, request, role_id):
-        try:
-            role = Role.objects.get(id=role_id)
-        except Role.DoesNotExist:
-            return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = BulkPermissionSerializer(data=request.data, many=True)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        for item in serializer.validated_data:
-            feature = item['feature_id']
+        for item in permissions_data:
+            app_name = item.get('app_name')
+            feature_slug = item.get('feature_slug')
+            
+            if not app_name or not feature_slug:
+                continue
+                
+            allow_all = item.get('allow_all', False)
+            
             RolePermission.objects.update_or_create(
-                role=role,
-                feature=feature,
+                role=role_obj,
+                app_name=app_name.strip(),
+                feature_slug=feature_slug.strip(),
                 defaults={
-                    'can_view': item['can_view'],
-                    'can_create': item['can_create'],
-                    'can_edit': item['can_edit'],
-                    'can_delete': item['can_delete'],
+                    'can_create': True if allow_all else item.get('can_create', False),
+                    'can_view': True if allow_all else item.get('can_view', False),
+                    'can_edit': True if allow_all else item.get('can_edit', False),
+                    'can_delete': True if allow_all else item.get('can_delete', False),
                 }
             )
 
-        return Response({"message": "Permissions updated successfully"}, status=status.HTTP_200_OK)
+        # এখানে RoleDetailWithPermissionsSerializer এর জায়গায় সরাসরি আপনার RoleSerializer ব্যবহার করা হয়েছে
+        serializer = RoleSerializer(role_obj)
+        return Response(serializer.data, status=status.HTTP_200_OK)

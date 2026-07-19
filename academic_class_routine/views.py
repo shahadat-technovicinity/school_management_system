@@ -10,7 +10,7 @@ from .serializers import *
 ### authentication teacher fetch
 User = get_user_model()
 class TeacherListView(ListAPIView):
-    queryset = User.objects.filter(role='Teacher')
+    queryset = User.objects.filter(role__name='Teacher')
     serializer_class = TeacherListSerializer
 
     

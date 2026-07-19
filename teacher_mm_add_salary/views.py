@@ -15,7 +15,7 @@ class EmployeeListView(generics.ListAPIView):
     serializer_class = EmployeeListSerializer
 
     def get_queryset(self):
-        return User.objects.filter(role__in=['Teacher', 'Staff'])
+        return User.objects.filter(role__name__in=['Teacher', 'Staff'])
 
 
 class SalaryListCreateView(generics.ListCreateAPIView):

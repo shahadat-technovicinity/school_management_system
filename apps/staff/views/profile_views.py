@@ -27,7 +27,7 @@ class StaffProfileViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def teachers(self, request):
-        teachers = self.queryset.filter(role='teacher')
+        teachers = self.queryset.filter(role__name='teacher')
         page = self.paginate_queryset(teachers)
         if page is not None:
             serializer = StaffListSerializer(page, many=True)
