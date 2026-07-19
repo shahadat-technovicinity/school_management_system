@@ -7,7 +7,6 @@ from drf_yasg import openapi
 from apps.admissions.models import StudentAdmission
 from apps.admissions.serializers.completion_serializers import (
     CompletedAdmissionSerializer,
-    FinalizeAdmissionSerializer,
 )
 from apps.admissions.services.enrollment_service import finalize_admission
 
@@ -25,7 +24,25 @@ class AdmissionCompletionViewSet(viewsets.ReadOnlyModelViewSet):
         ).prefetch_related('skills__skill', 'previous_academic_record')
 
     @swagger_auto_schema(
-        request_body=FinalizeAdmissionSerializer,
+        manual_parameters=[
+            openapi.Parameter(
+                'tc', openapi.IN_FORM, description="Transfer Certificate (file)",
+                type=openapi.TYPE_FILE, required=False,
+            ),
+            openapi.Parameter(
+                'mother_nid', openapi.IN_FORM, description="Mother NID (file)",
+                type=openapi.TYPE_FILE, required=False,
+            ),
+            openapi.Parameter(
+                'birth_certificate', openapi.IN_FORM,
+                description="Birth Certificate (file)",
+                type=openapi.TYPE_FILE, required=False,
+            ),
+            openapi.Parameter(
+                'student_photo', openapi.IN_FORM, description="Student Photo (file)",
+                type=openapi.TYPE_FILE, required=False,
+            ),
+        ],
         responses={
             201: openapi.Response("Admission completed", CompletedAdmissionSerializer),
             400: "No documents / not selectable",
