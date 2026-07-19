@@ -27,27 +27,14 @@ class AdmissionCompletionViewSet(viewsets.ReadOnlyModelViewSet):
     @swagger_auto_schema(
         parser_classes=[MultiPartParser, FormParser],
         manual_parameters=[
-            openapi.Parameter(
-                'tc', openapi.IN_FORM, description="Transfer Certificate (file)",
-                type=openapi.TYPE_FILE, required=False,
-            ),
-            openapi.Parameter(
-                'mother_nid', openapi.IN_FORM, description="Mother NID (file)",
-                type=openapi.TYPE_FILE, required=False,
-            ),
-            openapi.Parameter(
-                'birth_certificate', openapi.IN_FORM,
-                description="Birth Certificate (file)",
-                type=openapi.TYPE_FILE, required=False,
-            ),
-            openapi.Parameter(
-                'student_photo', openapi.IN_FORM, description="Student Photo (file)",
-                type=openapi.TYPE_FILE, required=False,
-            ),
+            openapi.Parameter('tc', openapi.IN_FORM, description="Transfer Certificate (file)", type=openapi.TYPE_FILE, required=False),
+            openapi.Parameter('mother_nid', openapi.IN_FORM, description="Mother NID (file)", type=openapi.TYPE_FILE, required=False),
+            openapi.Parameter('birth_certificate', openapi.IN_FORM, description="Birth Certificate (file)", type=openapi.TYPE_FILE, required=False),
+            openapi.Parameter('student_photo', openapi.IN_FORM, description="Student Photo (file)", type=openapi.TYPE_FILE, required=False),
         ],
         responses={
             201: openapi.Response("Admission completed", CompletedAdmissionSerializer),
-            400: "No documents / not selectable",
+            400: "No documents / not selectable / not found",
         },
     )
     @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
@@ -61,9 +48,20 @@ class AdmissionCompletionViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         try:
-            profile = finalize_admission(self.get_object().id, uploaded_files)
+            # Fetch directly (not via the 'selected'-only queryset) so a
+            # non-selected/existing id returns a clean 4xx, not a 500.
+            admission = StudentAdmission.objects.get(pk=pk)
+        except StudentAdmission.DoesNotExist:
+            return Response(
+                {"error": f"Admission #{pk} not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            profile = finalize_admission(admission.id, uploaded_files)
             serializer = CompletedAdmissionSerializer(
-                self.get_object(), context={'request': request}
+                StudentAdmission.objects.get(pk=pk),
+                context={'request': request},
             )
             return Response(
                 {
