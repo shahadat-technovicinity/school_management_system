@@ -8,7 +8,7 @@ class PreviousAcademicRecordSerializer(serializers.ModelSerializer):
         exclude = ('admission',)
 
 class StudentAdmissionSerializer(serializers.ModelSerializer):
-    previous_academic_record = PreviousAcademicRecordSerializer(required=False)
+    # previous_academic_record = PreviousAcademicRecordSerializer(required=False)
     skills = serializers.ListField(
         child=serializers.CharField(max_length=50),
         write_only=True,
