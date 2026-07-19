@@ -16,5 +16,5 @@ urlpatterns = [
     path('', include(router.urls)),
     
     # Bulk Custom API
-    path('bulk-import/', BulkImportAPIView.as_view(), name='admission-bulk-import'),
+    # path('bulk-import/', BulkImportAPIView.as_view(), name='admission-bulk-import'),
 ]
