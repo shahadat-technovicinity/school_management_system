@@ -18,7 +18,7 @@ class Role(models.Model):
 
 class RolePermission(models.Model):
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='feature_permissions')
-    app_name = models.CharField(max_length=100)
+    feature_name = models.CharField(max_length=100)
     feature_slug = models.CharField(max_length=100)
     can_create = models.BooleanField(default=False)
     can_view = models.BooleanField(default=False)
@@ -26,10 +26,10 @@ class RolePermission(models.Model):
     can_delete = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ('role', 'app_name', 'feature_slug')
+        unique_together = ('role', 'feature_name', 'feature_slug')
 
     def __str__(self):
-        return f"{self.role.name} -> {self.app_name} ({self.feature_slug})"
+        return f"{self.role.name} -> {self.feature_name} ({self.feature_slug})"
 
     @classmethod
     def get_all_app_features(cls):

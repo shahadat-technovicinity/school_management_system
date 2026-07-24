@@ -4,7 +4,7 @@ from .models import Role, RolePermission
 class RolePermissionGridSerializer(serializers.ModelSerializer):
     class Meta:
         model = RolePermission
-        fields = ['app_name', 'feature_slug', 'can_create', 'can_view', 'can_edit', 'can_delete']
+        fields = ['feature_name', 'feature_slug', 'can_create', 'can_view', 'can_edit', 'can_delete']
 
 
 class RoleSerializer(serializers.ModelSerializer):

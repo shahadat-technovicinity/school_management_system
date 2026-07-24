@@ -3,7 +3,7 @@ from django.conf import settings
 from .models import RolePermission
 
 
-def check_user_feature_permission(user, app_name, feature_slug, action='view'):
+def check_user_feature_permission(user, feature_name, feature_slug, action='view'):
     """
     ব্যবহার: check_user_feature_permission(request.user, 'admissions', 'student_admission', 'create')
     """
@@ -17,7 +17,7 @@ def check_user_feature_permission(user, app_name, feature_slug, action='view'):
     # অ্যাকশন ফিল্ড ডাইনামিকালি চেক (can_view, can_create ইত্যাদি)
     filter_kwargs = {
         'role': user.role,
-        'app_name': app_name,
+        'feature_name': feature_name,
         'feature_slug': feature_slug,
         f'can_{action}': True
     }

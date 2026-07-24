@@ -47,17 +47,17 @@ class AssignFeaturePermissionsAPIView(APIView):
         role_obj, _ = Role.objects.get_or_create(name=role_name.strip().capitalize())
 
         for item in permissions_data:
-            app_name = item.get('app_name')
+            feature_name = item.get('feature_name')
             feature_slug = item.get('feature_slug')
             
-            if not app_name or not feature_slug:
+            if not feature_name or not feature_slug:
                 continue
                 
             allow_all = item.get('allow_all', False)
             
             RolePermission.objects.update_or_create(
                 role=role_obj,
-                app_name=app_name.strip(),
+                feature_name=feature_name.strip(),
                 feature_slug=feature_slug.strip(),
                 defaults={
                     'can_create': True if allow_all else item.get('can_create', False),
