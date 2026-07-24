@@ -5,14 +5,10 @@ from user_auth_roles_permissions.models import Role
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6, required=False)
-    role = serializers.SlugRelatedField(
-        slug_field='name',
-        queryset=Role.objects.all()
-    )
-
+    
     class Meta:
         model = User
-        fields = ['id', 'name', 'username', 'phone_number', 'password', 'role']
+        fields = ['id', 'name', 'username', 'phone_number', 'password']
 
     def create(self, validated_data):
         password = validated_data.pop('password')

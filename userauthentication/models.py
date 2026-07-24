@@ -32,3 +32,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.username
+
+
+class UserRole(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_role')
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='user_roles')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.role.name}"
