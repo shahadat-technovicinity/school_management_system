@@ -8,7 +8,7 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path(
-        "login_new/",
+        "login-new/",
         CustomTokenObtainPairView.as_view(),
         name="token_obtain_pair",
     ),
