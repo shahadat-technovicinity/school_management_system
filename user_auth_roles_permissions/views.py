@@ -25,11 +25,7 @@ class RoleRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 # ── Permission CRUD ───────────────────────────────────────────────────────────
 class PermissionListCreateView(generics.ListCreateAPIView):
-    """
-    GET  /permissions/               → সব feature list
-                                       ?group_name=<name> দিয়ে ফিল্টার
-    POST /permissions/               → নতুন feature তৈরি
-    """
+   
     serializer_class = PermissionSerializer
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [IsAdminUser]
@@ -51,21 +47,7 @@ class PermissionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
 
 # ── RolePermission CRUD ───────────────────────────────────────────────────────
 class RolePermissionListCreateView(generics.ListCreateAPIView):
-    """
-    GET  /role-permissions/          → সব RolePermission list
-                                       ?role_id=<pk> দিয়ে ফিল্টার
-    POST /role-permissions/          → নতুন mapping তৈরি
-
-    POST body example:
-        {
-            "role": 1,
-            "permission": 3,
-            "can_view": true,
-            "can_create": false,
-            "can_edit": false,
-            "can_delete": false
-        }
-    """
+   
     serializer_class = RolePermissionSerializer
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [IsAdminUser]
@@ -79,12 +61,7 @@ class RolePermissionListCreateView(generics.ListCreateAPIView):
 
 
 class RolePermissionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    GET    /role-permissions/<pk>/   → একটি mapping দেখুন
-    PUT    /role-permissions/<pk>/   → সম্পূর্ণ আপডেট
-    PATCH  /role-permissions/<pk>/   → আংশিক আপডেট (e.g. শুধু can_edit পরিবর্তন)
-    DELETE /role-permissions/<pk>/   → mapping মুছে ফেলুন
-    """
+    
     queryset = RolePermission.objects.select_related('role', 'permission').all()
     serializer_class = RolePermissionSerializer
     # authentication_classes = [JWTAuthentication]
