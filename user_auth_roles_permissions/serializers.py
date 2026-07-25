@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Role, RolePermission
 
+
 class RolePermissionGridSerializer(serializers.ModelSerializer):
     class Meta:
         model = RolePermission
@@ -13,3 +14,21 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = ['id', 'name', 'permissions', 'created_at']
+
+
+class RolePermissionSerializer(serializers.ModelSerializer):
+    role_name = serializers.CharField(source='role.name', read_only=True)
+
+    class Meta:
+        model = RolePermission
+        fields = [
+            'id',
+            'role',
+            'role_name',
+            'feature_name',
+            'feature_slug',
+            'can_create',
+            'can_view',
+            'can_edit',
+            'can_delete',
+        ]
