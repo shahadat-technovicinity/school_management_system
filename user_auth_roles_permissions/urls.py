@@ -6,11 +6,11 @@ urlpatterns = [
     path('roles/', RoleListCreateView.as_view(), name='role-list-create'),
     path('roles/<int:pk>/', RoleRetrieveUpdateDestroyView.as_view(), name='role-detail'),
 
-    # RolePermission CRUD
+    # Permission
+    path('permissions/', PermissionListCreateView.as_view(), name='permission-list-create'),
+    path('permissions/<int:pk>/', PermissionRetrieveUpdateDestroyView.as_view(), name='permission-detail'),
+
+    # RolePermission (Role ↔ Permission M2M mapping)
     path('role-permissions/', RolePermissionListCreateView.as_view(), name='role-permission-list-create'),
     path('role-permissions/<int:pk>/', RolePermissionRetrieveUpdateDestroyView.as_view(), name='role-permission-detail'),
-
-    path('available-features/', AvailableFeaturesAPIView.as_view(), name='available-features'),
-
-    path('assign-permissions/', AssignFeaturePermissionsAPIView.as_view(), name='assign-permissions'),
 ]
