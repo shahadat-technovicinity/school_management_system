@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('user_auth_roles_permissions', '0004_rename_app_name_rolepermission_feature_name_and_more'),
+        ('user_auth_roles_permissions', '0001_initial'),
         ('userauthentication', '0002_alter_user_role'),
     ]
 
