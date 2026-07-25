@@ -6,7 +6,9 @@ from rest_framework.response import Response
 from .models import User
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import CustomTokenObtainPairSerializer
+from .serializers import CustomTokenObtainPairSerializer, UserRoleAssignSerializer
+from user_auth_roles_permissions.models import Role
+from .models import UserRole
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -80,3 +82,47 @@ class UserProfileDeleteview(DestroyAPIView):
     queryset = User.objects.all()  #all user call
     serializer_class = UserRegistrationSerializer  #serializer class call serializer
     lookup_field = 'id'
+
+
+class UserRoleAssignView(CreateAPIView):
+    """
+    POST /assign-role/
+    {
+        "user_id": 1,
+        "role_id": 2
+    }
+    Assigns or updates a role for a given user.
+    """
+    serializer_class = UserRoleAssignSerializer
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user_id = serializer.validated_data['user_id']
+        role_id = serializer.validated_data['role_id']
+        
+        try:
+            user = User.objects.get(id=user_id)
+            role = Role.objects.get(id=role_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Role.DoesNotExist:
+            return Response({"error": "Role not found."}, status=status.HTTP_404_NOT_FOUND)
+            
+        # Update UserRole model
+        user_role, created = UserRole.objects.update_or_create(
+            user=user,
+            defaults={'role': role}
+        )
+        
+        # Also update the role field in User model for consistency
+        user.role = role
+        user.save()
+        
+        return Response({
+            "message": "Role assigned successfully.",
+            "user_id": user.id,
+            "role_id": role.id,
+            "role_name": role.name
+        }, status=status.HTTP_200_OK)

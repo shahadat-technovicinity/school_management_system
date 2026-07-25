@@ -17,14 +17,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if role:
             permissions = [
                 {
-                    "feature_name": p.feature_name,
-                    "feature_slug": p.feature_slug,
+                    "feature_name": p.permission.feature_name,
+                    "feature_slug": p.permission.feature_slug,
                     "can_create": p.can_create,
                     "can_view": p.can_view,
                     "can_edit": p.can_edit,
                     "can_delete": p.can_delete,
                 }
-                for p in role.role.feature_permissions.all()
+                for p in role.role.role_permissions.all()
             ]
 
         data["user"] = {
@@ -63,3 +63,8 @@ class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True, min_length=6)
     confirm_password = serializers.CharField(write_only=True)
+
+
+class UserRoleAssignSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    role_id = serializers.IntegerField()
