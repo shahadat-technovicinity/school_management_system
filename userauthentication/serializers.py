@@ -17,6 +17,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if role:
             permissions = [
                 {
+                    "group_name": p.permission.group_name,
                     "feature_name": p.permission.feature_name,
                     "feature_slug": p.permission.feature_slug,
                     "can_create": p.can_create,
@@ -45,13 +46,19 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'name', 'username', 'phone_number', 'password','is_active']
+        fields = ['id', 'name', 'username', 'phone_number', 'password', 'is_active', 'role']
 
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+
+        # If a role is provided during registration, create the corresponding UserRole entry
+        if user.role:
+            from .models import UserRole
+            UserRole.objects.create(user=user, role=user.role)
+
         return user
 
     def update(self, instance, validated_data):
