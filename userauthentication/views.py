@@ -9,14 +9,35 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import CustomTokenObtainPairSerializer, UserRoleAssignSerializer
 from user_auth_roles_permissions.models import Role
 from .models import UserRole
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 #user list
 class userlistview(ListAPIView):
-    queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer    
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'role_id',
+                openapi.IN_QUERY,
+                description="Filter users by Role ID",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        queryset = User.objects.all()
+        role_id = self.request.query_params.get('role_id')
+        if role_id:
+            queryset = queryset.filter(role_id=role_id)
+        return queryset
 
 
 #user registration class
