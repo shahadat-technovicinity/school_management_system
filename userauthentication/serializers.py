@@ -84,7 +84,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 response['role'] = {
                     'id': instance.role.id,
                     'name': instance.role.name,
-                    'permissions': permissions
+                    # 'permissions': permissions
                 }
         except Role.DoesNotExist:
             response['role'] = None
