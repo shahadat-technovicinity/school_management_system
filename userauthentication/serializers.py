@@ -65,6 +65,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('password', None)
         return super().update(instance, validated_data)
 
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        if instance.role:
+            response['role'] = {
+                'id': instance.role.id,
+                'name': instance.role.name
+            }
+        return response
+
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)
