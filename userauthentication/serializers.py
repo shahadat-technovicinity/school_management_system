@@ -67,24 +67,27 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         response = super().to_representation(instance)
-        if instance.role:
-            permissions = [
-                {
-                    "group_name": p.permission.group_name,
-                    "feature_name": p.permission.feature_name,
-                    "feature_slug": p.permission.feature_slug,
-                    "can_create": p.can_create,
-                    "can_view": p.can_view,
-                    "can_edit": p.can_edit,
-                    "can_delete": p.can_delete,
+        try:
+            if instance.role:
+                permissions = [
+                    {
+                        "group_name": p.permission.group_name,
+                        "feature_name": p.permission.feature_name,
+                        "feature_slug": p.permission.feature_slug,
+                        "can_create": p.can_create,
+                        "can_view": p.can_view,
+                        "can_edit": p.can_edit,
+                        "can_delete": p.can_delete,
+                    }
+                    for p in instance.role.role_permissions.all()
+                ]
+                response['role'] = {
+                    'id': instance.role.id,
+                    'name': instance.role.name,
+                    'permissions': permissions
                 }
-                for p in instance.role.role_permissions.all()
-            ]
-            response['role'] = {
-                'id': instance.role.id,
-                'name': instance.role.name,
-                'permissions': permissions
-            }
+        except Role.DoesNotExist:
+            response['role'] = None
         return response
 
 
