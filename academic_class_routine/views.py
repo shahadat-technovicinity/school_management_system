@@ -30,3 +30,7 @@ class ClassRoutineView(ListCreateAPIView):
 class ClassRoutineupdateDelete(RetrieveUpdateDestroyAPIView):
     queryset = ClassRoutine.objects.all()
     serializer_class = ClassRoutineSerializer  
+
+
+
+

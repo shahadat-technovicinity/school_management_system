@@ -505,6 +505,6 @@ EMAIL_USE_TLS = True
 
 # আপনার জিমেইল এবং অ্যাপ পাসওয়ার্ড এখানে দিন
 EMAIL_HOST_USER = 'mehedihhasan809@gmail.com'  
-EMAIL_HOST_PASSWORD = 'your-16-digit-app-password'  
-DEFAULT_FROM_EMAIL = 'Harikhali High School <harikhalihs@gmail.com>'
+EMAIL_HOST_PASSWORD = 'klbs ejyw fakz easr'  # Use an App Password if you have 2FA enabled
+# DEFAULT_FROM_EMAIL = 'Harikhali High School <harikhalihs@gmail.com>'
 

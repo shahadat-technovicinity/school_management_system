@@ -37,3 +37,20 @@ class LatterSerializer(serializers.ModelSerializer):
     class Meta:
         model = LetterInfo
         fields = '__all__'
+
+
+
+
+
+# Student & teacher staff count serializer for school dashboard
+
+class ClassStudentCountSerializer(serializers.Serializer):
+    class_name = serializers.CharField()
+    total_students = serializers.IntegerField()
+
+class SchoolDashboardStatsSerializer(serializers.Serializer):
+    total_students_summary = serializers.CharField() # e.g. "৫০০০+"
+    total_teachers_summary = serializers.CharField() # e.g. "২০০+"
+    total_staff_summary = serializers.CharField()    # e.g. "৫০+"
+    
+    class_wise_students = ClassStudentCountSerializer(many=True)

@@ -1,37 +1,39 @@
 from django.core.mail import EmailMessage
+from django.conf import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
+
 def send_via_smtp(mail_obj):
     """
-    জ্যাঙ্গোর বিল্ট-ইন EmailMessage ব্যবহার করে জিমেইল SMTP-এর মাধ্যমে মেইল পাঠায়।
+    ১ জন হোক বা অনেকজন — সবাইকে BCC তে রেখে পাঠানো হয়,
+    যাতে recipient রা একে অপরের email দেখতে না পায় (privacy)।
     """
     try:
-        # কমা সেপারেটেড ইমেইলগুলোকে লিস্টে রূপান্তর
-        recipient_list = [email.strip() for email in mail_obj.to_emails.split(',') if email.strip()]
-        
+        recipient_list = [e.strip() for e in mail_obj.to_emails.split(',') if e.strip()]
+
         if not recipient_list:
-            mail_obj.smtp_error = "কোনো বৈধ প্রাপক (Recipient) পাওয়া যায়নি।"
+            mail_obj.smtp_error = "কোনো বৈধ প্রাপক (Recipient) পাওয়া যায়নি।"
             mail_obj.save(update_fields=['smtp_error'])
             return False
 
         email = EmailMessage(
             subject=mail_obj.subject,
             body=mail_obj.body,
-            from_email=None,  # settings.DEFAULT_FROM_EMAIL অটোমেটিক ব্যবহার হবে
-            to=recipient_list,
+            from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else settings.EMAIL_HOST_USER,
+            to=[],  # To ফাঁকা রাখছি, সবাইকে BCC তে পাঠাচ্ছি
+            bcc=recipient_list,
         )
 
-        # অ্যাটাচমেন্ট ফাইল যুক্ত করা
         for attachment in mail_obj.attachments.all():
             if attachment.file:
+                attachment.file.open('rb')
                 email.attach(attachment.filename, attachment.file.read(), 'application/octet-stream')
+                attachment.file.close()
 
-        # মেইল সেন্ড করা
         email.send(fail_silently=False)
-        
-        # ডাটাবেজে স্ট্যাটাস আপডেট
+
         mail_obj.smtp_sent = True
         mail_obj.smtp_error = ""
         mail_obj.save(update_fields=['smtp_sent', 'smtp_error'])
