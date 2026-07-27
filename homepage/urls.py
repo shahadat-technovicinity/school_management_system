@@ -23,4 +23,7 @@ urlpatterns = [
     ## Letter Info urls
     path('letterinfos/', LetterInfoListCreateView.as_view(), name='letterinfo-list-create'),
     path('letterinfos/<int:pk>/', LetterInfoRetrieveUpdateDestroyView.as_view(), name='letterinfo-detail'),
-]
+
+
+    ## School Dashboard Stats
+    path('school-dashboard-stats/', SchoolDashboardStatsAPIView.as_view(), name='school-dashboard-stats'),]

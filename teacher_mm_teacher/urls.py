@@ -19,3 +19,8 @@ router.register(r"", TeacherViewSet, basename="teacher")
 urlpatterns = [
     path("", include(router.urls)),
 ]
+
+
+
+
+

@@ -8,12 +8,12 @@ from .serializers import Subject_Name_Serializer
 class SubjectListCreateView(generics.ListCreateAPIView):
     queryset = Subject_Name.objects.all().order_by('name')
     serializer_class = Subject_Name_Serializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
 
 
 class SubjectRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Subject_Name.objects.all()
     serializer_class = Subject_Name_Serializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]

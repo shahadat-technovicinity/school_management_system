@@ -1,23 +1,21 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from .models import Mail, Attachment
 
+User = get_user_model()
+
+
 class UserSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
-
     class Meta:
-        model  = User
-        fields = ['id', 'username', 'email', 'full_name']
-
-    def get_full_name(self, obj):
-        return obj.get_full_name() or obj.username
+        model = User
+        fields = ['id', 'username', 'name', 'phone_number']
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
 
     class Meta:
-        model  = Attachment
+        model = Attachment
         fields = ['id', 'filename', 'file_size', 'file_url', 'uploaded_at']
 
     def get_file_url(self, obj):
@@ -28,55 +26,59 @@ class AttachmentSerializer(serializers.ModelSerializer):
 
 
 class MailListSerializer(serializers.ModelSerializer):
-    sender_name     = serializers.SerializerMethodField()
-    sender_email    = serializers.SerializerMethodField()
+    sender_name = serializers.CharField(source='sender.name', read_only=True)
     has_attachments = serializers.SerializerMethodField()
 
     class Meta:
-        model  = Mail
+        model = Mail
         fields = [
-            'id', 'sender_name', 'sender_email',
-            'to_emails', 'subject', 'folder',
-            'is_read', 'is_starred',
-            'has_attachments', 'created_at',
+            'id', 'sender_name', 'to_emails', 'subject',
+            'folder', 'is_read', 'is_starred',
+            'smtp_sent', 'smtp_error', 'has_attachments', 'created_at',
         ]
-
-    def get_sender_name(self, obj):
-        return obj.sender.get_full_name() or obj.sender.username
-
-    def get_sender_email(self, obj):
-        return obj.sender.email
 
     def get_has_attachments(self, obj):
         return obj.attachments.exists()
 
 
 class MailDetailSerializer(serializers.ModelSerializer):
-    sender           = UserSerializer(read_only=True)
-    attachments      = AttachmentSerializer(many=True, read_only=True)
-    reply_to_subject = serializers.SerializerMethodField()
+    sender = UserSerializer(read_only=True)
+    attachments = AttachmentSerializer(many=True, read_only=True)
 
     class Meta:
-        model  = Mail
+        model = Mail
         fields = [
-            'id', 'sender', 'to_emails',
-            'subject', 'body', 'folder',
-            'is_read', 'is_starred',
-            'smtp_sent', 'smtp_error',
-            'reply_to', 'reply_to_subject',
-            'attachments', 'created_at', 'updated_at',
+            'id', 'sender', 'to_emails', 'subject', 'body', 'folder',
+            'is_read', 'is_starred', 'smtp_sent', 'smtp_error',
+            'reply_to', 'attachments', 'created_at', 'updated_at',
         ]
 
-    def get_reply_to_subject(self, obj):
-        return obj.reply_to.subject if obj.reply_to else None
 
+from communication_canter_sms_template.models import SMSTemplate
 
 class MailCreateSerializer(serializers.ModelSerializer):
-    action = serializers.ChoiceField(choices=['send', 'draft'], default='send', write_only=True)
+    template = serializers.PrimaryKeyRelatedField(
+        queryset=SMSTemplate.objects.all(),
+        required=False,
+        write_only=True,
+    )
+    subject = serializers.CharField(required=False, allow_blank=True)
+    body = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
-        model  = Mail
-        fields = ['to_emails', 'subject', 'body', 'reply_to', 'action']
+        model = Mail
+        fields = ['to_emails', 'subject', 'body', 'reply_to', 'template']
+
+    def validate(self, attrs):
+        template = attrs.pop('template', None)
+        if template:
+            attrs['subject'] = attrs.get('subject') or template.template_name
+            attrs['body'] = attrs.get('body') or template.template_content
+        if not attrs.get('subject'):
+            raise serializers.ValidationError({"subject": "subject অথবা template — যেকোনো একটি দিতে হবে।"})
+        if not attrs.get('body'):
+            raise serializers.ValidationError({"body": "body অথবা template — যেকোনো একটি দিতে হবে।"})
+        return attrs
 
     def validate_to_emails(self, value):
         emails = [e.strip() for e in value.split(',') if e.strip()]
@@ -85,20 +87,10 @@ class MailCreateSerializer(serializers.ModelSerializer):
         return ', '.join(emails)
 
     def create(self, validated_data):
-        action = validated_data.pop('action', 'send')
         validated_data['sender'] = self.context['request'].user
-        # ইউজার যদি সেন্ড করে তবে 'sent' ফোল্ডার, অন্যথায় 'draft'
-        validated_data['folder'] = 'sent' if action == 'send' else 'draft'
+        validated_data['folder'] = 'sent'
         return super().create(validated_data)
 
 
-class MoveFolderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model  = Mail
-        fields = ['folder']
 
-    def validate_folder(self, value):
-        valid = ['inbox', 'sent', 'draft', 'trash', 'parents', 'teachers']
-        if value not in valid:
-            raise serializers.ValidationError(f"বৈধ ফোল্ডারগুলো হলো: {valid}")
-        return value
+
