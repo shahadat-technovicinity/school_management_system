@@ -4,6 +4,7 @@ from .views import *
 urlpatterns = [
     # Role
     path('roles/', RoleListCreateView.as_view(), name='role-list-create'),
+    path('roles/dropdown/', RoleDropdownListView.as_view(), name='role-dropdown'),
     path('roles/<int:pk>/', RoleRetrieveUpdateDestroyView.as_view(), name='role-detail'),
 
     # Permission

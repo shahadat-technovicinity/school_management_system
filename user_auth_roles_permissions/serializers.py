@@ -40,3 +40,9 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = ['id', 'name', 'role_permissions', 'created_at']
+
+# ── Role serializer (Dropdown) ────────────────────────────────────────────────
+class RoleDropdownSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ['id', 'name']

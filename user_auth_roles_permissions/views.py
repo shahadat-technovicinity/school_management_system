@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import Role, Permission, RolePermission
-from .serializers import RoleSerializer, PermissionSerializer, RolePermissionSerializer
+from .serializers import RoleSerializer, PermissionSerializer, RolePermissionSerializer, RoleDropdownSerializer
 
 
 # ── Role CRUD ─────────────────────────────────────────────────────────────────
@@ -19,6 +19,13 @@ class RoleListCreateView(generics.ListCreateAPIView):
 class RoleRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Role.objects.prefetch_related('role_permissions__permission').all()
     serializer_class = RoleSerializer
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAdminUser]
+
+
+class RoleDropdownListView(generics.ListAPIView):
+    queryset = Role.objects.all()
+    serializer_class = RoleDropdownSerializer
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [IsAdminUser]
 
