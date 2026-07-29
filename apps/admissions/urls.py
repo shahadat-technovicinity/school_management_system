@@ -8,7 +8,7 @@ from apps.admissions.views.completion import AdmissionCompletionViewSet
 
 router = DefaultRouter()
 router.register(r'forms', AdmissionFormViewSet, basename='admission-forms')
-router.register(r'lottery', LotteryExamViewSet, basename='admission-lottery')
+# router.register(r'lottery', LotteryExamViewSet, basename='admission-lottery')
 router.register(r'completion', AdmissionCompletionViewSet, basename='admission-completion')
 
 urlpatterns = [
