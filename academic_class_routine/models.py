@@ -22,10 +22,10 @@ CLASS_CHOICES = [
 ]
 
 SECTION_CHOICES = [
-    ('A', 'Section A'),
-    ('B', 'Section B'),
-    ('C', 'Section C'),
-    ('D', 'Section D'),
+    ('Section A', 'Section A'),
+    ('Section B', 'Section B'),
+    ('Section C', 'Section C'),
+    ('Section D', 'Section D'),
 ]
 
 DAY_CHOICES = [
