@@ -18,9 +18,9 @@ class TeacherListSerializer(serializers.ModelSerializer):
 
 
 class ClassRoutineSerializer(serializers.ModelSerializer):
-    teacher = serializers.SlugRelatedField(
-        queryset=User.objects.filter(role__name='Teacher'),
-        slug_field='name'
+    # SlugRelatedField সরিয়ে PrimaryKeyRelatedField ব্যবহার করা হচ্ছে
+    teacher = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(role__name='Teacher')
     )
     subject = serializers.PrimaryKeyRelatedField(
         queryset=Subject_Name.objects.all()
@@ -30,11 +30,20 @@ class ClassRoutineSerializer(serializers.ModelSerializer):
         model = ClassRoutine
         fields = '__all__'
 
+    # GET করার সময় ফ্রন্টএন্ড যেন ID এবং Name দুটোই দেখতে পায়
     def to_representation(self, instance):
         representation = super().to_representation(instance)
+        
+        if instance.teacher:
+            representation['teacher'] = {
+                'id': instance.teacher.id,
+                'name': getattr(instance.teacher, 'name', str(instance.teacher))
+            }
+            
         if instance.subject:
             representation['subject'] = {
                 'id': instance.subject.id,
-                'name': getattr(instance.subject, 'name', str(instance.subject)) # আপনার মডেলে নাম ফিল্ডের যা নাম (যেমন: name বা subject_name)
+                'name': getattr(instance.subject, 'name', str(instance.subject))
             }
+            
         return representation
