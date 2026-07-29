@@ -369,3 +369,6 @@ class TeacherUpdateSerializer(serializers.ModelSerializer):
                 "A teacher with this ID already exists."
             )
         return value
+
+
+
