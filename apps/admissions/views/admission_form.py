@@ -14,7 +14,7 @@ class AdmissionFormViewSet(viewsets.ModelViewSet):
     queryset = StudentAdmission.objects.all().order_by('-admission_date') # Using default sorting or ordering
     serializer_class = StudentAdmissionSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
     # Query parameters filter fields
     filterset_fields = ['admission_status', 'desired_class', 'payment_status']
     search_fields = ['student_name_english', 'application_number', 'mobile_number']
