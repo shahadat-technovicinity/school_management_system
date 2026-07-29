@@ -8,6 +8,7 @@ from .serializers import *
 
 User = get_user_model()
 
+#Fetch all teachers
 # teacher fetch view
 class TeacherListView(ListAPIView):
     queryset = User.objects.filter(role__name='Teacher').order_by('-id')
