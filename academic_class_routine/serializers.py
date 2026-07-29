@@ -29,3 +29,12 @@ class ClassRoutineSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClassRoutine
         fields = '__all__'
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.subject:
+            representation['subject'] = {
+                'id': instance.subject.id,
+                'name': getattr(instance.subject, 'name', str(instance.subject)) # আপনার মডেলে নাম ফিল্ডের যা নাম (যেমন: name বা subject_name)
+            }
+        return representation
