@@ -6,31 +6,22 @@ from .models import ClassRoutine
 from .serializers import *
 
 
-# academic_management/views.py
-### authentication teacher fetch
 User = get_user_model()
+
+# teacher fetch view
 class TeacherListView(ListAPIView):
-    queryset = User.objects.filter(role__name='Teacher')
+    queryset = User.objects.filter(role__name='Teacher').order_by('-id')
     serializer_class = TeacherListSerializer
 
-    
-# class ClassRoutineCreate(CreateAPIView):
-#     queryset = ClassRoutine.objects.all()
-#     serializer_class = ClassRoutineSerializer
 
-## get, post
-User = get_user_model()
-
+## GET, POST
 class ClassRoutineView(ListCreateAPIView):
-    queryset = ClassRoutine.objects.all()
+    # order_by('-id') যোগ করা হয়েছে যাতে নতুন রুটিনগুলো সবার আগে আসে এবং UnorderedObjectListWarning দূর হয়
+    queryset = ClassRoutine.objects.all().order_by('-id')
     serializer_class = ClassRoutineSerializer
 
 
-#get, put, patch, delete
+## GET, PUT, PATCH, DELETE
 class ClassRoutineupdateDelete(RetrieveUpdateDestroyAPIView):
-    queryset = ClassRoutine.objects.all()
-    serializer_class = ClassRoutineSerializer  
-
-
-
-
+    queryset = ClassRoutine.objects.all().order_by('-id')
+    serializer_class = ClassRoutineSerializer
