@@ -6,6 +6,7 @@ from apps.admissions.models import StudentAdmission
 from apps.admissions.serializers.form_serializers import StudentAdmissionSerializer,ChangeStatusSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from apps.common.pagination.standard_pagination import StandardPagination
 
 class AdmissionFormViewSet(viewsets.ModelViewSet):
     """
@@ -14,6 +15,7 @@ class AdmissionFormViewSet(viewsets.ModelViewSet):
     queryset = StudentAdmission.objects.all().order_by('-admission_date') # Using default sorting or ordering
     serializer_class = StudentAdmissionSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    pagination_class = StandardPagination
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
     # Query parameters filter fields
     filterset_fields = ['admission_status', 'desired_class', 'payment_status']
