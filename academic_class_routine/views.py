@@ -8,6 +8,7 @@ from .serializers import *
 
 User = get_user_model()
 
+#Fetch all teachers
 # teacher fetch view
 class TeacherListView(ListAPIView):
     queryset = User.objects.filter(role__name='Teacher').order_by('-id')
@@ -25,3 +26,6 @@ class ClassRoutineView(ListCreateAPIView):
 class ClassRoutineupdateDelete(RetrieveUpdateDestroyAPIView):
     queryset = ClassRoutine.objects.all().order_by('-id')
     serializer_class = ClassRoutineSerializer
+
+
+
