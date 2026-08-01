@@ -26,3 +26,6 @@ class ClassRoutineView(ListCreateAPIView):
 class ClassRoutineupdateDelete(RetrieveUpdateDestroyAPIView):
     queryset = ClassRoutine.objects.all().order_by('-id')
     serializer_class = ClassRoutineSerializer
+
+
+

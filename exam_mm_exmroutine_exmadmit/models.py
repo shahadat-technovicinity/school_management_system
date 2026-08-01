@@ -56,7 +56,11 @@ class ExamRoutine(models.Model):
     date = models.DateField()
     day = models.CharField(max_length=10, choices=DAY_CHOICES) # Auto-calculated or manually entered
     time_slot = models.CharField(max_length=50) # e.g., "10:00 AM - 1:00 PM"
-    subject = models.CharField(max_length=100)
+    subject = models.ForeignKey(
+        'academic_create_subject.Subject_Name', 
+        on_delete=models.CASCADE,
+        related_name="examsss"
+    )   
     exam_hall = models.CharField(max_length=50)
 
     class Meta:
@@ -90,7 +94,11 @@ class ExamAdmit(models.Model):
     student_name = models.CharField(max_length=250)
     roll_number = models.IntegerField()
     class_selection = models.CharField(max_length=20, choices=CLASS_CHOICES)
-    subject = models.CharField(max_length=250)
+    subject = models.ForeignKey(
+        'academic_create_subject.Subject_Name', 
+        on_delete=models.CASCADE,
+        related_name="examsadmit"
+    )
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES)
     exam_type = models.CharField(max_length=2, choices=EXAM_TYPE_CHOICES)
 
