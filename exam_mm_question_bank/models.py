@@ -1,5 +1,6 @@
 from django.db import models
-from django.conf import settings # Guruttopurno: Eita import kora hoyeche
+from django.conf import settings
+
 
 class ExmQuestionBank(models.Model):
     CLASS_CHOICES = [
@@ -16,7 +17,6 @@ class ExmQuestionBank(models.Model):
         ('rejected', 'Rejected'),
     ]
 
-    # ✅ Shongshodhon kora holo: User model-ke settings theke load kora hochche
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE,
@@ -25,14 +25,19 @@ class ExmQuestionBank(models.Model):
     ) 
     
     question_title = models.CharField(max_length=255)
-    subject = models.CharField(max_length=100)
+    subject = models.ForeignKey(
+        'academic_create_subject.Subject_Name', 
+        on_delete=models.CASCADE,
+        related_name="examquestionbank"
+    )   
     class_name = models.CharField(max_length=20, choices=CLASS_CHOICES)
     date_created = models.DateTimeField(auto_now_add=True)
     
-    # default status 'pending' set kora holo
+    # বাই-ডিফল্ট পেন্ডিং থাকবে
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
     pdf_file = models.FileField(upload_to='questions_pdfs/', blank=True, null=True)
 
     def __str__(self):
-        return f"{self.question_title} ({self.class_name}) by {self.uploaded_by.username}"
+        user_name = self.uploaded_by.username if self.uploaded_by else 'Anonymous'
+        return f"{self.question_title} ({self.class_name}) by {user_name}"

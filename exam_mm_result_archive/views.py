@@ -1,20 +1,30 @@
 from rest_framework import generics, status
-from apps.students.models import Student
 from rest_framework.response import Response
-from .models import *
-from .serializers import *
-from rest_framework.filters import SearchFilter
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import ValidationError
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+from apps.students.models import Student
+from .models import ExamMark
+from .serializers import (
+    StudentInfoFilterSerializer,
+    MarkSubmissionSerializer,
+    MarksSerializer,
+    MarkStatusUpdateSerializer,
+    FinalResultSerializer
+)
+
+
+# --- 1. Student Filter View ---
 class StudentFilterView(generics.ListAPIView):
     serializer_class = StudentInfoFilterSerializer
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(
         manual_parameters=[
-            openapi.Parameter('class_name', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True),
-            openapi.Parameter('section', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True),
+            openapi.Parameter('class_name', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False, description="Class name e.g. Six"),
+            openapi.Parameter('section', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False, description="Section e.g. A"),
         ]
     )
     def get(self, request, *args, **kwargs):
@@ -24,91 +34,108 @@ class StudentFilterView(generics.ListAPIView):
         if getattr(self, "swagger_fake_view", False):
             return Student.objects.none()
 
-        class_name = self.request.query_params.get('class_name')
-        section = self.request.query_params.get('section')
+        queryset = Student.objects.all().order_by('roll_number')
 
-        if not class_name or not section:
-            return Student.objects.none()
+        # Query param থেকে ভ্যালু নেওয়া (অতিরিক্ত স্পেস থাকলে strip করে দেবে)
+        class_name = self.request.query_params.get('class_name', '').strip()
+        section = self.request.query_params.get('section', '').strip()
 
-        return Student.objects.filter(
-            class_name_static=class_name,
-            section_static=section
-        ).order_by('roll_number')
+        # class_name দিলে ফিল্টার করবে
+        if class_name:
+            queryset = queryset.filter(class_name_static__icontains=class_name)
+
+        # section দিলে ফিল্টার করবে
+        if section:
+            queryset = queryset.filter(section_static__icontains=section)
+
+        return queryset
 
 
-
-
-
+# --- 2. Main Marks List (STRICTLY PENDING) & Create (GET / POST) ---
+# GET: শুধু 'pending' মার্কস দেখাবে। Approved/Rejected হয়ে গেলে এখান থেকে হাওয়া হয়ে যাবে।
 class MarksListCreateAPIView(generics.ListCreateAPIView):
-    queryset = ExamMark.objects.all()
+    permission_classes = [AllowAny]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return MarkSubmissionSerializer
         return MarksSerializer
 
+    def get_queryset(self):
+        return ExamMark.objects.filter(status='pending').order_by('-updated_at')
+
     def create(self, request, *args, **kwargs):
-        data = request.data
-
-        # Bulk (list) নাকি Single (dict)?
-        is_bulk = isinstance(data, list)
-        marks_list = data if is_bulk else [data]
-
-        saved = []
-        errors = []
-
-        for item in marks_list:
-            serializer = MarkSubmissionSerializer(data=item)
-            if serializer.is_valid():
-                result = serializer.save()
-                saved.append(result)
-            else:
-                errors.append(serializer.errors)
-
-        if errors:
-            return Response({"saved": saved, "errors": errors}, status=status.HTTP_207_MULTI_STATUS)
-
-        return Response({"saved": saved, "message": f"{len(saved)} টি mark save হয়েছে"}, status=status.HTTP_201_CREATED)
-    
+        serializer = MarkSubmissionSerializer(data=request.data)
+        if serializer.is_valid():
+            result = serializer.save()
+            return Response(result, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# --- 3. Single Mark Retrieve, Update, Delete ---
+class MarkRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ExamMark.objects.all()
+    serializer_class = MarksSerializer
+    permission_classes = [AllowAny]
 
-##student mark and total view
+
+# --- 4. Admin: Approved Marks List Only ---
+class AdminApprovedMarksListAPIView(generics.ListAPIView):
+    serializer_class = MarksSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return ExamMark.objects.filter(status='approved').order_by('-updated_at')
+
+
+# --- 5. Admin: Rejected Marks List Only ---
+class AdminRejectedMarksListAPIView(generics.ListAPIView):
+    serializer_class = MarksSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return ExamMark.objects.filter(status='rejected').order_by('-updated_at')
+
+
+# --- 6. Admin: Status Change Only (PATCH ONLY) ---
+class AdminMarkStatusUpdateAPIView(generics.UpdateAPIView):
+    queryset = ExamMark.objects.all()
+    serializer_class = MarkStatusUpdateSerializer
+    permission_classes = [AllowAny]
+    http_method_names = ['patch']
+
+    def perform_update(self, serializer):
+        new_status = self.request.data.get('status')
+        valid_status = [choice[0] for choice in ExamMark.STATUS_CHOICES]
+
+        if not new_status or new_status not in valid_status:
+            raise ValidationError({"detail": f"Invalid status. Must be one of {valid_status}."})
+
+        serializer.save(status=new_status)
+
+
+# --- 7. Final Result Sheet View ---
 class FinalResultView(generics.ListAPIView):
-    serializer_class = FinalResultSerializer # FinalResultSerializer ব্যবহার হবে
+    serializer_class = FinalResultSerializer
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Student.objects.none()
             
-        # Student মডেল ধরে ছাত্রদের তালিকা তৈরি করা হবে
         queryset = Student.objects.all() 
-        
         class_name = self.request.query_params.get('class_name')
         section = self.request.query_params.get('section')
-        exam_type = self.request.query_params.get('exam_type') # ⬅️ Exam Type ইনপুট নেওয়া হলো
-
-        # class_name এবং section দিয়ে ছাত্রদের ফিল্টার করা
+        
         if class_name:
             queryset = queryset.filter(class_name=class_name)
         if section:
             queryset = queryset.filter(section=section)
         
-        # Serializer-কে ব্যবহারের জন্য exam_type কে instance ভেরিয়েবল হিসেবে সেভ করা হলো
-        self.exam_type = exam_type
-        
+        self.exam_type = self.request.query_params.get('exam_type')
         return queryset
 
     def get_serializer_context(self):
-        # context এর মাধ্যমে exam_type ডেটা FinalResultSerializer এ পাস করা হলো
         context = super().get_serializer_context()
-        context['exam_type'] = self.exam_type
+        context['exam_type'] = getattr(self, 'exam_type', None)
         return context
-    
-
-class MarkRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ExamMark.objects.all()
-    serializer_class = MarksSerializer
-
-
-
