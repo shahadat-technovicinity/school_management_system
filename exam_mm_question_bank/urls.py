@@ -1,9 +1,21 @@
 from django.urls import path
-from . import views
+from .views import (
+    QuestionListCreateAPIView,
+    QuestionDetailAPIView,
+    AdminApprovedQuestionListAPIView,
+    AdminRejectedQuestionListAPIView,
+    AdminQuestionStatusUpdateAPIView,
+)
 
 urlpatterns = [
-    path('questions/', views.QuestionListCreateAPIView.as_view(), name='question-list-create'),
-    path('questions/<int:pk>/', views.QuestionRetrieveAPIView.as_view(), name='question-retrieve'), 
-    path('admin/pending/', views.AdminPendingQuestionListAPIView.as_view(), name='admin-pending-list'),
-    path('admin/status/<int:pk>/', views.admin_change_status, name='admin-change-status'),
+    # Main Questions Endpoint (Get all / Create)
+    path('questions/', QuestionListCreateAPIView.as_view(), name='question-list-create'),
+    path('questions/<int:pk>/', QuestionDetailAPIView.as_view(), name='question-detail-delete'),
+    
+    # Admin Approved & Rejected Endpoints
+    path('admin/questions/approved/', AdminApprovedQuestionListAPIView.as_view(), name='admin-approved-questions'),
+    path('admin/questions/rejected/', AdminRejectedQuestionListAPIView.as_view(), name='admin-rejected-questions'),
+    
+    # Admin Status Change Endpoint
+    path('admin/questions/<int:pk>/status/', AdminQuestionStatusUpdateAPIView.as_view(), name='admin-change-status'),
 ]
