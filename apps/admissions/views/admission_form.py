@@ -11,6 +11,12 @@ from apps.common.pagination.standard_pagination import StandardPagination
 class AdmissionFormViewSet(viewsets.ModelViewSet):
     """
     ViewSet for handling New Student Admission Form (Create) and Forms Management (List/Patch)
+
+    List Query Parameters:
+        admission_status (str): Filter by admission status (pending, interview, selected, rejected, enrolled)
+        payment_status (str): Filter by payment status (pending, paid, failed)
+        desired_class (str): Filter by desired class
+        search (str): Search by student name, application number, or mobile number
     """
     queryset = StudentAdmission.objects.all().order_by('-admission_date') # Using default sorting or ordering
     serializer_class = StudentAdmissionSerializer
@@ -20,6 +26,43 @@ class AdmissionFormViewSet(viewsets.ModelViewSet):
     # Query parameters filter fields
     filterset_fields = ['admission_status', 'desired_class', 'payment_status']
     search_fields = ['student_name_english', 'application_number', 'mobile_number']
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'admission_status',
+                openapi.IN_QUERY,
+                description="Filter by admission status",
+                type=openapi.TYPE_STRING,
+                enum=['pending', 'interview', 'selected', 'rejected', 'enrolled'],
+                required=False,
+            ),
+            openapi.Parameter(
+                'payment_status',
+                openapi.IN_QUERY,
+                description="Filter by payment status",
+                type=openapi.TYPE_STRING,
+                enum=['pending', 'paid', 'failed'],
+                required=False,
+            ),
+            openapi.Parameter(
+                'desired_class',
+                openapi.IN_QUERY,
+                description="Filter by desired class",
+                type=openapi.TYPE_STRING,
+                required=False,
+            ),
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Search by student name (English), application number, or mobile number",
+                type=openapi.TYPE_STRING,
+                required=False,
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
     
     def get_queryset(self):
         # Override to enable dynamic optimization (e.g. prefetch related data)
