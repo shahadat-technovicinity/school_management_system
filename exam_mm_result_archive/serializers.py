@@ -167,3 +167,6 @@ class FinalResultSerializer(serializers.ModelSerializer):
             if mark.total is None or mark.total < 33:
                 return "Fail"
         return "Pass"
+    
+
+
