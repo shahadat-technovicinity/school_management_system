@@ -72,7 +72,9 @@ urlpatterns = [
     path("exam_mm_exmroutine_exmadmit/", include("exam_mm_exmroutine_exmadmit.urls")),
     path("exam_mm_question_bank/", include("exam_mm_question_bank.urls")),
     path("exam_mm_result_archive/", include("exam_mm_result_archive.urls")),
-
+    path("exam_mm_seat_mm/", include("exam_mm_seat_mm.urls")),
+    path("exam_mm_teacher_duty/", include("exam_mm_teacher_duty.urls")),
+    
 
     ######## account Management
     path("account_mm_stipend_student/", include('account_mm_std_stipent.urls')),

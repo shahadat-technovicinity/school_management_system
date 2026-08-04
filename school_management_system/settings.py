@@ -196,6 +196,8 @@ INSTALLED_APPS = [
     'exam_mm_exmroutine_exmadmit',
     'exam_mm_question_bank',
     'exam_mm_result_archive',
+    'exam_mm_seat_mm',
+    'exam_mm_teacher_duty',
 
     ## student management
     # 'student_profile',
