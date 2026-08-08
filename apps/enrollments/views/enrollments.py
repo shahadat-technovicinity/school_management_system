@@ -37,6 +37,17 @@ class EnrollmentViewSet(BaseModelViewSet):
 
     authentication_classes = [JWTAuthentication]
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        enrollment = serializer.save()
+        student = enrollment.student
+        student.class_name_static = enrollment.classname
+        student.section_static = enrollment.section
+        student.save(update_fields=['class_name_static', 'section_static'])
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
     @swagger_auto_schema(
         request_body=BulkEnrollmentSerializer,
         responses={
@@ -84,6 +95,7 @@ class EnrollmentViewSet(BaseModelViewSet):
             )
 
         enrollments = []
+        students_to_update = []
         for student_id in student_ids:
             student = existing_students[student_id]
             roll_no = student.roll_number if student.roll_number else 0
@@ -94,9 +106,13 @@ class EnrollmentViewSet(BaseModelViewSet):
                 academic_year=academic_year,
                 roll_no=roll_no,
             ))
+            student.class_name_static = classname
+            student.section_static = section
+            students_to_update.append(student)
 
         with transaction.atomic():
             Enrollment.objects.bulk_create(enrollments)
+            Student.objects.bulk_update(students_to_update, ['class_name_static', 'section_static'])
 
         return Response(
             {
