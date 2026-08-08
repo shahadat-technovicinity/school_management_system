@@ -1,12 +1,18 @@
 from apps.common.pagination.standard_pagination import StandardPagination
 from apps.common.views.basemodelview import BaseModelViewSet
-from apps.enrollments.serializers.enrollments import EnrollmentSerializer
-from rest_framework import viewsets, permissions, filters
+from apps.enrollments.serializers.enrollments import EnrollmentSerializer, BulkEnrollmentSerializer
+from rest_framework import viewsets, permissions, filters, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.pagination import LimitOffsetPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.enrollments.models import Enrollment
+from apps.students.models import Student
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+from apps.academics.models import AcademicYear
+from django.db import transaction
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 
 class EnrollmentViewSet(BaseModelViewSet):
@@ -21,7 +27,7 @@ class EnrollmentViewSet(BaseModelViewSet):
     """
     queryset = Enrollment.objects.all()
     serializer_class = EnrollmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
     pagination_class = StandardPagination
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -30,34 +36,75 @@ class EnrollmentViewSet(BaseModelViewSet):
     ordering_fields = ['created_at', 'updated_at', 'start_date', 'end_date']
 
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
 
-    # def get_queryset(self):
-    #     if getattr(self, 'swagger_fake_view', False):
-    #         return Enrollment.objects.none()
-        
-    #     # allow limiting to current user's school if Enrollment has that relation
-    #     qs = super().get_queryset()
-    #     user = self.request.user
-    #     if user.is_anonymous:
-    #         return Enrollment.objects.none()
-            
-    #     if not user.is_staff:
-    #         # attempt common patterns: school relation on enrollment or student
-    #         if hasattr(qs.model, "school"):
-    #             qs = qs.filter(school=getattr(user, "school", None))
-    #         elif hasattr(qs.model, "student") and hasattr(user, "school"):
-    #             qs = qs.filter(student__school=getattr(user, "school", None))
-    #     return qs
+    @swagger_auto_schema(
+        request_body=BulkEnrollmentSerializer,
+        responses={
+            201: openapi.Response("Bulk enrollment created"),
+            400: "Bad request - duplicate enrollment or missing students",
+            404: "Students not found",
+        }
+    )
+    @action(detail=False, methods=['post'], url_path='bulk-create')
+    def bulk_create(self, request):
+        serializer = BulkEnrollmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-    # def get_permissions(self):
-    #     """
-    #     GET/List: Anyone can see.
-    #     POST/PUT/DELETE: Only authenticated users.
-    #     """
-    #     if self.action in ['list', 'retrieve']:
-    #         permission_classes = [permissions.AllowAny]
-    #     else:
-    #         permission_classes = [permissions.IsAuthenticated]
-        
-    #     return [permission() for permission in permission_classes]
+        student_ids = data['student_ids']
+        classname = data['classname']
+        section = data.get('section', 'A')
+
+        academic_year = data.get('academic_year')
+        if not academic_year:
+            active_year = AcademicYear.objects.filter(is_active=True).first()
+            academic_year = active_year.year_label if active_year else "2025-2026"
+
+        # Validate students exist and fetch their existing roll numbers
+        students_qs = Student.objects.filter(id__in=student_ids).only('id', 'roll_number')
+        existing_students = {s.id: s for s in students_qs}
+        missing_ids = set(student_ids) - set(existing_students.keys())
+        if missing_ids:
+            return Response(
+                {"error": f"Students not found: {sorted(missing_ids)}"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check for duplicates in this academic year
+        existing_enrollments = set(
+            Enrollment.objects.filter(
+                student_id__in=student_ids,
+                academic_year=academic_year
+            ).values_list('student_id', flat=True)
+        )
+        if existing_enrollments:
+            return Response(
+                {"error": f"Students already enrolled this year: {sorted(existing_enrollments)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        enrollments = []
+        for student_id in student_ids:
+            student = existing_students[student_id]
+            roll_no = student.roll_number if student.roll_number else 0
+            enrollments.append(Enrollment(
+                student_id=student_id,
+                classname=classname,
+                section=section,
+                academic_year=academic_year,
+                roll_no=roll_no,
+            ))
+
+        with transaction.atomic():
+            Enrollment.objects.bulk_create(enrollments)
+
+        return Response(
+            {
+                "message": f"Enrolled {len(enrollments)} students successfully.",
+                "academic_year": academic_year,
+                "classname": classname,
+                "section": section,
+                "count": len(enrollments),
+            },
+            status=status.HTTP_201_CREATED
+        )
