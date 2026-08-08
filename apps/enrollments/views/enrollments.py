@@ -40,11 +40,15 @@ class EnrollmentViewSet(BaseModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        student_id = serializer.validated_data['student'].id
         enrollment = serializer.save()
         student = enrollment.student
         student.class_name_static = enrollment.classname
         student.section_static = enrollment.section
-        student.save(update_fields=['class_name_static', 'section_static'])
+        student.roll_number = student_id
+        student.save(update_fields=['class_name_static', 'section_static', 'roll_number'])
+        enrollment.roll_no = student_id
+        enrollment.save(update_fields=['roll_no'])
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -71,8 +75,8 @@ class EnrollmentViewSet(BaseModelViewSet):
             active_year = AcademicYear.objects.filter(is_active=True).first()
             academic_year = active_year.year_label if active_year else "2025-2026"
 
-        # Validate students exist and fetch their existing roll numbers
-        students_qs = Student.objects.filter(id__in=student_ids).only('id', 'roll_number')
+        # Validate students exist
+        students_qs = Student.objects.filter(id__in=student_ids).only('id')
         existing_students = {s.id: s for s in students_qs}
         missing_ids = set(student_ids) - set(existing_students.keys())
         if missing_ids:
@@ -98,21 +102,21 @@ class EnrollmentViewSet(BaseModelViewSet):
         students_to_update = []
         for student_id in student_ids:
             student = existing_students[student_id]
-            roll_no = student.roll_number if student.roll_number else 0
             enrollments.append(Enrollment(
                 student_id=student_id,
                 classname=classname,
                 section=section,
                 academic_year=academic_year,
-                roll_no=roll_no,
+                roll_no=student_id,
             ))
             student.class_name_static = classname
             student.section_static = section
+            student.roll_number = student_id
             students_to_update.append(student)
 
         with transaction.atomic():
             Enrollment.objects.bulk_create(enrollments)
-            Student.objects.bulk_update(students_to_update, ['class_name_static', 'section_static'])
+            Student.objects.bulk_update(students_to_update, ['class_name_static', 'section_static', 'roll_number'])
 
         return Response(
             {
