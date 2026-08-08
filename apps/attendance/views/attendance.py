@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 
 class BulkAttendanceAPIView(CreateAPIView):
     serializer_class = BulkAttendanceSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
