@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from apps.common.pagination.standard_pagination import StandardPagination
 
 
 class BulkAttendanceAPIView(CreateAPIView):
@@ -46,6 +47,7 @@ class AttendancePatchByKeyAPIView(APIView):
 
 class StudentAttendanceListAPIView(ListAPIView):
     serializer_class = AttendanceListSerializer
+    pagination_class = StandardPagination
     # permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
