@@ -39,6 +39,19 @@ class EnrollmentViewSet(BaseModelViewSet):
 
     authentication_classes = [JWTAuthentication]
 
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('student', openapi.IN_QUERY, description="Student ID", type=openapi.TYPE_INTEGER),
+            openapi.Parameter('classname', openapi.IN_QUERY, description="Class name", type=openapi.TYPE_STRING),
+            openapi.Parameter('section', openapi.IN_QUERY, description="Section", type=openapi.TYPE_STRING),
+            openapi.Parameter('academic_year', openapi.IN_QUERY, description="Academic year", type=openapi.TYPE_STRING),
+            openapi.Parameter('search', openapi.IN_QUERY, description="Search across student name, class, section, academic year", type=openapi.TYPE_STRING),
+            openapi.Parameter('ordering', openapi.IN_QUERY, description="Order by field (prefix with - for descending)", type=openapi.TYPE_STRING),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
