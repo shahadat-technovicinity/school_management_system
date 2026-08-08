@@ -50,7 +50,7 @@ class StudentAttendanceListAPIView(ListAPIView):
 
     @swagger_auto_schema(
         manual_parameters=[
-            openapi.Parameter('student_id', openapi.IN_PATH, description="Student ID", type=openapi.TYPE_INTEGER),
+            openapi.Parameter('student_id', openapi.IN_PATH, description="Student ID (optional)", type=openapi.TYPE_INTEGER),
             openapi.Parameter('classname', openapi.IN_QUERY, description="Class name", type=openapi.TYPE_STRING),
             openapi.Parameter('section', openapi.IN_QUERY, description="Section", type=openapi.TYPE_STRING),
             openapi.Parameter('date_from', openapi.IN_QUERY, description="Start date (YYYY-MM-DD)", type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE),
@@ -67,11 +67,11 @@ class StudentAttendanceListAPIView(ListAPIView):
         if getattr(self, 'swagger_fake_view', False):
             return Attendance.objects.none()
         
+        queryset = Attendance.objects.all()
+
         student_id = self.kwargs.get('student_id')
-        if student_id is None:
-            return Attendance.objects.none()
-        
-        queryset = Attendance.objects.filter(student_id=student_id)
+        if student_id is not None:
+            queryset = queryset.filter(student_id=student_id)
 
         class_name = self.request.query_params.get('classname')
         section = self.request.query_params.get('section')

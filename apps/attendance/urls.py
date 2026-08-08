@@ -14,4 +14,9 @@ urlpatterns = [
         StudentAttendanceListAPIView.as_view(),
         name='student-attendance-list'
     ),
+    path(
+        '',
+        StudentAttendanceListAPIView.as_view(),
+        name='attendance-list'
+    ),
 ]
