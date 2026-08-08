@@ -21,7 +21,9 @@ class EnrollmentViewSet(BaseModelViewSet):
     Supports filtering, search and ordering via query params.
     Example query params:
       ?student=1
-      ?course=2
+      ?classname=Class+5
+      ?section=A
+      ?academic_year=2025-2026
       ?search=john
       ?ordering=-created_at
     """
@@ -31,8 +33,8 @@ class EnrollmentViewSet(BaseModelViewSet):
     pagination_class = StandardPagination
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    # filterset_fields = ['student', 'course', 'status', 'term']
-    search_fields = ['student__first_name', 'student__last_name', 'course__title','academic_year']
+    filterset_fields = ['student', 'classname', 'section', 'academic_year']
+    search_fields = ['student__first_name', 'student__last_name', 'classname', 'section', 'academic_year']
     ordering_fields = ['created_at', 'updated_at', 'start_date', 'end_date']
 
     authentication_classes = [JWTAuthentication]
