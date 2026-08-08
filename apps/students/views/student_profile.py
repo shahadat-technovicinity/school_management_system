@@ -1,8 +1,10 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 from apps.students.models import Student, StudentDiscipline
 from apps.students.serializers.management_serializers import StudentManagementSerializer, StudentDisciplineSerializer
+
 
 class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -11,6 +13,8 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = Student.objects.all()
     serializer_class = StudentManagementSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['class_name_static', 'section_static']
 
     @action(detail=True, methods=['get'])
     def academic_performance(self, request, pk=None):

@@ -32,7 +32,7 @@ class EnrollmentViewSet(BaseModelViewSet):
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     # filterset_fields = ['student', 'course', 'status', 'term']
-    search_fields = ['student__first_name', 'student__last_name', 'course__title']
+    search_fields = ['student__first_name', 'student__last_name', 'course__title','academic_year']
     ordering_fields = ['created_at', 'updated_at', 'start_date', 'end_date']
 
     authentication_classes = [JWTAuthentication]

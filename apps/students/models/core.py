@@ -67,10 +67,7 @@ class Student(models.Model):
     class_name_static = models.CharField(db_column='class_name', max_length=64, blank=True, null=True)
     section_static = models.CharField(db_column='section', max_length=32, blank=True, null=True)
     
-    # Ideally these would be foreign keys. For the fake migration we map them later or keep them as references.
-    # class_name = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, related_name='students')
-    # section = models.ForeignKey(Section, on_delete=models.SET_NULL, null=True, related_name='students')
-    # We will rename the db_columns in step 2.
+    
 
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
     date_of_birth = models.DateField()
