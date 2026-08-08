@@ -1,6 +1,8 @@
 from django.db import models
 
-from academic_class_routine.models import Teacher
+# from academic_class_routine.models import Teacher
+from teacher_mm_teacher.models import Teacher
+
 from apps.academics.models import ClassSection
 from apps.students.models import Student
 
