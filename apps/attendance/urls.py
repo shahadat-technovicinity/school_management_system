@@ -10,11 +10,6 @@ urlpatterns = [
         name='attendance-patch-by-key'
     ),
     path(
-        'student/<int:student_id>/',
-        StudentAttendanceListAPIView.as_view(),
-        name='student-attendance-list'
-    ),
-    path(
         '',
         StudentAttendanceListAPIView.as_view(),
         name='attendance-list'
