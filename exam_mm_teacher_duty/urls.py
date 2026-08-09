@@ -11,3 +11,4 @@ urlpatterns = [
     path('duties/archive/', ArchivedExamDutyListView.as_view(), name='exam-duty-archive'),
     path('duties/stats/', DutyStatsView.as_view(), name='exam-duty-stats'),
 ]
+

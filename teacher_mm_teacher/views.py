@@ -1,6 +1,5 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
@@ -38,33 +37,19 @@ class TeacherViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = TeacherFilter
     search_fields = [
-        "teacher_id",
         "user__name",
         "user__username",
-        "subject",
+        "subject__name",
         "class_assigned",
         "primary_contact_number",
     ]
     ordering_fields = [
-        "teacher_id",
         "user__name",
         "date_of_joining",
         "created_at",
         "status",
     ]
     ordering = ["-created_at"]
-
-    def get_permissions(self):
-        """
-        Set permissions based on action:
-        - list, retrieve: Allow any (or IsAuthenticated based on requirements)
-        - create, update, partial_update, destroy: Admin only
-        """
-        if self.action in ["list", "retrieve"]:
-            permission_classes = [AllowAny]
-        else:
-            permission_classes = [IsAuthenticated]
-        return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
@@ -101,7 +86,6 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
         **Required fields:**
         - user_id: ID of the existing user
-        - teacher_id: Unique teacher identifier
 
         **File uploads:**
         - resume: PDF/DOC file
@@ -111,7 +95,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        
+
         # Return detailed response
         detail_serializer = TeacherDetailSerializer(serializer.instance)
         headers = self.get_success_headers(detail_serializer.data)
@@ -133,24 +117,6 @@ class TeacherViewSet(viewsets.ModelViewSet):
         tags=["Teachers"],
     )
     def list(self, request, *args, **kwargs):
-        """
-        List all teachers with pagination and filtering.
-
-        **Filtering options:**
-        - status: Filter by employment status
-        - gender: Filter by gender
-        - subject: Filter by teaching subject
-        - class_assigned: Filter by assigned class
-        - contract_type: Filter by contract type
-        - work_shift: Filter by work shift
-
-        **Search:**
-        Search across teacher_id, name, subject, class, and phone number.
-
-        **Ordering:**
-        Order by teacher_id, name, date_of_joining, created_at, or status.
-        Use `-` prefix for descending order (e.g., `-created_at`).
-        """
         return super().list(request, *args, **kwargs)
 
     @swagger_auto_schema(
@@ -166,18 +132,6 @@ class TeacherViewSet(viewsets.ModelViewSet):
         tags=["Teachers"],
     )
     def retrieve(self, request, *args, **kwargs):
-        """
-        Retrieve a single teacher's complete profile.
-
-        Returns all fields including:
-        - Personal information
-        - Payroll details
-        - Bank information
-        - Leave allocation
-        - Transport and hostel details
-        - Social media links
-        - Uploaded documents
-        """
         return super().retrieve(request, *args, **kwargs)
 
     @swagger_auto_schema(
@@ -196,7 +150,6 @@ class TeacherViewSet(viewsets.ModelViewSet):
         tags=["Teachers"],
     )
     def update(self, request, *args, **kwargs):
-        """Update a teacher profile (full update)."""
         return super().update(request, *args, **kwargs)
 
     @swagger_auto_schema(
@@ -215,7 +168,6 @@ class TeacherViewSet(viewsets.ModelViewSet):
         tags=["Teachers"],
     )
     def partial_update(self, request, *args, **kwargs):
-        """Partially update a teacher profile."""
         return super().partial_update(request, *args, **kwargs)
 
     @swagger_auto_schema(
@@ -229,7 +181,6 @@ class TeacherViewSet(viewsets.ModelViewSet):
         tags=["Teachers"],
     )
     def destroy(self, request, *args, **kwargs):
-        """Delete a teacher profile."""
         return super().destroy(request, *args, **kwargs)
 
     @swagger_auto_schema(
