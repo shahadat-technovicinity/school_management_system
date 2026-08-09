@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+# from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
@@ -45,7 +45,7 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
     - DELETE /teacher/leave-types/{id}/ - Delete leave type
     """
     queryset = LeaveType.objects.all()
-    permission_classes = [AllowAny]  # Change to IsAuthenticated in production
+    # permission_classes = [AllowAny]  # Change to IsAuthenticated in production
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "description"]
     ordering_fields = ["name", "default_days", "created_at"]
@@ -118,7 +118,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
     queryset = TeacherLeave.objects.select_related(
         "teacher", "teacher__user", "leave_type", "reviewed_by"
     ).all()
-    permission_classes = [AllowAny]  # Change to IsAuthenticated in production
+    # permission_classes = [AllowAny]  # Change to IsAuthenticated in production
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = TeacherLeaveFilter
     search_fields = ["teacher__teacher_id", "teacher__user__name", "reason"]
@@ -354,7 +354,7 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
         "teacher", "teacher__user", "leave_type"
     ).all()
     serializer_class = LeaveBalanceSerializer
-    permission_classes = [AllowAny]  # Change to IsAuthenticated in production
+    # permission_classes = [AllowAny]  # Change to IsAuthenticated in production
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["teacher", "leave_type", "year"]
     ordering_fields = ["year", "leave_type__name", "total_allocated", "used"]

@@ -10,7 +10,7 @@ from teacher_mm_teacher.models import Teacher
 
 class LeaveTypeSerializer(serializers.ModelSerializer):
     """Serializer for Leave Type - used for listing and details."""
-    
+
     class Meta:
         model = LeaveType
         fields = [
@@ -27,7 +27,7 @@ class LeaveTypeSerializer(serializers.ModelSerializer):
 
 class LeaveTypeCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating Leave Type."""
-    
+
     class Meta:
         model = LeaveType
         fields = ["name", "description", "default_days", "is_active"]
@@ -39,10 +39,10 @@ class LeaveTypeCreateSerializer(serializers.ModelSerializer):
 
 class LeaveBalanceSerializer(serializers.ModelSerializer):
     """Serializer for Leave Balance - shows leave allocation and usage."""
-    
+
     leave_type_name = serializers.CharField(source="leave_type.name", read_only=True)
     available = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = LeaveBalance
         fields = [
@@ -79,20 +79,20 @@ class LeaveBalanceSummarySerializer(serializers.Serializer):
 class TeacherMinimalSerializer(serializers.ModelSerializer):
     """Minimal teacher info for leave list."""
     name = serializers.CharField(source="full_name", read_only=True)
-    
+
     class Meta:
         model = Teacher
-        fields = ["id", "teacher_id", "name", "photo"]
+        fields = ["id", "name", "photo"]
 
 
 class TeacherLeaveListSerializer(serializers.ModelSerializer):
     """Serializer for listing teacher leaves."""
-    
+
     leave_type_name = serializers.CharField(source="leave_type.name", read_only=True)
     teacher_name = serializers.CharField(source="teacher.full_name", read_only=True)
-    teacher_id_display = serializers.CharField(source="teacher.teacher_id", read_only=True)
+    teacher_id_display = serializers.IntegerField(source="teacher.id", read_only=True)
     leave_date_display = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = TeacherLeave
         fields = [
@@ -122,11 +122,11 @@ class TeacherLeaveListSerializer(serializers.ModelSerializer):
 
 class TeacherLeaveDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer for single leave application."""
-    
+
     teacher = TeacherMinimalSerializer(read_only=True)
     leave_type = LeaveTypeSerializer(read_only=True)
     reviewed_by_name = serializers.CharField(source="reviewed_by.name", read_only=True)
-    
+
     class Meta:
         model = TeacherLeave
         fields = [
@@ -156,7 +156,7 @@ class TeacherLeaveCreateSerializer(serializers.ModelSerializer):
     Serializer for creating a leave application.
     Used by admin to create leave on behalf of teacher.
     """
-    
+
     class Meta:
         model = TeacherLeave
         fields = [
@@ -175,13 +175,13 @@ class TeacherLeaveCreateSerializer(serializers.ModelSerializer):
         """Validate leave application data."""
         from_date = data.get("from_date")
         to_date = data.get("to_date")
-        
+
         if from_date and to_date:
             if to_date < from_date:
                 raise serializers.ValidationError({
                     "to_date": "End date cannot be before start date."
                 })
-        
+
         # Check for overlapping leaves
         teacher = data.get("teacher")
         if teacher and from_date and to_date:
@@ -197,7 +197,7 @@ class TeacherLeaveCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "This leave overlaps with an existing leave application."
                 )
-        
+
         return data
 
     def create(self, validated_data):
@@ -212,13 +212,13 @@ class TeacherLeaveCreateSerializer(serializers.ModelSerializer):
                 validated_data["no_of_days"] = delta * 0.5
             else:
                 validated_data["no_of_days"] = delta
-        
+
         return super().create(validated_data)
 
 
 class TeacherLeaveUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating leave application (before approval)."""
-    
+
     class Meta:
         model = TeacherLeave
         fields = [
@@ -239,21 +239,21 @@ class TeacherLeaveUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Cannot update leave application that has been approved or declined."
             )
-        
+
         from_date = data.get("from_date", instance.from_date if instance else None)
         to_date = data.get("to_date", instance.to_date if instance else None)
-        
+
         if from_date and to_date and to_date < from_date:
             raise serializers.ValidationError({
                 "to_date": "End date cannot be before start date."
             })
-        
+
         return data
 
 
 class LeaveApprovalSerializer(serializers.Serializer):
     """Serializer for approving/declining leave application."""
-    
+
     action = serializers.ChoiceField(
         choices=["approve", "decline"],
         help_text="Action to perform on the leave application"
@@ -277,17 +277,17 @@ class LeaveApprovalSerializer(serializers.Serializer):
         """Process the approval/decline action."""
         action = self.validated_data["action"]
         admin_remarks = self.validated_data.get("admin_remarks", "")
-        
+
         leave.status = "approved" if action == "approve" else "declined"
         leave.reviewed_by = user
         leave.reviewed_at = timezone.now()
         leave.admin_remarks = admin_remarks
         leave.save()
-        
+
         # Update leave balance if approved
         if action == "approve":
             self._update_leave_balance(leave)
-        
+
         return leave
 
     def _update_leave_balance(self, leave):

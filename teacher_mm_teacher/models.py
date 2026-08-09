@@ -5,7 +5,7 @@ from django.conf import settings
 class Teacher(models.Model):
     """
     Teacher profile model linked to User via OneToOne relationship.
-    User model handles name, email, and password.
+    User model handles name, email, password, and role.
     """
 
     GENDER_CHOICES = [
@@ -49,27 +49,35 @@ class Teacher(models.Model):
     ]
 
     # ─────────────────────────────────────────────────────────────
-    # User Relationship (OneToOne)
+    # User Relationship (OneToOne) - user.id ei Teacher er identifier
     # ─────────────────────────────────────────────────────────────
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="teacher_profile",
         help_text="Linked user account for authentication",
-        null=True,  # Allow null temporarily for migration, should be non-null in production
+        null=True,
         blank=True
     )
 
     # ─────────────────────────────────────────────────────────────
     # Personal Information
     # ─────────────────────────────────────────────────────────────
-    teacher_id = models.CharField(max_length=50, unique=True, help_text="Unique teacher identifier")
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS_CHOICES, blank=True)
     languages_known = models.JSONField(default=list, blank=True, help_text="List of languages known")
     class_assigned = models.CharField(max_length=100, blank=True)
-    subject = models.CharField(max_length=100, blank=True)
+
+    # Subject - FK relation
+    subject = models.ForeignKey(
+        'academic_create_subject.Subject_Name',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='teachers'
+    )
+
     blood_group = models.CharField(max_length=5, choices=BLOOD_GROUP_CHOICES, blank=True)
     primary_contact_number = models.CharField(max_length=20, blank=True)
     father_name = models.CharField(max_length=150, blank=True)
@@ -133,11 +141,11 @@ class Teacher(models.Model):
     # ─────────────────────────────────────────────────────────────
     # Social Media Links
     # ─────────────────────────────────────────────────────────────
-    facebook = models.URLField(blank=True)
-    instagram = models.URLField(blank=True)
-    linkedin = models.URLField(blank=True)
-    youtube = models.URLField(blank=True)
-    twitter = models.URLField(blank=True)
+    facebook = models.CharField(max_length=200, blank=True, null=True)
+    instagram = models.CharField(max_length=200, blank=True, null=True)
+    linkedin = models.CharField(max_length=200, blank=True, null=True)
+    youtube = models.CharField(max_length=200, blank=True, null=True)
+    twitter = models.CharField(max_length=200, blank=True, null=True)
 
     # ─────────────────────────────────────────────────────────────
     # Documents (File Uploads)
@@ -163,8 +171,8 @@ class Teacher(models.Model):
 
     def __str__(self) -> str:
         if self.user:
-            return f"{self.teacher_id} - {self.user.name}"
-        return f"{self.teacher_id}"
+            return f"{self.user.name} (ID: {self.user.id})"
+        return f"Teacher {self.id}"
 
     @property
     def full_name(self) -> str:
