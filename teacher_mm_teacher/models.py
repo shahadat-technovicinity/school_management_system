@@ -128,9 +128,9 @@ class Teacher(models.Model):
     # ─────────────────────────────────────────────────────────────
     # Transport Details
     # ─────────────────────────────────────────────────────────────
-    route_id = models.CharField(max_length=50, blank=True)
-    vehicle_number = models.CharField(max_length=50, blank=True)
-    pickup_point = models.CharField(max_length=100, blank=True)
+    route_id = models.CharField(max_length=50, blank=True, null=True)
+    vehicle_number = models.CharField(max_length=50, blank=True,null=True)
+    pickup_point = models.CharField(max_length=100, blank=True, null=True)
 
     # ─────────────────────────────────────────────────────────────
     # Hostel Details
