@@ -1,4 +1,3 @@
-# attendance/views.py
 from rest_framework.views import APIView
 from apps.attendance.models import Attendance
 from apps.attendance.serializers.attendance import AttendanceListSerializer, AttendancePatchSerializer, BulkAttendanceSerializer
@@ -13,12 +12,12 @@ from apps.common.pagination.standard_pagination import StandardPagination
 
 class BulkAttendanceAPIView(CreateAPIView):
     serializer_class = BulkAttendanceSerializer
-    # permission_classes = [IsAuthenticated]
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['request'] = self.request
-        return context
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "Attendance marked successfully"}, status=201)
 
 
 class AttendancePatchByKeyAPIView(APIView):
@@ -48,7 +47,6 @@ class AttendancePatchByKeyAPIView(APIView):
 class StudentAttendanceListAPIView(ListAPIView):
     serializer_class = AttendanceListSerializer
     pagination_class = StandardPagination
-    # permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         manual_parameters=[
@@ -57,7 +55,7 @@ class StudentAttendanceListAPIView(ListAPIView):
             openapi.Parameter('section', openapi.IN_QUERY, description="Section", type=openapi.TYPE_STRING),
             openapi.Parameter('date_from', openapi.IN_QUERY, description="Start date (YYYY-MM-DD)", type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE),
             openapi.Parameter('date_to', openapi.IN_QUERY, description="End date (YYYY-MM-DD)", type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE),
-            openapi.Parameter('marked_by', openapi.IN_QUERY, description="Teacher ID who marked attendance", type=openapi.TYPE_INTEGER),
+            openapi.Parameter('marked_by', openapi.IN_QUERY, description="Teacher User ID who marked attendance", type=openapi.TYPE_INTEGER),
             openapi.Parameter('date', openapi.IN_QUERY, description="Specific date (YYYY-MM-DD)", type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE),
             openapi.Parameter('ordering', openapi.IN_QUERY, description="Order by field (prefix with - for descending)", type=openapi.TYPE_STRING),
         ]
@@ -68,7 +66,7 @@ class StudentAttendanceListAPIView(ListAPIView):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Attendance.objects.none()
-        
+
         queryset = Attendance.objects.all()
 
         student_id = self.kwargs.get('student_id') or self.request.query_params.get('student_id')
@@ -77,7 +75,6 @@ class StudentAttendanceListAPIView(ListAPIView):
 
         class_name = self.request.query_params.get('classname')
         section = self.request.query_params.get('section')
-
         marked_by = self.request.query_params.get('marked_by')
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
@@ -85,16 +82,12 @@ class StudentAttendanceListAPIView(ListAPIView):
 
         if class_name:
             queryset = queryset.filter(classname=class_name)
-
         if section:
             queryset = queryset.filter(section=section)
-
         if marked_by:
             queryset = queryset.filter(marked_by_id=marked_by)
-
         if date:
             queryset = queryset.filter(date=date)
-
         if date_from and date_to:
             queryset = queryset.filter(date__range=[date_from, date_to])
         elif date_from:
