@@ -1,7 +1,8 @@
 from django.db import models
 
 # from academic_class_routine.models import Teacher
-from teacher_mm_teacher.models import Teacher
+# from teacher_mm_teacher.models import Teacher
+from django.conf import settings
 
 # from apps.academics.models import ClassSection
 from apps.students.models import Student
@@ -22,7 +23,10 @@ class Attendance(models.Model):
     date = models.DateField()
     status = models.CharField(max_length=1, choices=STATUS_CHOICES)
     marked_by = models.ForeignKey(
-        Teacher, on_delete=models.SET_NULL, null=True
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        limit_choices_to={'role__name': 'Teacher'}
     )
 
     class Meta:
