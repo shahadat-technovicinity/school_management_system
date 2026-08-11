@@ -1,8 +1,9 @@
 from apps.attendance.models import Attendance
 from rest_framework import serializers
-from apps.academics.models import ClassSection
 from apps.students.models import Student
-from teacher_mm_teacher.models import Teacher
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class AttendanceRecordSerializer(serializers.Serializer):
@@ -20,14 +21,11 @@ class BulkAttendanceSerializer(serializers.Serializer):
     section = serializers.CharField(max_length=256)
     records = AttendanceRecordSerializer(many=True)
     marked_by = serializers.PrimaryKeyRelatedField(
-        queryset=Teacher.objects.all()
+        queryset=User.objects.filter(role__name='Teacher')
     )
 
     def create(self, validated_data):
-        """
-        UPSERT logic: create or update attendance
-        """
-        teacher = validated_data['marked_by']
+        user = validated_data['marked_by']
         classname = validated_data['classname']
         section = validated_data['section']
         date = validated_data['date']
@@ -43,7 +41,7 @@ class BulkAttendanceSerializer(serializers.Serializer):
                 date=date,
                 defaults={
                     'status': record['status'],
-                    'marked_by': teacher
+                    'marked_by': user
                 }
             )
             attendances.append(obj)
