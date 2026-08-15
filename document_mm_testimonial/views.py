@@ -1,7 +1,9 @@
 import io
 import os
 import base64
+import subprocess
 import qrcode
+
 from django.http import HttpResponse
 from django.conf import settings
 from rest_framework.views import APIView
@@ -162,12 +164,22 @@ class DownloadTestimonialPDFView(APIView):
         </html>
         """
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            page.set_content(html_content)
-            pdf_bytes = page.pdf(format="A4", print_background=True)
-            browser.close()
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.set_content(html_content)
+                pdf_bytes = page.pdf(format="A4", print_background=True)
+                browser.close()
+        except Exception:
+            # Auto install chromium if missing on server
+            subprocess.run(["playwright", "install", "chromium"], check=True)
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.set_content(html_content)
+                pdf_bytes = page.pdf(format="A4", print_background=True)
+                browser.close()
 
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="Testimonial_{application.roll}.pdf"'
