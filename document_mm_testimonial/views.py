@@ -1,8 +1,6 @@
 import io
 import os
 import base64
-import sys
-import subprocess
 import qrcode
 
 from django.http import HttpResponse
@@ -53,11 +51,17 @@ class DownloadTestimonialPDFView(APIView):
         except StudentApplication.DoesNotExist:
             return Response({"error": "Application not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Explicit HTTPS Verification URL for scanning QR code
+        # 1. Available Font Encoding (SolaimanLipi)
+        font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'SolaimanLipi.ttf')
+        font_base64 = ""
+        if os.path.exists(font_path):
+            with open(font_path, "rb") as font_file:
+                font_base64 = base64.b64encode(font_file.read()).decode('utf-8')
+
+        # 2. Dynamic Verification QR Code (Base64)
         base_url = "https://api.harikhalihs.edu.bd"
         verify_url = f"{base_url}/document_mm_testimonial/applications/{application.id}/"
         
-        # Generate QR Code image in memory
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -70,34 +74,31 @@ class DownloadTestimonialPDFView(APIView):
         
         buffer = io.BytesIO()
         img.save(buffer, format="PNG")
-        qr_b64 = base64.b64encode(buffer.getvalue()).decode()
+        qr_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         qr_image_data = f"data:image/png;base64,{qr_b64}"
+        buffer.close()
 
-        font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'Kalpurush.ttf').replace('\\', '/')
-
+        # 3. HTML Layout Structure
         html_content = f"""
         <!DOCTYPE html>
-        <html>
+        <html lang="bn">
         <head>
             <meta charset="utf-8">
             <style>
-                @page {{
-                    size: A4;
-                    margin: 40pt;
-                }}
                 @font-face {{
-                    font-family: 'Kalpurush';
-                    src: url('file:///{font_path}');
+                    font-family: 'SolaimanLipi';
+                    src: url('data:font/truetype;charset=utf-8;base64,{font_base64}') format('truetype');
                 }}
                 body {{
-                    font-family: 'Kalpurush', sans-serif;
+                    font-family: 'SolaimanLipi', sans-serif;
                     font-size: 14pt;
                     line-height: 1.8;
                     color: #000000;
                     margin: 0;
-                    padding: 0;
+                    padding: 40pt;
                 }}
                 .app-id {{
+                    font-family: Arial, sans-serif;
                     font-size: 11pt;
                     color: #333333;
                     font-weight: bold;
@@ -140,15 +141,15 @@ class DownloadTestimonialPDFView(APIView):
                 পিতা: <b>{application.father_name_bn}</b>, মাতা: <b>{application.mother_name_bn}</b>, 
                 গ্রাম: <b>{application.village}</b>, ডাকঘর: <b>{application.post_office}</b>, 
                 উপজেলা: <b>{application.upazila}</b>, জেলা: <b>{application.district}</b>। 
-                সে অত্র হরিখালী উচ্চ বিদ্যালয়ের দশম শ্রেণির শিক্ষার্থী ছিল। 
+                সে অত্র হরিখালী উচ্চ বিদ্যালয়ের দশম শ্রেণির শিক্ষার্থী ছিল। 
                 সে <b>{application.passing_year}</b> সালের <b>{application.exam_month}</b> মাসে 
-                <b>{application.board}</b> কর্তৃক অনুষ্ঠিত সেকেন্ডারী স্কুল সার্টিফিকেট পরীক্ষায় 
+                <b>{application.board}</b> কর্তৃক অনুষ্ঠিত সেকেন্ডারী স্কুল সার্টিফিকেট পরীক্ষায় 
                 <b>{application.department}</b> বিভাগে অংশ গ্রহণ করিয়া <b>{application.grade}</b> গ্রেডে উত্তীর্ণ হইয়াছে। 
-                তাহার গ্রেড পয়েন্ট এভারেজ(GPA) <b>{application.gpa}</b>, তাহার পরীক্ষার রোল সোনার নং <b>{application.roll}</b>, 
+                তাহার গ্রেড পয়েন্ট এভারেজ(GPA) <b>{application.gpa}</b>, তাহার পরীক্ষার রোল সোনার নং <b>{application.roll}</b>, 
                 নিবন্ধন সংখ্যা <b>{application.registration_no}</b>, শিক্ষাবর্ষ <b>{application.academic_year}</b>। 
                 তাহার জন্ম তারিখ <b>{application.date_of_birth}</b>।
                 <br/><br/>
-                যতদূর জানি তাহার স্বভাব চরিত্র ভালো এবং অত্র বিদ্যালয়ে অধ্যয়নকালে সে রাষ্ট্র বিরোধী অথবা নিয়ম শৃঙ্খলা পরিপন্থী কোন কাজে অংশ গ্রহণ করে নাই।
+                যতদূর জানি তাহার স্বভাব চরিত্র ভালো এবং অত্র বিদ্যালয়ে অধ্যয়নকালে সে রাষ্ট্র বিরোধী অথবা নিয়ম শৃঙ্খলা পরিপন্থী কোন কাজে অংশ গ্রহণ করে নাই।
                 <br/><br/>
                 আমি তাহার সাফল্য কামনা করি।
             </div>
@@ -166,21 +167,29 @@ class DownloadTestimonialPDFView(APIView):
         </html>
         """
 
-        def render_pdf():
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-                page.set_content(html_content)
-                pdf_bytes = page.pdf(format="A4", print_background=True)
+        # 4. Safe PDF Generation with Crash Prevention Arguments
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu'
+                ]
+            )
+            try:
+                context = browser.new_context()
+                page = context.new_page()
+                page.set_content(html_content, wait_until="networkidle")
+                
+                pdf_bytes = page.pdf(
+                    format="A4",
+                    print_background=True,
+                    margin={"top": "15mm", "bottom": "15mm", "left": "15mm", "right": "15mm"}
+                )
+            finally:
                 browser.close()
-                return pdf_bytes
-
-        try:
-            pdf_bytes = render_pdf()
-        except Exception:
-            # sys.executable দিয়ে সরাসরি Virtualenv Python রান করে Chromium ইনস্টল
-            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
-            pdf_bytes = render_pdf()
 
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="Testimonial_{application.roll}.pdf"'
