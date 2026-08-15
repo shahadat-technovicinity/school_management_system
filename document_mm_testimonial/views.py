@@ -1,6 +1,7 @@
 import io
 import os
 import base64
+import sys
 import subprocess
 import qrcode
 
@@ -52,8 +53,9 @@ class DownloadTestimonialPDFView(APIView):
         except StudentApplication.DoesNotExist:
             return Response({"error": "Application not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Dynamic verification URL for scanning QR code
-        verify_url = request.build_absolute_uri(f"/document_mm_testimonial/applications/{application.id}/")
+        # Explicit HTTPS Verification URL for scanning QR code
+        base_url = "https://api.harikhalihs.edu.bd"
+        verify_url = f"{base_url}/document_mm_testimonial/applications/{application.id}/"
         
         # Generate QR Code image in memory
         qr = qrcode.QRCode(
@@ -164,22 +166,21 @@ class DownloadTestimonialPDFView(APIView):
         </html>
         """
 
+        def render_pdf():
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.set_content(html_content)
+                pdf_bytes = page.pdf(format="A4", print_background=True)
+                browser.close()
+                return pdf_bytes
+
         try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-                page.set_content(html_content)
-                pdf_bytes = page.pdf(format="A4", print_background=True)
-                browser.close()
+            pdf_bytes = render_pdf()
         except Exception:
-            # Auto install chromium if missing on server
-            subprocess.run(["playwright", "install", "chromium"], check=True)
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-                page.set_content(html_content)
-                pdf_bytes = page.pdf(format="A4", print_background=True)
-                browser.close()
+            # sys.executable দিয়ে সরাসরি Virtualenv Python রান করে Chromium ইনস্টল
+            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+            pdf_bytes = render_pdf()
 
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="Testimonial_{application.roll}.pdf"'
