@@ -169,6 +169,10 @@ INSTALLED_APPS = [
     'userauthentication',
     'user_auth_roles_permissions',
 
+
+    ## Overview management
+    'Overview',
+
     ## student admission
     # 'student_admission',
     'admission_exam',
@@ -246,6 +250,7 @@ INSTALLED_APPS = [
 
     #### Document & Certificate centre
     'document_mm_document_storage',
+    'document_mm_testimonial',
 
 
     ### home page

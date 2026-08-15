@@ -100,3 +100,5 @@ class StudentAttendanceListAPIView(ListAPIView):
             queryset = queryset.order_by(ordering)
 
         return queryset
+
+
