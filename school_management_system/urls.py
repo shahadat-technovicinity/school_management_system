@@ -49,6 +49,8 @@ urlpatterns = [
     # your app APIs
     path("blog/", include("blog.urls")),
 
+    path("overview/", include("Overview.urls")),
+
     ######### Mehedi##########
     path("auth/", include("userauthentication.urls")),
     path("auth-roles-permissions/", include("user_auth_roles_permissions.urls")),
@@ -132,7 +134,7 @@ urlpatterns = [
 
     ### Document management
     path("document_mm_document_storage/", include('document_mm_document_storage.urls')),
-
+    path("document_mm_testimonial/", include('document_mm_testimonial.urls')),
 
 
 
