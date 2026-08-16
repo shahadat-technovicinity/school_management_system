@@ -19,7 +19,7 @@ class StudentApplicationSerializer(serializers.ModelSerializer):
             'exam_month',
             'board',
             'department',
-            'gpa',
+            'GPA',
             'grade',
             'roll',
             'registration_no',
