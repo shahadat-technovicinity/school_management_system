@@ -2,6 +2,7 @@ import io
 import os
 import base64
 import qrcode
+from datetime import datetime
 
 from django.http import HttpResponse
 from django.conf import settings
@@ -9,7 +10,7 @@ from rest_framework.views import APIView
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.renderers import BaseRenderer
+from rest_framework.renderers import BaseRenderer, TemplateHTMLRenderer, JSONRenderer
 from playwright.sync_api import sync_playwright
 
 from .models import StudentApplication
@@ -25,6 +26,12 @@ class StudentApplicationListCreateView(generics.ListCreateAPIView):
 class StudentApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = StudentApplication.objects.all()
     serializer_class = StudentApplicationSerializer
+    renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
+    template_name = 'rest_framework/api.html'
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        return response
 
 
 class StudentApplicationStatusUpdateView(generics.UpdateAPIView):
@@ -51,16 +58,28 @@ class DownloadTestimonialPDFView(APIView):
         except StudentApplication.DoesNotExist:
             return Response({"error": "Application not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # 1. Available Font Encoding (SolaimanLipi)
+        # 1. Date Formatting (DD-MM-YYYY)
+        formatted_dob = ""
+        if application.date_of_birth:
+            if isinstance(application.date_of_birth, str):
+                try:
+                    dob_obj = datetime.strptime(application.date_of_birth, "%Y-%m-%d")
+                    formatted_dob = dob_obj.strftime("%d-%m-%Y")
+                except ValueError:
+                    formatted_dob = application.date_of_birth
+            else:
+                formatted_dob = application.date_of_birth.strftime("%d-%m-%Y")
+
+        # 2. Font Encoding
         font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'SolaimanLipi.ttf')
         font_base64 = ""
         if os.path.exists(font_path):
             with open(font_path, "rb") as font_file:
                 font_base64 = base64.b64encode(font_file.read()).decode('utf-8')
 
-        # 2. Dynamic Verification QR Code (Base64)
+        # 3. Dynamic Verification QR Code
         base_url = "https://api.harikhalihs.edu.bd"
-        verify_url = f"{base_url}/document_mm_testimonial/applications/{application.id}/"
+        verify_url = f"{base_url}/document_mm_testimonial/applications/{application.id}/?format=html"
         
         qr = qrcode.QRCode(
             version=1,
@@ -78,7 +97,7 @@ class DownloadTestimonialPDFView(APIView):
         qr_image_data = f"data:image/png;base64,{qr_b64}"
         buffer.close()
 
-        # 3. HTML Layout Structure
+        # 4. Corrected HTML Layout Structure
         html_content = f"""
         <!DOCTYPE html>
         <html lang="bn">
@@ -134,24 +153,23 @@ class DownloadTestimonialPDFView(APIView):
         </head>
         <body>
             <div class="app-id">ID: {application.id}</div>
-            <div class="title">প্রশংসা পত্র</div>
+            <div class="title">প্রশংসাপত্র</div>
             
             <div class="content">
-                এই মর্মে প্রশংসা পত্র প্রদান করিতেছি যে, <b>{application.student_name_bn}</b>, 
+                এই মর্মে প্রশংসাপত্র প্রদান করছি যে, <b>{application.student_name_bn}</b>, 
                 পিতা: <b>{application.father_name_bn}</b>, মাতা: <b>{application.mother_name_bn}</b>, 
                 গ্রাম: <b>{application.village}</b>, ডাকঘর: <b>{application.post_office}</b>, 
                 উপজেলা: <b>{application.upazila}</b>, জেলা: <b>{application.district}</b>। 
-                সে অত্র হরিখালী উচ্চ বিদ্যালয়ের দশম শ্রেণির শিক্ষার্থী ছিল। 
-                সে <b>{application.passing_year}</b> সালের <b>{application.exam_month}</b> মাসে 
-                <b>{application.board}</b> কর্তৃক অনুষ্ঠিত সেকেন্ডারী স্কুল সার্টিফিকেট পরীক্ষায় 
-                <b>{application.department}</b> বিভাগে অংশ গ্রহণ করিয়া <b>{application.grade}</b> গ্রেডে উত্তীর্ণ হইয়াছে। 
-                তাহার গ্রেড পয়েন্ট এভারেজ(GPA) <b>{application.gpa}</b>, তাহার পরীক্ষার রোল সোনার নং <b>{application.roll}</b>, 
-                নিবন্ধন সংখ্যা <b>{application.registration_no}</b>, শিক্ষাবর্ষ <b>{application.academic_year}</b>। 
-                তাহার জন্ম তারিখ <b>{application.date_of_birth}</b>।
+                সে অত্র হরিখালী উচ্চ বিদ্যালয় থেকে <b>{application.passing_year}</b> সালের 
+                <b>{application.exam_month}</b> মাসে <b>{application.board}</b> কর্তৃক অনুষ্ঠিত সেকেন্ডারী স্কুল সার্টিফিকেট পরীক্ষায় 
+                <b>{application.department}</b> বিভাগে অংশগ্রহণ করে <b>{application.grade}</b> লেটার গ্রেডে উত্তীর্ণ হয়েছে। 
+                তার প্রাপ্ত গ্রেড পয়েন্ট এভারেজ(GPA) <b>{application.GPA}</b>, তার পরীক্ষার রোল নং <b>{application.roll}</b>, 
+                রেজিস্ট্রেশন নং <b>{application.registration_no}</b>, শিক্ষাবর্ষ <b>{application.academic_year}</b> এবং 
+                তার জন্ম তারিখ <b>{formatted_dob}</b>।
                 <br/><br/>
-                যতদূর জানি তাহার স্বভাব চরিত্র ভালো এবং অত্র বিদ্যালয়ে অধ্যয়নকালে সে রাষ্ট্র বিরোধী অথবা নিয়ম শৃঙ্খলা পরিপন্থী কোন কাজে অংশ গ্রহণ করে নাই।
+                যতদূর জানি তার স্বভাব-চরিত্র ভালো এবং অত্র বিদ্যালয়ে অধ্যয়নকালে সে কোনো রাষ্ট্র বিরোধী অথবা নিয়ম-শৃঙ্খলা পরিপন্থী কোন কাজে অংশগ্রহণ করে নাই।
                 <br/><br/>
-                আমি তাহার সাফল্য কামনা করি।
+                আমি তার সাফল্য কামনা করি।
             </div>
 
             <table class="footer-table">
@@ -167,7 +185,7 @@ class DownloadTestimonialPDFView(APIView):
         </html>
         """
 
-        # 4. Safe PDF Generation with Crash Prevention Arguments
+        # 5. Playwright Generation
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
@@ -175,13 +193,15 @@ class DownloadTestimonialPDFView(APIView):
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--disable-gpu'
+                    '--disable-gpu',
+                    '--no-zygote',
+                    '--single-process'
                 ]
             )
             try:
                 context = browser.new_context()
                 page = context.new_page()
-                page.set_content(html_content, wait_until="networkidle")
+                page.set_content(html_content, wait_until="load")
                 
                 pdf_bytes = page.pdf(
                     format="A4",
