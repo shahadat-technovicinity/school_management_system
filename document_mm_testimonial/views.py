@@ -1,6 +1,7 @@
 import io
 import os
 import base64
+import logging
 import qrcode
 from datetime import datetime, date
 
@@ -15,6 +16,8 @@ from playwright.sync_api import sync_playwright
 
 from .models import StudentApplication
 from .serializers import StudentApplicationSerializer, StudentApplicationStatusUpdateSerializer
+
+logger = logging.getLogger(__name__)
 
 
 def convert_eng_to_bng_digits(text):
@@ -71,30 +74,38 @@ class DownloadTestimonialPDFView(APIView):
         # -------------------------------------------------------------
         # 0. Status Check: Approve না থাকলে ডাউনলোড ব্লক করবে
         # -------------------------------------------------------------
-        # আপনার মডেলের স্ট্যাটাস ফিল্ডের মান অনুযায়ী 'APPROVED' বা 'approved' ব্যবহার করুন
         if str(application.status).upper() != 'APPROVED':
             return Response(
                 {"error": "This application is not approved yet. Download is restricted."}, 
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # 1. Safe Date Formatting (Handles string, datetime, and date objects)
+        # -------------------------------------------------------------
+        # 1. Multi-Format Date Parsing & Formatting
+        # -------------------------------------------------------------
         formatted_dob = ""
         if application.date_of_birth:
             dob_val = application.date_of_birth
+            
             if isinstance(dob_val, (datetime, date)):
                 raw_dob_str = dob_val.strftime("%d-%m-%Y")
             else:
                 raw_dob_str = str(dob_val).strip()
-                try:
-                    dob_obj = datetime.strptime(raw_dob_str, "%Y-%m-%d")
-                    raw_dob_str = dob_obj.strftime("%d-%m-%Y")
-                except ValueError:
+                parsed_date = None
+                for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d/%m/%Y"):
                     try:
-                        dob_obj = datetime.strptime(raw_dob_str, "%d-%m-%Y")
-                        raw_dob_str = dob_obj.strftime("%d-%m-%Y")
+                        parsed_date = datetime.strptime(raw_dob_str, fmt)
+                        break
                     except ValueError:
-                        pass
+                        continue
+                
+                if parsed_date:
+                    raw_dob_str = parsed_date.strftime("%d-%m-%Y")
+                else:
+                    # Fallback for YYYY-MM-DD hyphen/slash pattern if parsing fails
+                    parts = raw_dob_str.replace('/', '-').split('-')
+                    if len(parts) == 3 and len(parts[0]) == 4:
+                        raw_dob_str = f"{parts[2]}-{parts[1]}-{parts[0]}"
 
             formatted_dob = convert_eng_to_bng_digits(raw_dob_str)
 
@@ -106,12 +117,14 @@ class DownloadTestimonialPDFView(APIView):
         academic_year_bn = convert_eng_to_bng_digits(application.academic_year)
         app_id_bn = convert_eng_to_bng_digits(application.id)
 
-        # 3. Font Encoding
+        # 3. Font Encoding & Validation
         font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'SolaimanLipi.ttf')
         font_base64 = ""
         if os.path.exists(font_path):
             with open(font_path, "rb") as font_file:
                 font_base64 = base64.b64encode(font_file.read()).decode('utf-8')
+        else:
+            logger.warning(f"SolaimanLipi font not found at path: {font_path}")
 
         # 4. Dynamic Verification QR Code
         base_url = "https://api.harikhalihs.edu.bd"
@@ -133,7 +146,7 @@ class DownloadTestimonialPDFView(APIView):
         qr_image_data = f"data:image/png;base64,{qr_b64}"
         buffer.close()
 
-        # 5. Corrected HTML Layout Structure for Pad Printing
+        # 5. HTML Layout with Typography Fixes
         html_content = f"""
         <!DOCTYPE html>
         <html lang="bn">
@@ -151,8 +164,9 @@ class DownloadTestimonialPDFView(APIView):
                     color: #000000;
                     margin: 0;
                     padding: 0;
-                    letter-spacing: normal;
-                    word-spacing: normal;
+                    letter-spacing: 0px !important;
+                    word-spacing: 0px !important;
+                    font-variant-ligatures: normal;
                 }}
                 .header-meta {{
                     width: 100%;
