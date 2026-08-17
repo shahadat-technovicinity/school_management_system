@@ -24,7 +24,6 @@ class StudentApplication(models.Model):
         ('D', 'D'),
     ]
 
-
     EXAM_MONTH_CHOICES = [
         ('জানুয়ারি', 'জানুয়ারি'),
         ('ফেব্রুয়ারি', 'ফেব্রুয়ারি'),
