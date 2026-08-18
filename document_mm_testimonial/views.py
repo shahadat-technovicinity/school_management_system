@@ -20,6 +20,22 @@ from .serializers import StudentApplicationSerializer, StudentApplicationStatusU
 logger = logging.getLogger(__name__)
 
 
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 10  # প্রতি পেজে কয়টি করে ডাটা দেখাবে
+    page_size_query_param = 'page_size'  # চাইলে ফ্রন্টএন্ড থেকে ?page_size=20 পাঠানো যাবে
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'total_pages': self.page.paginator.num_pages,
+            'current_page': self.page.number,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data
+        })
+
+
 def convert_eng_to_bng_digits(text):
     """ইংরেজি ডিজিট, সংখ্যা বা None-কে নিরাপদে বাংলা ডিজিটে রূপান্তর করার হেলপার ফাংশন"""
     if text is None:
@@ -32,7 +48,7 @@ def convert_eng_to_bng_digits(text):
 class StudentApplicationListCreateView(generics.ListCreateAPIView):
     queryset = StudentApplication.objects.all().order_by('-created_at')
     serializer_class = StudentApplicationSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = CustomPageNumberPagination
 
 
 class StudentApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -279,3 +295,5 @@ class DownloadTestimonialPDFView(APIView):
         response['Content-Disposition'] = f'attachment; filename="Testimonial_{application.roll}.pdf"'
         response['Access-Control-Expose-Headers'] = 'Content-Disposition'
         return response
+
+
