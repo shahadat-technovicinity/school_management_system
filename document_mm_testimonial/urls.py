@@ -4,6 +4,7 @@ from .views import (
     StudentApplicationDetailView,
     StudentApplicationStatusUpdateView,
     DownloadTestimonialPDFView,
+    MoveToNothiArchiveView,
 )
 
 urlpatterns = [
@@ -11,4 +12,5 @@ urlpatterns = [
     path('applications/<int:pk>/', StudentApplicationDetailView.as_view(), name='application-detail'),
     path('applications/<int:pk>/status/', StudentApplicationStatusUpdateView.as_view(), name='application-status-update'),
     path('applications/<int:pk>/download-pdf/', DownloadTestimonialPDFView.as_view(), name='application-download-pdf'),
+    path('<int:pk>/archive-to-nothi/', MoveToNothiArchiveView.as_view(), name='archive-to-nothi'),
 ]

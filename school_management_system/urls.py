@@ -135,6 +135,7 @@ urlpatterns = [
     ### Document management
     path("document_mm_document_storage/", include('document_mm_document_storage.urls')),
     path("document_mm_testimonial/", include('document_mm_testimonial.urls')),
+    path("documment_mm_nothi/", include('documment_mm_nothi.urls')),
 
 
 

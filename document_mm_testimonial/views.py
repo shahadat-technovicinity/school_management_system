@@ -2,8 +2,12 @@ import io
 import os
 import base64
 import logging
+import json as py_json
+from django.core.serializers import json
 import qrcode
 from datetime import datetime, date
+import zipfile
+from django.core.files.base import ContentFile
 
 from django.http import HttpResponse
 from django.conf import settings
@@ -13,6 +17,8 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.renderers import BaseRenderer, TemplateHTMLRenderer, JSONRenderer
 from playwright.sync_api import sync_playwright
+from documment_mm_nothi.models import Nothi
+
 
 from .models import StudentApplication
 from .serializers import StudentApplicationSerializer, StudentApplicationStatusUpdateSerializer
@@ -49,6 +55,7 @@ class StudentApplicationListCreateView(generics.ListCreateAPIView):
     queryset = StudentApplication.objects.all().order_by('-created_at')
     serializer_class = StudentApplicationSerializer
     pagination_class = CustomPageNumberPagination
+
 
 
 class StudentApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -297,3 +304,73 @@ class DownloadTestimonialPDFView(APIView):
         return response
 
 
+#### Downloaded pdf file move to nothi archive view
+class MoveToNothiArchiveView(APIView):
+    """
+    POST /document_mm_testimonial/<int:pk>/archive-to-nothi/
+    অন্য কোনো অ্যাপ বা সিগনেচারে পরিবর্তন না এনে Nothi-র description-এ JSON স্টোর করে রাখবে।
+    """
+    def post(self, request, pk, *args, **kwargs):
+        try:
+            application = StudentApplication.objects.get(pk=pk)
+        except StudentApplication.DoesNotExist:
+            return Response({"error": "Application not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # 🛑 ১. Validation
+        if application.status.lower() not in ['approved', 'rejected']:
+            return Response(
+                {"error": "Only Approved or Rejected applications can be moved to Nothi."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        session = application.academic_year.strip() if application.academic_year else "Unknown"
+        nothi_title = f"Testimonial ({session})"
+
+        nothi_obj, created = Nothi.objects.get_or_create(
+            title=nothi_title,
+            defaults={
+                'academic_year': session,
+                'description': '[]'  # ডিফল্ট খালি JSON array
+            }
+        )
+
+        # 📦 ২. স্টুডেন্টের বিস্তারিত ডেটা সাজানো
+        student_data = {
+            "id": application.id,
+            "student_name_bn": getattr(application, 'student_name_bn', ''),
+            "father_name_bn": getattr(application, 'father_name_bn', ''),
+            "mother_name_bn": getattr(application, 'mother_name_bn', ''),
+            "roll": str(getattr(application, 'roll', '')),
+            "registration_no": str(getattr(application, 'registration_no', '')),
+            "academic_year": getattr(application, 'academic_year', ''),
+            "passing_year": getattr(application, 'passing_year', ''),
+            "department": getattr(application, 'department', ''),
+            "board": getattr(application, 'board', ''),
+            "GPA": str(getattr(application, 'GPA', '')),
+            "grade": getattr(application, 'grade', ''),
+            "status": application.status,
+        }
+
+        # 💾 ৩. description ফিল্ড থেকে পুরোনো ডাটা পড়ে নতুন ডাটা অ্যাপেন্ড করা
+        try:
+            existing_data = py_json.loads(nothi_obj.description) if nothi_obj.description else []
+            if not isinstance(existing_data, list):
+                existing_data = []
+        except Exception:
+            existing_data = []
+
+        existing_data.append(student_data)
+
+        # JSON String বানিয়ে description-এ সেভ করা
+        nothi_obj.description = py_json.dumps(existing_data, ensure_ascii=False, indent=2)
+        nothi_obj.save()
+
+        # 🗑️ ৪. মূল টেবিল থেকে অ্যাপ্লিকেশন ডিলিট করা
+        application.delete()
+
+        return Response({
+            "success": True,
+            "message": f"Student data archived into Nothi '{nothi_title}' successfully.",
+            "nothi_id": nothi_obj.id,
+            "nothi_no": nothi_obj.nothi_no
+        }, status=status.HTTP_200_OK)
