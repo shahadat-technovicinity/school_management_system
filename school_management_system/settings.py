@@ -251,6 +251,7 @@ INSTALLED_APPS = [
     #### Document & Certificate centre
     'document_mm_document_storage',
     'document_mm_testimonial',
+    'documment_mm_nothi',
 
 
     ### home page
