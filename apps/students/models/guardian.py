@@ -22,6 +22,7 @@ class GuardianDetails(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
         verbose_name="Profile Picture (300x300)")
     father_name = models.CharField(max_length=100)
+    father_name_bn = models.CharField(max_length=150, blank=True, null=True)
     father_email = models.EmailField(blank=True, null=True)
     father_phone = models.CharField(max_length=20, blank=True, null=True)
     father_occupation = models.CharField(max_length=100, blank=True, null=True)
@@ -33,6 +34,7 @@ class GuardianDetails(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
         verbose_name="Profile Picture (300x300)")
     mother_name = models.CharField(max_length=100)
+    mother_name_bn = models.CharField(max_length=150, blank=True, null=True)
     mother_email = models.EmailField(blank=True, null=True)
     mother_phone = models.CharField(max_length=20, blank=True, null=True)
     mother_occupation = models.CharField(max_length=100, blank=True, null=True)
@@ -45,6 +47,7 @@ class GuardianDetails(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
         verbose_name="Profile Picture (300x300)")
     guardian_name = models.CharField(max_length=100, blank=True, null=True)
+    guardian_name_bn = models.CharField(max_length=150, blank=True, null=True)
     guardian_relation = models.CharField(max_length=50, blank=True, null=True)
     guardian_phone = models.CharField(max_length=20, blank=True, null=True)
     guardian_email = models.EmailField(blank=True, null=True)
@@ -57,8 +60,18 @@ class GuardianDetails(models.Model):
     sibling_admission_no = models.CharField(max_length=50, blank=True, null=True)
 
     # Address
-    current_address = models.TextField(blank=True, null=True)
-    permanent_address = models.TextField(blank=True, null=True)
+ # Present Address
+    present_address_village = models.CharField(max_length=255)
+    present_address_post_office = models.CharField(max_length=255)
+    present_address_sub_district = models.CharField(max_length=255)
+    present_address_district = models.CharField(max_length=255)
+    
+    # Permanent Address
+    permanent_address_village = models.CharField(max_length=255)
+    permanent_address_post_office = models.CharField(max_length=255)
+    permanent_address_sub_district = models.CharField(max_length=255)
+    permanent_address_district = models.CharField(max_length=255)
+
 
     class Meta:
         db_table = "student_profile_studentgurdianinfo"
