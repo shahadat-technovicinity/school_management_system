@@ -1,21 +1,24 @@
 from rest_framework import serializers
 from apps.students.models import Student, GuardianDetails, AdditionalDetails, StudentDiscipline
-from apps.academics.models import Class, Section
+
 
 class GuardianDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = GuardianDetails
         exclude = ('student',)
 
+
 class AdditionalDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdditionalDetails
         exclude = ('student',)
 
+
 class StudentDisciplineSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentDiscipline
         fields = '__all__'
+
 
 class StudentManagementSerializer(serializers.ModelSerializer):
     guardian_info = GuardianDetailsSerializer(required=False)
@@ -36,7 +39,6 @@ class StudentManagementSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_attendance_percentage(self, obj):
-        # Placeholder for real attendance calculation logic from attendance app
         return 85.5 
 
     def get_disciplinary_status(self, obj):
@@ -68,16 +70,16 @@ class StudentManagementSerializer(serializers.ModelSerializer):
 
         # Update or create guardian info
         if guardian_data:
-            guardian_obj, created = GuardianDetails.objects.get_or_create(student=instance)
-            for attr, value in guardian_data.items():
-                setattr(guardian_obj, attr, value)
-            guardian_obj.save()
+            GuardianDetails.objects.update_or_create(
+                student=instance,
+                defaults=guardian_data
+            )
 
         # Update or create additional info
         if additional_data:
-            additional_obj, created = AdditionalDetails.objects.get_or_create(student=instance)
-            for attr, value in additional_data.items():
-                setattr(additional_obj, attr, value)
-            additional_obj.save()
+            AdditionalDetails.objects.update_or_create(
+                student=instance,
+                defaults=additional_data
+            )
 
         return instance
