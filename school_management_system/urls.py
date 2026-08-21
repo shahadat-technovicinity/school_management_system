@@ -63,6 +63,7 @@ urlpatterns = [
     path("academic_class_routine/", include("academic_class_routine.urls")),
     path("academic_online_class/", include("academic_online_class.urls")),
     path("academic_create_subject/", include("academic_create_subject.urls")),
+    path("academic_mm_class_and_section/", include("academic_mm_class_and_section.urls")),
 
 
     ### Student Management

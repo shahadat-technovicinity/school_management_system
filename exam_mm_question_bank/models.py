@@ -1,16 +1,10 @@
 from django.db import models
 from django.conf import settings
+from academic_mm_class_and_section.models import AcademicClass, Section
+
 
 
 class ExmQuestionBank(models.Model):
-    CLASS_CHOICES = [
-        ('class 6', 'Class 6'),
-        ('class 7', 'Class 7'),
-        ('class 8', 'Class 8'),
-        ('class 9', 'Class 9'),
-        ('class 10', 'Class 10'),
-    ]
-
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
@@ -30,7 +24,7 @@ class ExmQuestionBank(models.Model):
         on_delete=models.CASCADE,
         related_name="examquestionbank"
     )   
-    class_name = models.CharField(max_length=20, choices=CLASS_CHOICES)
+    class_name = models.ForeignKey(AcademicClass, on_delete=models.CASCADE)
     date_created = models.DateTimeField(auto_now_add=True)
     
     # বাই-ডিফল্ট পেন্ডিং থাকবে

@@ -1,4 +1,8 @@
+from xml.parsers.expat import model
+
 from django.db import models
+from academic_mm_class_and_section.models import AcademicClass, Section
+
 
 class ExamRoutine(models.Model):
     EXAM_TYPE_CHOICES = [
@@ -7,13 +11,6 @@ class ExamRoutine(models.Model):
         ('OT', 'Other'),
     ]
 
-    CLASS_CHOICES = [
-        ('class 6', 'Class 6'),
-        ('class 7', 'Class 7'),
-        ('class 8', 'Class 8'),
-        ('class 9', 'Class 9'),
-        ('class 10', 'Class 10'),
-    ]
 
     SHIFT_CHOICES = [
         ('morning', 'Morning'),
@@ -34,7 +31,7 @@ class ExamRoutine(models.Model):
     academic_year = models.IntegerField()
     start_date = models.DateField()
     end_date = models.DateField()
-    class_selection = models.CharField(max_length=20, choices=CLASS_CHOICES)
+    class_selection = models.ForeignKey(AcademicClass, on_delete=models.CASCADE)
     shift_selection = models.CharField(max_length=50, choices=SHIFT_CHOICES) # Assuming text input/dropdown
     stream = models.CharField(max_length=2, choices=STREAM_CHOICES, default='SC')
 
@@ -73,14 +70,6 @@ class ExamRoutine(models.Model):
 
 
 class ExamAdmit(models.Model):
-    CLASS_CHOICES = [
-        ('class 6', 'Class 6'),
-        ('class 7', 'Class 7'),
-        ('class 8', 'Class 8'),
-        ('class 9', 'Class 9'),
-        ('class 10', 'Class 10'),
-    ]
-
     PAYMENT_STATUS_CHOICES = [
         ('paid', 'Paid'),
         ('non paid', 'Non Paid'),
@@ -93,7 +82,7 @@ class ExamAdmit(models.Model):
     ]
     student_name = models.CharField(max_length=250)
     roll_number = models.IntegerField()
-    class_selection = models.CharField(max_length=20, choices=CLASS_CHOICES)
+    class_selection = models.ForeignKey(AcademicClass, on_delete=models.CASCADE)
     subject = models.ForeignKey(
         'academic_create_subject.Subject_Name', 
         on_delete=models.CASCADE,

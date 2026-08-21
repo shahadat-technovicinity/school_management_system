@@ -2,23 +2,12 @@ from django.db import models
 from django.core.validators import RegexValidator, EmailValidator
 from django.utils import timezone
 from django.core.validators import FileExtensionValidator
+from academic_mm_class_and_section.models import AcademicClass, Section
+
 
 
 class Top_Student(models.Model):
     # Choice classes for dropdowns
-    CLASSCHOICES = [
-        ('class 6', 'Class 6'),
-        ('class 7', 'Class 7'),
-        ('class 8', 'Class 8'),
-        ('class 9', 'Class 9'),
-        ('class 10', 'Class 10'),]
-    
-    SECTIONCHOICES = [
-        ('section A', 'Section A'),
-        ('section B', 'Section B'),
-        ('section C', 'Section C'),
-        ('section D', 'Section D'),
-    ]
 
     student_name = models.CharField(max_length=255)
     father_name = models.CharField(max_length=255)
@@ -28,8 +17,8 @@ class Top_Student(models.Model):
     roll = models.PositiveIntegerField()
     
     # Implementing choices here
-    student_class = models.CharField(max_length=10, choices=CLASSCHOICES, default='class 10')
-    section = models.CharField(max_length=10, choices=SECTIONCHOICES, default='section A')
+    student_class = models.ForeignKey(AcademicClass, on_delete=models.CASCADE)
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)
     subject = models.CharField(max_length=100)
     religion = models.CharField(max_length=50)
     village = models.CharField(max_length=255)

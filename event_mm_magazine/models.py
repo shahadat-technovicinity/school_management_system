@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 
+
 class MagazineIssue(models.Model):
     STATUS_CHOICES = [
         ('Draft', 'Draft'),

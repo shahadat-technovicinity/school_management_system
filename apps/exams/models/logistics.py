@@ -2,6 +2,7 @@ from django.db import models
 from apps.common.models_audit import AuditModel
 from apps.exams.models.setup import ExamSetup
 
+
 class ExamAdmitCard(AuditModel):
     exam_setup = models.ForeignKey(ExamSetup, on_delete=models.CASCADE)
     student = models.ForeignKey('students.Student', on_delete=models.CASCADE)

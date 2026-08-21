@@ -1,4 +1,5 @@
 from django.db import models
+from academic_mm_class_and_section.models import AcademicClass, Section
 
 # চয়েসগুলো উপরে একবার ডিফাইন করলে কোড ক্লিন থাকে (DRY Principle)
 ASSIGNMENT_TYPE_CHOICES = [
@@ -6,20 +7,6 @@ ASSIGNMENT_TYPE_CHOICES = [
     ('individual', 'Individual Student Fee'),
 ]
 
-SELECT_CLASS_CHOICES = [
-        ('class 6', 'Class 6'),
-        ('class 7', 'Class 7'),
-        ('class 8', 'Class 8'),
-        ('class 9', 'Class 9'),
-        ('class 10', 'Class 10'),
-    ]
-
-SELECT_SECTION_CHOICES = [
-    ('section A', 'Section A'),
-    ('section B', 'Section B'),
-    ('section C', 'Section C'),
-    ('section D', 'Section D'),
-]
 
 DECIMAL_OPTIONS = {
     'max_digits': 10,
@@ -36,8 +23,8 @@ class CreateFee(models.Model):
     ]
     
     assignment_type = models.CharField(max_length=20, choices=ASSIGNMENT_TYPE_CHOICES)
-    select_class = models.CharField(max_length=50, choices=SELECT_CLASS_CHOICES) 
-    select_section = models.CharField(max_length=50, choices=SELECT_SECTION_CHOICES)    
+    select_class = models.ForeignKey(AcademicClass, on_delete=models.PROTECT)
+    select_section = models.ForeignKey(Section, on_delete=models.PROTECT)
     fee_type = models.CharField(max_length=50, choices=FEE_TYPE_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total amount assigned.")
     due_date = models.DateField()
@@ -49,8 +36,8 @@ class CreateFee(models.Model):
 
 class FormFilupAmount(models.Model):
     assignment_type = models.CharField(max_length=20, choices=ASSIGNMENT_TYPE_CHOICES)
-    select_class = models.CharField(max_length=50, choices=SELECT_CLASS_CHOICES) 
-    select_section = models.CharField(max_length=50, choices=SELECT_SECTION_CHOICES)    
+    select_class = models.ForeignKey(AcademicClass, on_delete=models.PROTECT)
+    select_section = models.ForeignKey(Section, on_delete=models.PROTECT)
     fee_type = models.CharField(max_length=50, default='form filup', editable=False)
     
     # Amount

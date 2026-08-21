@@ -2,6 +2,7 @@
 from django.db import models
 from django.conf import settings
 from academic_create_subject.models import Subject_Name
+from academic_mm_class_and_section.models import AcademicClass, Section
 
 
 #####    Teacher fetch    ########
@@ -11,22 +12,6 @@ class Teacher(models.Model):
     def __str__(self):
         return self.user.get_full_name() or self.user.username
 
-
-########### Routine created ###########
-CLASS_CHOICES = [
-    ('6', 'Class 6'),
-    ('7', 'Class 7'),
-    ('8', 'Class 8'),
-    ('9', 'Class 9'),
-    ('10', 'Class 10'),
-]
-
-SECTION_CHOICES = [
-    ('Section A', 'Section A'),
-    ('Section B', 'Section B'),
-    ('Section C', 'Section C'),
-    ('Section D', 'Section D'),
-]
 
 DAY_CHOICES = [
     ('Saturday', 'Saturday'),
@@ -42,9 +27,9 @@ class ClassRoutine(models.Model):
     # Teacher: authenticated teacher data fetch
     teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True)
 
-    class_name = models.CharField(max_length=10, choices=CLASS_CHOICES)
-    section = models.CharField(max_length=10, choices=SECTION_CHOICES)
-    subject = models.ForeignKey('academic_create_subject.Subject_Name', on_delete=models.PROTECT)
+    class_name = models.ForeignKey(AcademicClass, on_delete=models.PROTECT)
+    section = models.ForeignKey(Section, on_delete=models.PROTECT)
+    subject = models.ForeignKey(Subject_Name, on_delete=models.PROTECT)
     day = models.CharField(max_length=10, choices=DAY_CHOICES)
     start_time = models.TimeField()
     end_time = models.TimeField()
