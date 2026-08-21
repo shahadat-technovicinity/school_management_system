@@ -1,4 +1,6 @@
 from django.db import models
+from academic_mm_class_and_section.models import AcademicClass, Section
+
 
 # Create your models here.
 class stipend_student(models.Model):
@@ -15,16 +17,10 @@ class stipend_student(models.Model):
         ('Completed', 'Completed'),
     ]
 
-    CLASS_NAME_CHOICES = [
-        ('class 6', 'Class 6'),
-        ('class 7', 'Class 7'),
-        ('class 8', 'Class 8'),
-        ('class 9', 'Class 9'),
-        ('class 10', 'Class 10'),
-    ]
+    
     student_id = models.CharField(max_length=50)
     student_name = models.CharField(max_length=50)
-    class_name = models.CharField(max_length=50, choices=CLASS_NAME_CHOICES)
+    class_name = models.ForeignKey(AcademicClass, on_delete=models.PROTECT)
     stipend_type = models.CharField(max_length=50, choices=STIPEND_TYPE_CHOICHES)
     amount = models.CharField(max_length=50)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES)
@@ -58,16 +54,9 @@ class stipend_free_hf(models.Model):
     ]
 
 
-    CLASS_NAME_CHOICES = [
-        ('class 6', 'Class 6'),
-        ('class 7', 'Class 7'),
-        ('class 8', 'Class 8'),
-        ('class 9', 'Class 9'),
-        ('class 10', 'Class 10'),
-    ]
     student_id = models.CharField(max_length=50)
     student_name = models.CharField(max_length=50)
-    class_name = models.CharField(max_length=50, choices=CLASS_NAME_CHOICES)
+    class_name = models.ForeignKey(AcademicClass, on_delete=models.PROTECT)
     concession_type = models.CharField(max_length=50, choices=CONCESSION_TYPE_CHOICHES)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     valid_till = models.DateField()

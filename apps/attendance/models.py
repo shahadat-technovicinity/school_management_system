@@ -6,6 +6,7 @@ from django.conf import settings
 
 # from apps.academics.models import ClassSection
 from apps.students.models import Student
+from academic_mm_class_and_section.models import AcademicClass, Section
 
 class Attendance(models.Model):
     PRESENT = 'P'
@@ -18,8 +19,8 @@ class Attendance(models.Model):
 
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     # class_section = models.ForeignKey(ClassSection, on_delete=models.CASCADE)
-    classname = models.CharField(max_length=256)
-    section = models.CharField(max_length=256)
+    classname = models.ForeignKey(AcademicClass, on_delete=models.CASCADE)
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)
     date = models.DateField()
     status = models.CharField(max_length=1, choices=STATUS_CHOICES)
     marked_by = models.ForeignKey(

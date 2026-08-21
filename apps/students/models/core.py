@@ -3,6 +3,7 @@ from django.core.validators import RegexValidator, EmailValidator, FileExtension
 from apps.academics.models import AcademicYear, Class, Section
 
 
+
 def student_photo_upload_path(instance, filename):
     year = (instance.academic_year or '').replace('/', '_')
     adm = instance.admission_number or 'unknown'

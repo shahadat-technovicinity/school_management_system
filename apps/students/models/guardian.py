@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import FileExtensionValidator
 from .core import Student
 
+
 class GuardianDetails(models.Model):
     student = models.OneToOneField(
         Student, 

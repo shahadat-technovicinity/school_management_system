@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class TrainingRecord(models.Model):
     STATUS_CHOICES = [
         ('Completed', 'Completed'),

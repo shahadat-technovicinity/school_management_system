@@ -1,6 +1,7 @@
 from django.db import models
 from apps.common.models_audit import AuditModel
 from apps.academics.models import AcademicYear, Class, Section, ClassSection
+from academic_mm_class_and_section.models import AcademicClass, Section
 
 class ExamType(AuditModel):
     name = models.CharField(max_length=100)
@@ -21,7 +22,7 @@ class ExamSetup(AuditModel):
     title = models.CharField(max_length=200)
     exam_type = models.ForeignKey(ExamType, on_delete=models.CASCADE)
     academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
-    class_name = models.ForeignKey(Class, on_delete=models.CASCADE)
+    class_name = models.ForeignKey(AcademicClass, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     total_marks = models.DecimalField(max_digits=5, decimal_places=2, default=100.00)
     pass_marks = models.DecimalField(max_digits=5, decimal_places=2, default=33.00)

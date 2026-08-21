@@ -1,21 +1,7 @@
 from django.db import models
 from apps.students.models import Student
+from academic_mm_class_and_section.models import AcademicClass, Section
 
-
-CLASS_CHOICES = (
-    ('Class 6', 'Class 6'),
-    ('Class 7', 'Class 7'),
-    ('Class 8', 'Class 8'),
-    ('Class 9', 'Class 9'),
-    ('Class 10', 'Class 10'),
-)
-
-SECTION_CHOICES = (
-    ('Section A', 'Section A'),
-    ('Section B', 'Section B'),
-    ('Section C', 'Section C'),
-    ('Section D', 'Section D'),
-)
 
 SHIFT_CHOICES = [
     ('Morning', 'Morning Shift'),
@@ -51,8 +37,8 @@ class RoomClassAssignment(models.Model):
     """কোন Room-এ কোন Class-এর কতজন Student বসবে, কোন Subject"""
     exam_session = models.ForeignKey(ExamSession, on_delete=models.CASCADE, related_name='room_assignments')
     room = models.ForeignKey(ExamRoom, on_delete=models.CASCADE, related_name='class_assignments')
-    class_name = models.CharField(max_length=20, choices=CLASS_CHOICES)
-    section = models.CharField(max_length=20, choices=SECTION_CHOICES)
+    class_name = models.ForeignKey(AcademicClass, on_delete=models.CASCADE)
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)
     subject = models.CharField(max_length=100)
 
     class Meta:

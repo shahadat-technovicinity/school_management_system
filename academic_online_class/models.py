@@ -1,22 +1,9 @@
 from django.db import models
+from academic_mm_class_and_section.models import AcademicClass, Section
 
 # Create your models here.
 
 class academiconlineclass(models.Model):
-    CLASS_CHOICES = (
-            ('Class 6', 'classs 6'),
-            ('Class 7', 'class 7'),
-            ('Class 8', 'class 8'),
-            ('Class 9', 'class 9'),
-            ('Class 10', 'class 10'),
-        )
-    
-    SECTION_CHOICES = (
-            ('Section A', 'section A'),
-            ('Section B', 'section B'),
-            ('Section C', 'section C'),
-            ('Section D', 'section D')
-        )
     
     NOTIFICATION_CHOICES = (
             ('Whatsapp & SMS', 'whatsapp & sms'),
@@ -25,8 +12,8 @@ class academiconlineclass(models.Model):
             ('Email', 'email')
         )
 
-    For_Class = models.CharField(max_length=50, choices=CLASS_CHOICES, default='Class 6')
-    Section = models.CharField(max_length= 50, choices=SECTION_CHOICES)
+    For_Class = models.ForeignKey(AcademicClass, on_delete=models.PROTECT)
+    Section = models.ForeignKey(Section, on_delete=models.PROTECT)
     Class_Topic = models.CharField(max_length=255)
     Class_Date = models.DateField()
     Class_Time = models.TimeField()

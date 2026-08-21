@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Event_mm_Achievement(models.Model):
     CATEGORY_CHOICES = [
         ('Academic', 'Academic'),

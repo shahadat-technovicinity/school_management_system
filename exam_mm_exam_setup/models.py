@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 
+
 class exm_mm_exam_setup(models.Model):
     VISIBILITY_CHOICES = [
         ("public", "Public"),

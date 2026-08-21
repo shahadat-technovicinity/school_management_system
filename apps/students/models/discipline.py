@@ -1,6 +1,7 @@
 from django.db import models
 from .core import Student
 
+
 class StudentDiscipline(models.Model):
     LEVEL_CHOICES = [
         ('low', 'Low (Warning)'),

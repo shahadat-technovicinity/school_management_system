@@ -194,6 +194,7 @@ INSTALLED_APPS = [
     'academic_class_routine',
     'academic_online_class',
     'academic_create_subject',
+    'academic_mm_class_and_section',
 
     ## exam management
     'exam_mm_exam_setup',
