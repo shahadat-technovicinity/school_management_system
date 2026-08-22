@@ -10,8 +10,8 @@ class Enrollment(models.Model):
     # academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
     classname = models.ForeignKey(AcademicClass, on_delete=models.PROTECT)
     section = models.ForeignKey(Section, on_delete=models.PROTECT)
-    academic_year = models.ForeignKey(AcademicYear, on_delete=models.PROTECT)
-    roll_no = models.PositiveIntegerField()
+    academic_year = models.CharField(max_length=20)
+    roll_no = models.PositiveIntegerField(blank=True, null=True)
 
     class Meta:
         unique_together = ('student', 'academic_year')

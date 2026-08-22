@@ -1,7 +1,8 @@
-from apps.attendance.models import Attendance
 from rest_framework import serializers
-from apps.students.models import Student
 from django.contrib.auth import get_user_model
+from apps.attendance.models import Attendance
+from apps.students.models import Student
+from academic_mm_class_and_section.models import AcademicClass, Section
 
 User = get_user_model()
 
@@ -17,8 +18,12 @@ class AttendanceRecordSerializer(serializers.Serializer):
 
 class BulkAttendanceSerializer(serializers.Serializer):
     date = serializers.DateField()
-    classname = serializers.CharField(max_length=256)
-    section = serializers.CharField(max_length=256)
+    classname = serializers.PrimaryKeyRelatedField(
+        queryset=AcademicClass.objects.all()
+    )
+    section = serializers.PrimaryKeyRelatedField(
+        queryset=Section.objects.all()
+    )
     records = AttendanceRecordSerializer(many=True)
     marked_by = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.filter(role__name='Teacher')
@@ -53,8 +58,12 @@ class AttendancePatchSerializer(serializers.Serializer):
     student = serializers.PrimaryKeyRelatedField(
         queryset=Student.objects.all()
     )
-    classname = serializers.CharField(max_length=256)
-    section = serializers.CharField(max_length=256)
+    classname = serializers.PrimaryKeyRelatedField(
+        queryset=AcademicClass.objects.all()
+    )
+    section = serializers.PrimaryKeyRelatedField(
+        queryset=Section.objects.all()
+    )
     date = serializers.DateField()
     status = serializers.ChoiceField(
         choices=Attendance.STATUS_CHOICES
@@ -66,6 +75,7 @@ class AttendanceListSerializer(serializers.ModelSerializer):
         model = Attendance
         fields = [
             'id',
+            'student',
             'date',
             'classname',
             'section',

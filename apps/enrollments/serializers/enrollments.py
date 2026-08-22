@@ -1,26 +1,26 @@
 from rest_framework import serializers
-
 from apps.enrollments.models import Enrollment
 
 
 class EnrollmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enrollment
-        fields = "__all__"
-        read_only_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
+        fields = ['id', 'student', 'classname', 'section', 'academic_year']
+        read_only_fields = ('id',)
         extra_kwargs = {
             'student': {'required': True},
-            'class_section': {'required': True},
+            'classname': {'required': True},
+            'section': {'required': True},
             'academic_year': {'required': True}
         }
 
 
+class StudentEnrollmentItemSerializer(serializers.Serializer):
+    student_id = serializers.IntegerField(min_value=1)
+
+
 class BulkEnrollmentSerializer(serializers.Serializer):
-    student_ids = serializers.ListField(
-        child=serializers.IntegerField(min_value=1),
-        allow_empty=False,
-        help_text="List of Student IDs to enroll",
-    )
-    classname = serializers.CharField(max_length=256, help_text="Class name for enrollment")
-    section = serializers.CharField(max_length=256, default="A", help_text="Section (default: A)")
-    academic_year = serializers.CharField(max_length=256, required=False, help_text="Academic year (defaults to active year)")
+    students = StudentEnrollmentItemSerializer(many=True, allow_empty=False)
+    classname = serializers.IntegerField(help_text="Class ID")
+    section = serializers.IntegerField(help_text="Section ID")
+    academic_year = serializers.IntegerField(required=False, help_text="Academic Year ID (optional)")

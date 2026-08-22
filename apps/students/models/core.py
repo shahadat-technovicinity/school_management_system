@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import RegexValidator, EmailValidator, FileExtensionValidator
 from apps.academics.models import AcademicYear, Class, Section
+from academic_mm_class_and_section.models import AcademicClass, Section
 
 
 
@@ -74,8 +75,8 @@ class Student(models.Model):
     )
 
     # Replaced Static Text with ForeignKeys representing relational data
-    class_name_static = models.CharField(db_column='class_name', max_length=64, blank=True, null=True)
-    section_static = models.CharField(db_column='section', max_length=32, blank=True, null=True)
+    class_name_static = models.ForeignKey(AcademicClass, on_delete=models.SET_NULL, null=True, blank=True)
+    section_static = models.ForeignKey(Section, on_delete=models.SET_NULL, null=True, blank=True)
 
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
     date_of_birth = models.DateField()

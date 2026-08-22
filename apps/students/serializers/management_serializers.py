@@ -29,14 +29,35 @@ class StudentManagementSerializer(serializers.ModelSerializer):
     attendance_percentage = serializers.SerializerMethodField()
     disciplinary_status = serializers.SerializerMethodField()
     
-    # Read-only labels for the UI grid/list
-    class_label = serializers.CharField(source='class_name_static', read_only=True)
-    section_label = serializers.CharField(source='section_static', read_only=True)
+    # Dynamic labels with fallback support
+    class_label = serializers.SerializerMethodField()
+    section_label = serializers.SerializerMethodField()
     full_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = Student
         fields = '__all__'
+
+    def get_class_label(self, obj):
+        # 1. Check for ForeignKey 'classname'
+        if hasattr(obj, 'classname') and obj.classname:
+            return getattr(obj.classname, 'name', str(obj.classname))
+        # 2. Check for ForeignKey 'class_obj' or similar
+        if hasattr(obj, 'class_obj') and obj.class_obj:
+            return getattr(obj.class_obj, 'name', str(obj.class_obj))
+        # 3. Fallback to static field
+        if hasattr(obj, 'class_name_static') and obj.class_name_static is not None:
+            return f"Class {obj.class_name_static}" if str(obj.class_name_static).isdigit() else str(obj.class_name_static)
+        return ""
+
+    def get_section_label(self, obj):
+        # 1. Check for ForeignKey 'section'
+        if hasattr(obj, 'section') and obj.section:
+            return getattr(obj.section, 'name', str(obj.section))
+        # 2. Fallback to static field
+        if hasattr(obj, 'section_static') and obj.section_static is not None:
+            return str(obj.section_static)
+        return ""
 
     def get_attendance_percentage(self, obj):
         return 85.5 
