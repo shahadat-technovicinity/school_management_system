@@ -1,5 +1,16 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.auth.models import User
+from academic_mm_class_and_section.models import AcademicClass, Section
+
+
+
+class Teacherss(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.user.get_full_name() or self.user.username
+
 
 
 class Teacher(models.Model):
@@ -49,7 +60,7 @@ class Teacher(models.Model):
     ]
 
     # ─────────────────────────────────────────────────────────────
-    # User Relationship (OneToOne) - user.id ei Teacher er identifier
+    # User Relationship (OneToOne)
     # ─────────────────────────────────────────────────────────────
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -63,13 +74,12 @@ class Teacher(models.Model):
     # ─────────────────────────────────────────────────────────────
     # Personal Information
     # ─────────────────────────────────────────────────────────────
+    name_bn = models.CharField(max_length=255, blank=True)  # শিক্ষকের বাংলা নাম
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS_CHOICES, blank=True)
     languages_known = models.JSONField(default=list, blank=True, help_text="List of languages known")
-    class_assigned = models.CharField(max_length=100, blank=True)
-
-    # Subject - FK relation
+    class_assigned = models.ForeignKey('academic_mm_class_and_section.AcademicClass', on_delete=models.SET_NULL, null=True, blank=True, related_name="teachers")
     subject = models.ForeignKey(
         'academic_create_subject.Subject_Name',
         on_delete=models.SET_NULL,
@@ -80,8 +90,12 @@ class Teacher(models.Model):
 
     blood_group = models.CharField(max_length=5, choices=BLOOD_GROUP_CHOICES, blank=True)
     primary_contact_number = models.CharField(max_length=20, blank=True)
+    
     father_name = models.CharField(max_length=150, blank=True)
+    father_name_bn = models.CharField(max_length=150, blank=True)  # বাবার বাংলা নাম
     mother_name = models.CharField(max_length=150, blank=True)
+    mother_name_bn = models.CharField(max_length=150, blank=True)  # মায়ের বাংলা নাম
+    
     qualification = models.CharField(max_length=255, blank=True)
     work_experience = models.CharField(max_length=255, blank=True)
 
@@ -90,11 +104,13 @@ class Teacher(models.Model):
     previous_school_address = models.CharField(max_length=255, blank=True)
     previous_school_phone = models.CharField(max_length=25, blank=True)
 
-    # Address
+    # Address & Location
+    district = models.CharField(max_length=100, blank=True)  # নিজ জেলা
     permanent_address = models.TextField(blank=True)
     current_address = models.TextField(blank=True)
 
     # Identification
+    nid_number = models.CharField(max_length=50, blank=True)  # NID নম্বর
     pan_number = models.CharField(max_length=50, blank=True, help_text="PAN or Tax ID number")
 
     # ─────────────────────────────────────────────────────────────
@@ -129,7 +145,7 @@ class Teacher(models.Model):
     # Transport Details
     # ─────────────────────────────────────────────────────────────
     route_id = models.CharField(max_length=50, blank=True, null=True)
-    vehicle_number = models.CharField(max_length=50, blank=True,null=True)
+    vehicle_number = models.CharField(max_length=50, blank=True, null=True)
     pickup_point = models.CharField(max_length=100, blank=True, null=True)
 
     # ─────────────────────────────────────────────────────────────
@@ -153,6 +169,8 @@ class Teacher(models.Model):
     photo = models.ImageField(upload_to="teachers/photos/", null=True, blank=True)
     resume = models.FileField(upload_to="teachers/resume/", null=True, blank=True)
     joining_letter = models.FileField(upload_to="teachers/joining_letter/", null=True, blank=True)
+    office_order_copy = models.FileField(upload_to="teachers/office_orders/", null=True, blank=True)  # অফিস আদেশ কপি
+    nid_card_copy = models.FileField(upload_to="teachers/nid_cards/", null=True, blank=True)  # NID কার্ডের কপি
 
     # ─────────────────────────────────────────────────────────────
     # Additional Info
@@ -183,7 +201,7 @@ class Teacher(models.Model):
 
     @property
     def email(self) -> str:
-        """Return the user's email (username in this case)."""
+        """Return the user's email."""
         if self.user:
             return self.user.username
         return ""
