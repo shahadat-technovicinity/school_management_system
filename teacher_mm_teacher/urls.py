@@ -1,6 +1,7 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path, include
-from .views import TeacherViewSet
+from .views import TeacherViewSet, TeacherListView
+
 
 # Create a router and register our viewset
 router = DefaultRouter()
@@ -17,6 +18,8 @@ router.register(r"", TeacherViewSet, basename="teacher")
 # - GET    /teachers/statistics/ -> Get teacher statistics
 
 urlpatterns = [
+    path("list/", TeacherListView.as_view(), name="teacher-list"),
+
     path("", include(router.urls)),
 ]
 

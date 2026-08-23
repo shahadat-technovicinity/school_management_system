@@ -5,6 +5,8 @@ from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework import generics
+from django.contrib.auth import get_user_model
 
 from .models import Teacher
 from .serializers import (
@@ -12,36 +14,35 @@ from .serializers import (
     TeacherDetailSerializer,
     TeacherCreateSerializer,
     TeacherUpdateSerializer,
+    TeachersListSerializer,
 )
 from .filters import TeacherFilter
 from .pagination import TeacherPagination
+
+User = get_user_model()
 
 
 class TeacherViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing Teacher profiles.
-
-    Provides CRUD operations for teacher management:
-    - POST /teachers/ - Create a new teacher profile (Admin only)
-    - GET /teachers/ - List all teachers with pagination and filtering
-    - GET /teachers/{id}/ - Retrieve a single teacher's details
-    - PUT/PATCH /teachers/{id}/ - Update a teacher profile
-    - DELETE /teachers/{id}/ - Delete a teacher profile
-
-    Supports file uploads for resume, joining letter, and photo.
     """
 
-    queryset = Teacher.objects.select_related("user").all()
+    # 🟢 Optimized Queryset to avoid N+1 problem
+    queryset = Teacher.objects.select_related("user", "subject", "class_assigned").all()
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = TeacherPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = TeacherFilter
+    
+    # 🟢 Fixed search fields with ForeignKey spans & new Bangla/NID fields
     search_fields = [
         "user__name",
         "user__username",
+        "name_bn",
         "subject__name",
-        "class_assigned",
+        "class_assigned__name",
         "primary_contact_number",
+        "nid_number",
     ]
     ordering_fields = [
         "user__name",
@@ -78,25 +79,10 @@ class TeacherViewSet(viewsets.ModelViewSet):
         tags=["Teachers"],
     )
     def create(self, request, *args, **kwargs):
-        """
-        Create a new teacher profile.
-
-        Links the teacher profile to an existing user account.
-        The user must not already have a teacher profile.
-
-        **Required fields:**
-        - user_id: ID of the existing user
-
-        **File uploads:**
-        - resume: PDF/DOC file
-        - joining_letter: PDF/DOC file
-        - photo: Image file (JPG, PNG)
-        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
 
-        # Return detailed response
         detail_serializer = TeacherDetailSerializer(serializer.instance)
         headers = self.get_success_headers(detail_serializer.data)
         return Response(
@@ -216,3 +202,17 @@ class TeacherViewSet(viewsets.ModelViewSet):
             "inactive": inactive,
             "on_leave": on_leave,
         })
+
+
+class TeacherListView(generics.ListAPIView):
+    """
+    Simple Dropdown/List view to populate User options with role 'Teacher'.
+    """
+    serializer_class = TeachersListSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return User.objects.none()
+            
+        return User.objects.filter(role__name__iexact='Teacher')
