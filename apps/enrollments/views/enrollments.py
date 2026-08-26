@@ -1,9 +1,10 @@
-from rest_framework import status, filters
+from rest_framework import status, filters, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db import transaction
+from django.db.models import Q
 from django.utils.dateparse import parse_date
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
@@ -33,6 +34,45 @@ class EnrollmentViewSet(BaseModelViewSet):
 
     authentication_classes = [JWTAuthentication]
 
+    def _sync_student_info(self, enrollment):
+        """Enrollment পরিবর্তন হলে Student মডেলের Static Class, Section ও Academic Year সিঙ্ক করে"""
+        student = enrollment.student
+        if student:
+            update_fields = []
+            if hasattr(student, 'class_name_static'):
+                student.class_name_static = enrollment.classname
+                update_fields.append('class_name_static')
+            if hasattr(student, 'section_static'):
+                student.section_static = enrollment.section
+                update_fields.append('section_static')
+            if hasattr(student, 'academic_year') and enrollment.academic_year:
+                student.academic_year = str(enrollment.academic_year)
+                update_fields.append('academic_year')
+
+            if update_fields:
+                student.save(update_fields=update_fields)
+
+    def perform_create(self, serializer):
+        enrollment = serializer.save()
+        self._sync_student_info(enrollment)
+
+    def perform_update(self, serializer):
+        enrollment = serializer.save()
+        self._sync_student_info(enrollment)
+
+    def perform_destroy(self, instance):
+        student = instance.student
+        instance.delete()
+        # এনরোলমেন্ট ডিলিট হলে স্টুডেন্ট প্রোফাইলের সিঙ্ক ডাটা আপডেট করা
+        if student:
+            latest_enrollment = Enrollment.objects.filter(student=student).order_by('-id').first()
+            if latest_enrollment:
+                self._sync_student_info(latest_enrollment)
+            else:
+                student.class_name_static = None
+                student.section_static = None
+                student.save(update_fields=['class_name_static', 'section_static'])
+
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Enrollment.objects.none()
@@ -44,11 +84,8 @@ class EnrollmentViewSet(BaseModelViewSet):
 
         target_year = None
 
-        # ১. ফ্রন্টএন্ড থেকে সরাসরি academic_year আসলে
         if academic_year_param:
             target_year = str(academic_year_param)
-
-        # ২. ফ্রন্টএন্ড থেকে date বা attendance_date পাঠালে
         elif date_param:
             parsed_dt = parse_date(str(date_param))
             if parsed_dt:
@@ -58,20 +95,17 @@ class EnrollmentViewSet(BaseModelViewSet):
                 parts = clean_date.split('-')
                 target_year = next((part for part in parts if len(part) == 4 and part.isdigit()), None)
 
-        # 🟢 ৩. ফ্রন্টএন্ড থেকে কিছুই না পাঠালে (Fallback to Active Academic Year / Current Year)
         if not target_year:
             active_year_obj = AcademicYear.objects.filter(is_active=True).first()
             if active_year_obj:
-                # AcademicYear অবজেক্ট থেকে 'name' বা 'year' ফিল্ড নেওয়ার চেষ্টা
                 target_year = str(getattr(active_year_obj, 'name', getattr(active_year_obj, 'year', active_year_obj.id)))
             else:
-                # ডাটাবেজে Active Year সেট করা না থাকলে বর্তমান রানিং সাল (e.g. 2026) নেওয়া হবে
                 target_year = str(timezone.now().year)
 
-        # নির্দিষ্ট টার্গেট ইয়ার ফিল্টার করা (যা ২০২৮ বা ভবিষ্যতের ডাটা আসা সম্পূর্ণ বন্ধ করবে)
-        filtered_qs = queryset.filter(academic_year=target_year)
+        filtered_qs = queryset.filter(
+            Q(academic_year=target_year) | Q(student__academic_year=target_year)
+        )
 
-        # যদি ওই নির্দিষ্ট বছরে কোনো এনরোলমেন্ট ডাটা না থাকে, তবে খালি queryset রিটার্ন করবে
         return filtered_qs.distinct()
 
     @swagger_auto_schema(
@@ -91,7 +125,7 @@ class EnrollmentViewSet(BaseModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         student = serializer.validated_data['student']
         academic_year = serializer.validated_data['academic_year']
         classname = serializer.validated_data['classname']
@@ -107,14 +141,7 @@ class EnrollmentViewSet(BaseModelViewSet):
             }
         )
 
-        if hasattr(student, 'class_name_static_id'):
-            student.class_name_static_id = classname.id if hasattr(classname, 'id') else classname
-        if hasattr(student, 'section_static_id'):
-            student.section_static_id = section.id if hasattr(section, 'id') else section
-        if hasattr(student, 'academic_year'):
-            student.academic_year = str(academic_year)
-            
-        student.save()
+        self._sync_student_info(enrollment)
 
         response_serializer = self.get_serializer(enrollment)
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
@@ -200,7 +227,7 @@ class EnrollmentViewSet(BaseModelViewSet):
 
         with transaction.atomic():
             Enrollment.objects.bulk_create(enrollments)
-            
+
             update_fields = []
             if hasattr(Student, 'class_name_static'):
                 update_fields.append('class_name_static')
@@ -208,7 +235,7 @@ class EnrollmentViewSet(BaseModelViewSet):
                 update_fields.append('section_static')
             if hasattr(Student, 'academic_year'):
                 update_fields.append('academic_year')
-                
+
             if update_fields:
                 Student.objects.bulk_update(students_to_update, update_fields)
 
