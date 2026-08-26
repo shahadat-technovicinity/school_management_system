@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db import transaction
+from django.utils.dateparse import parse_date
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -20,7 +21,7 @@ class EnrollmentViewSet(BaseModelViewSet):
     CRUD API for Enrollment.
     Supports filtering, search and ordering via query params.
     """
-    # 🟢 academic_year Non-relational field হওয়ায় select_related থেকে সরিয়ে দেওয়া হয়েছে
+    # 🟢 academic_year Non-relational field হওয়ায় select_related থেকে সরিয়ে দেওয়া হয়েছে
     queryset = Enrollment.objects.select_related('student', 'classname', 'section').all()
     serializer_class = EnrollmentSerializer
     pagination_class = StandardPagination
@@ -32,12 +33,37 @@ class EnrollmentViewSet(BaseModelViewSet):
 
     authentication_classes = [JWTAuthentication]
 
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Enrollment.objects.none()
+
+        queryset = super().get_queryset()
+
+        date_param = self.request.query_params.get('date')
+        academic_year_param = self.request.query_params.get('academic_year')
+
+        # 🟢 academic_year সরাসরি না পাঠালে, date থেকে ডায়নামিকালি বের করে ফিল্টার করা
+        if date_param and not academic_year_param:
+            parsed_dt = parse_date(str(date_param))
+            if parsed_dt:
+                extracted_year = str(parsed_dt.year)
+            else:
+                clean_date = str(date_param).replace('/', '-')
+                parts = clean_date.split('-')
+                extracted_year = next((part for part in parts if len(part) == 4 and part.isdigit()), None)
+
+            if extracted_year:
+                queryset = queryset.filter(academic_year=extracted_year)
+
+        return queryset.distinct()
+
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('student', openapi.IN_QUERY, description="Student ID", type=openapi.TYPE_INTEGER),
             openapi.Parameter('classname', openapi.IN_QUERY, description="Class ID", type=openapi.TYPE_INTEGER),
             openapi.Parameter('section', openapi.IN_QUERY, description="Section ID", type=openapi.TYPE_INTEGER),
             openapi.Parameter('academic_year', openapi.IN_QUERY, description="Academic Year ID/Name", type=openapi.TYPE_STRING),
+            openapi.Parameter('date', openapi.IN_QUERY, description="Date for attendance filtering", type=openapi.TYPE_STRING),
             openapi.Parameter('search', openapi.IN_QUERY, description="Search across student name", type=openapi.TYPE_STRING),
             openapi.Parameter('ordering', openapi.IN_QUERY, description="Order by field", type=openapi.TYPE_STRING),
         ]
