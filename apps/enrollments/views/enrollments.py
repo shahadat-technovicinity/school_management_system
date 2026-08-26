@@ -5,6 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db import transaction
 from django.utils.dateparse import parse_date
+from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -21,7 +22,6 @@ class EnrollmentViewSet(BaseModelViewSet):
     CRUD API for Enrollment.
     Supports filtering, search and ordering via query params.
     """
-    # 🟢 academic_year Non-relational field হওয়ায় select_related থেকে সরিয়ে দেওয়া হয়েছে
     queryset = Enrollment.objects.select_related('student', 'classname', 'section').all()
     serializer_class = EnrollmentSerializer
     pagination_class = StandardPagination
@@ -39,23 +39,40 @@ class EnrollmentViewSet(BaseModelViewSet):
 
         queryset = super().get_queryset()
 
-        date_param = self.request.query_params.get('date')
+        date_param = self.request.query_params.get('date') or self.request.query_params.get('attendance_date')
         academic_year_param = self.request.query_params.get('academic_year')
 
-        # 🟢 academic_year সরাসরি না পাঠালে, date থেকে ডায়নামিকালি বের করে ফিল্টার করা
-        if date_param and not academic_year_param:
+        target_year = None
+
+        # ১. ফ্রন্টএন্ড থেকে সরাসরি academic_year আসলে
+        if academic_year_param:
+            target_year = str(academic_year_param)
+
+        # ২. ফ্রন্টএন্ড থেকে date বা attendance_date পাঠালে
+        elif date_param:
             parsed_dt = parse_date(str(date_param))
             if parsed_dt:
-                extracted_year = str(parsed_dt.year)
+                target_year = str(parsed_dt.year)
             else:
                 clean_date = str(date_param).replace('/', '-')
                 parts = clean_date.split('-')
-                extracted_year = next((part for part in parts if len(part) == 4 and part.isdigit()), None)
+                target_year = next((part for part in parts if len(part) == 4 and part.isdigit()), None)
 
-            if extracted_year:
-                queryset = queryset.filter(academic_year=extracted_year)
+        # 🟢 ৩. ফ্রন্টএন্ড থেকে কিছুই না পাঠালে (Fallback to Active Academic Year / Current Year)
+        if not target_year:
+            active_year_obj = AcademicYear.objects.filter(is_active=True).first()
+            if active_year_obj:
+                # AcademicYear অবজেক্ট থেকে 'name' বা 'year' ফিল্ড নেওয়ার চেষ্টা
+                target_year = str(getattr(active_year_obj, 'name', getattr(active_year_obj, 'year', active_year_obj.id)))
+            else:
+                # ডাটাবেজে Active Year সেট করা না থাকলে বর্তমান রানিং সাল (e.g. 2026) নেওয়া হবে
+                target_year = str(timezone.now().year)
 
-        return queryset.distinct()
+        # নির্দিষ্ট টার্গেট ইয়ার ফিল্টার করা (যা ২০২৮ বা ভবিষ্যতের ডাটা আসা সম্পূর্ণ বন্ধ করবে)
+        filtered_qs = queryset.filter(academic_year=target_year)
+
+        # যদি ওই নির্দিষ্ট বছরে কোনো এনরোলমেন্ট ডাটা না থাকে, তবে খালি queryset রিটার্ন করবে
+        return filtered_qs.distinct()
 
     @swagger_auto_schema(
         manual_parameters=[
@@ -90,7 +107,6 @@ class EnrollmentViewSet(BaseModelViewSet):
             }
         )
 
-        # Student মডেল আপডেট
         if hasattr(student, 'class_name_static_id'):
             student.class_name_static_id = classname.id if hasattr(classname, 'id') else classname
         if hasattr(student, 'section_static_id'):
