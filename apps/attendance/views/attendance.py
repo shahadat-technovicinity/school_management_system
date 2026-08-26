@@ -3,7 +3,6 @@ from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from django.utils.dateparse import parse_date
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -63,8 +62,7 @@ class StudentAttendanceListAPIView(ListAPIView):
             openapi.Parameter('date_from', openapi.IN_QUERY, description="Start date (YYYY-MM-DD)", type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE),
             openapi.Parameter('date_to', openapi.IN_QUERY, description="End date (YYYY-MM-DD)", type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE),
             openapi.Parameter('marked_by', openapi.IN_QUERY, description="Teacher User ID who marked attendance", type=openapi.TYPE_INTEGER),
-            openapi.Parameter('date', openapi.IN_QUERY, description="Specific date (e.g. 2026-08-26 or 26-08-2026)", type=openapi.TYPE_STRING),
-            openapi.Parameter('academic_year', openapi.IN_QUERY, description="Academic Year (optional)", type=openapi.TYPE_STRING),
+            openapi.Parameter('date', openapi.IN_QUERY, description="Specific date (YYYY-MM-DD)", type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE),
             openapi.Parameter('ordering', openapi.IN_QUERY, description="Order by field (prefix with - for descending)", type=openapi.TYPE_STRING),
         ]
     )
@@ -78,45 +76,24 @@ class StudentAttendanceListAPIView(ListAPIView):
         queryset = Attendance.objects.select_related('student', 'classname', 'section', 'marked_by').all()
 
         student_id = self.kwargs.get('student_id') or self.request.query_params.get('student_id')
+        if student_id:
+            queryset = queryset.filter(student_id=student_id)
+
         class_name = self.request.query_params.get('classname')
         section = self.request.query_params.get('section')
         marked_by = self.request.query_params.get('marked_by')
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
-        date_param = self.request.query_params.get('date')
-        academic_year = self.request.query_params.get('academic_year')
+        date = self.request.query_params.get('date')
 
-        if student_id:
-            queryset = queryset.filter(student_id=student_id)
         if class_name:
             queryset = queryset.filter(classname_id=class_name)
         if section:
             queryset = queryset.filter(section_id=section)
         if marked_by:
             queryset = queryset.filter(marked_by_id=marked_by)
-
-        if date_param:
-            queryset = queryset.filter(date=date_param)
-
-            # তারিখ থেকে ডায়নামিকালি বছর এক্সট্র্যাক্ট করা
-            if not academic_year:
-                parsed_dt = parse_date(str(date_param))
-                if parsed_dt:
-                    academic_year = str(parsed_dt.year)
-                else:
-                    clean_date = str(date_param).replace('/', '-')
-                    parts = clean_date.split('-')
-                    for part in parts:
-                        if len(part) == 4 and part.isdigit():
-                            academic_year = part
-                            break
-
-        # academic_year ফিল্টার করে সঠিক বছরের এনরোলমেন্ট ডাটা মেলানো
-        if academic_year:
-            queryset = queryset.filter(
-                student__enrollments__academic_year=str(academic_year)
-            )
-
+        if date:
+            queryset = queryset.filter(date=date)
         if date_from and date_to:
             queryset = queryset.filter(date__range=[date_from, date_to])
         elif date_from:
@@ -128,4 +105,4 @@ class StudentAttendanceListAPIView(ListAPIView):
         if ordering:
             queryset = queryset.order_by(ordering)
 
-        return queryset.distinct()
+        return queryset
