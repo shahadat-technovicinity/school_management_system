@@ -63,7 +63,6 @@ class EnrollmentViewSet(BaseModelViewSet):
     def perform_destroy(self, instance):
         student = instance.student
         instance.delete()
-        # এনরোলমেন্ট ডিলিট হলে স্টুডেন্ট প্রোফাইলের সিঙ্ক ডাটা আপডেট করা
         if student:
             latest_enrollment = Enrollment.objects.filter(student=student).order_by('-id').first()
             if latest_enrollment:
@@ -84,10 +83,8 @@ class EnrollmentViewSet(BaseModelViewSet):
 
         target_year = None
 
-        # ১. ক্লায়েন্ট সিলেক্টেড Academic Year থাকলে
         if academic_year_param:
             target_year = str(academic_year_param)
-        # ২. Attendance Date পাঠানো থাকলে সাল বের করা
         elif date_param:
             parsed_dt = parse_date(str(date_param))
             if parsed_dt:
@@ -97,7 +94,6 @@ class EnrollmentViewSet(BaseModelViewSet):
                 parts = clean_date.split('-')
                 target_year = next((part for part in parts if len(part) == 4 and part.isdigit()), None)
 
-        # ৩. কোনো প্যারামিটার না থাকলে Active Academic Year
         if not target_year:
             active_year_obj = AcademicYear.objects.filter(is_active=True).first()
             if active_year_obj:
@@ -105,12 +101,8 @@ class EnrollmentViewSet(BaseModelViewSet):
             else:
                 target_year = str(timezone.now().year)
 
-        # Strictly Enrollment টেবিলের Academic Year দিয়ে ফিল্টার (Student Profile এর Year দেখা হবে না)
-        queryset = queryset.filter(
-            Q(academic_year=target_year) |
-            Q(academic_year__id=target_year) |
-            Q(academic_year__name=target_year)
-        )
+        # academic_year CharField হওয়ায় সরাসরি Exact String ফিল্টার করা হলো
+        queryset = queryset.filter(academic_year=str(target_year))
 
         return queryset.distinct()
 
