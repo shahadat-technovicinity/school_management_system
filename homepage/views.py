@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Count
 from drf_yasg.utils import swagger_auto_schema
+import re
 
 # App Models
 from apps.students.models import Student
@@ -99,23 +100,13 @@ class SchoolDashboardStatsAPIView(APIView):
     )
     def get(self, request, *args, **kwargs):
         # 1. Real-time database counts
-        total_students_count = Student.objects.filter(status="active").count() if hasattr(Student, 'status') else Student.objects.count()
+        total_students_count = Student.objects.filter(status="active").count()
         
         # Teacher count filter
-        if hasattr(Teacher, 'status'):
-            total_teachers_count = Teacher.objects.filter(status="active").count()
-        elif hasattr(Teacher, 'is_active'):
-            total_teachers_count = Teacher.objects.filter(is_active=True).count()
-        else:
-            total_teachers_count = Teacher.objects.count()
+        total_teachers_count = Teacher.objects.filter(status="active").count() if hasattr(Teacher, 'status') else Teacher.objects.count()
         
         # Staff count filter
-        if hasattr(StaffProfile, 'status'):
-            total_staff_count = StaffProfile.objects.filter(status="active").count()
-        elif hasattr(StaffProfile, 'is_active'):
-            total_staff_count = StaffProfile.objects.filter(is_active=True).count()
-        else:
-            total_staff_count = StaffProfile.objects.count()
+        total_staff_count = StaffProfile.objects.filter(status="active").count() if hasattr(StaffProfile, 'status') else StaffProfile.objects.count()
 
         # 2. Dynamic summary response formatting
         summary_data = {
@@ -124,13 +115,12 @@ class SchoolDashboardStatsAPIView(APIView):
             "total_staff_summary": f"{total_staff_count}+",
         }
 
-        # 3. Dynamic class-wise student counts directly from Student model
-        # class_name_static যদি Foreign Key হয় তবে class_name_static__name ব্যবহার করতে হবে
+        # 3. Dynamic class-wise student counts (Foreign Key name handles relation dynamically)
         class_wise_qs = (
-            Student.objects.exclude(class_name_static__isnull=True)
+            Student.objects.filter(status="active")
+            .exclude(class_name_static__isnull=True)
             .values('class_name_static__name')
             .annotate(total_students=Count('id'))
-            .order_by('class_name_static__name')
         )
 
         class_wise_students = [
@@ -140,6 +130,12 @@ class SchoolDashboardStatsAPIView(APIView):
             }
             for item in class_wise_qs
         ]
+
+        # 4. Numeric Sorting: Class 6 -> Class 7 -> Class 8 -> Class 9 -> Class 10
+        class_wise_students = sorted(
+            class_wise_students, 
+            key=lambda x: int(re.search(r'\d+', str(x['class_name'])).group()) if re.search(r'\d+', str(x['class_name'])) else 999
+        )
 
         response_payload = {
             **summary_data,
