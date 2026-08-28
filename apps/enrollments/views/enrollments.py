@@ -84,10 +84,10 @@ class EnrollmentViewSet(BaseModelViewSet):
 
         target_year = None
 
-        # ১. যদি ক্লায়েন্ট নির্দিষ্টভাবে academic_year সিলেক্ট করে পাঠায়
+        # ১. ক্লায়েন্ট সিলেক্টেড Academic Year থাকলে
         if academic_year_param:
             target_year = str(academic_year_param)
-        # ২. তারিখ পাঠানো থাকলে সেটির বছর বের করা
+        # ২. Attendance Date পাঠানো থাকলে সাল বের করা
         elif date_param:
             parsed_dt = parse_date(str(date_param))
             if parsed_dt:
@@ -97,28 +97,20 @@ class EnrollmentViewSet(BaseModelViewSet):
                 parts = clean_date.split('-')
                 target_year = next((part for part in parts if len(part) == 4 and part.isdigit()), None)
 
-        # ৩. কোনো ফিল্টার না থাকলে রানিং/Active Academic Year সিলেক্ট হবে
-        if target_year:
-            queryset = queryset.filter(
-                Q(academic_year=target_year) |
-                Q(academic_year__id=target_year) |
-                Q(academic_year__name=target_year) |
-                Q(student__academic_year=target_year)
-            )
-        else:
+        # ৩. কোনো প্যারামিটার না থাকলে Active Academic Year
+        if not target_year:
             active_year_obj = AcademicYear.objects.filter(is_active=True).first()
             if active_year_obj:
-                active_id = str(active_year_obj.id)
-                active_name = str(getattr(active_year_obj, 'name', active_year_obj.id))
-                active_year_val = str(getattr(active_year_obj, 'year', active_year_obj.id))
+                target_year = str(getattr(active_year_obj, 'name', getattr(active_year_obj, 'year', active_year_obj.id)))
+            else:
+                target_year = str(timezone.now().year)
 
-                queryset = queryset.filter(
-                    Q(academic_year=active_id) |
-                    Q(academic_year=active_name) |
-                    Q(academic_year=active_year_val) |
-                    Q(academic_year__is_active=True) |
-                    Q(student__academic_year=active_name)
-                )
+        # Strictly Enrollment টেবিলের Academic Year দিয়ে ফিল্টার (Student Profile এর Year দেখা হবে না)
+        queryset = queryset.filter(
+            Q(academic_year=target_year) |
+            Q(academic_year__id=target_year) |
+            Q(academic_year__name=target_year)
+        )
 
         return queryset.distinct()
 
