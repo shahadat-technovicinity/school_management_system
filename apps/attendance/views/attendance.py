@@ -5,18 +5,16 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import OuterRef, Subquery
 from django.utils import timezone
-from django.utils.dateparse import parse_date
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from apps.attendance.models import Attendance
 from apps.attendance.serializers.attendance import (
-    AttendanceListSerializer, 
-    AttendancePatchSerializer, 
+    AttendanceListSerializer,
+    AttendancePatchSerializer,
     BulkAttendanceSerializer
 )
 from apps.common.pagination.standard_pagination import StandardPagination
-from apps.academics.models import AcademicYear
 
 
 class BulkAttendanceAPIView(CreateAPIView):
@@ -77,7 +75,7 @@ class StudentAttendanceListAPIView(ListAPIView):
         if getattr(self, 'swagger_fake_view', False):
             return Attendance.objects.none()
 
-        queryset = Attendance.objects.select_related('student', 'classname', 'section', 'marked_by').all()
+        queryset = Attendance.objects.select_related('student', 'marked_by').all()
 
         student_id = self.kwargs.get('student_id') or self.request.query_params.get('student_id')
         class_name = self.request.query_params.get('classname')
@@ -96,7 +94,6 @@ class StudentAttendanceListAPIView(ListAPIView):
         if marked_by:
             queryset = queryset.filter(marked_by_id=marked_by)
 
-        # ১. নির্দিষ্ট তারিখ ফিল্টার
         if date:
             queryset = queryset.filter(date=date)
         elif date_from and date_to:
@@ -106,15 +103,11 @@ class StudentAttendanceListAPIView(ListAPIView):
         elif date_to:
             queryset = queryset.filter(date__lte=date_to)
         else:
-            # 🟢 ২. যদি তারিখ সংক্রান্ত কোনো প্যারামিটার না আসে:
-            # অ্যাক্টিভ একাডেমিক ইয়ারের সাল অথবা চলতি বছর দিয়ে ফিল্টার করা
-            active_year = AcademicYear.objects.filter(is_active=True).first()
-            year_val = str(getattr(active_year, 'name', getattr(active_year, 'year', timezone.now().year))) if active_year else str(timezone.now().year)
-            
-            # শুধুমাত্র চলতি বছরের ডাটা ফিল্টার
-            queryset = queryset.filter(date__year=year_val)
+            # Current year automatically
+            current_year = timezone.now().year
+            queryset = queryset.filter(date__year=current_year)
 
-            # 🟢 ৩. প্রতিটি স্টুডেন্টের সর্বশেষ ১টি ডাটা ফিল্টার করা (ডুপ্লিকেট রিমুভ)
+            # প্রতিটি student এর latest attendance
             latest_attendance_ids = Attendance.objects.filter(
                 student=OuterRef('student'),
                 classname_id=class_name if class_name else OuterRef('classname'),
