@@ -99,13 +99,23 @@ class SchoolDashboardStatsAPIView(APIView):
     )
     def get(self, request, *args, **kwargs):
         # 1. Real-time database counts
-        total_students_count = Student.objects.filter(status="active").count()
+        total_students_count = Student.objects.filter(status="active").count() if hasattr(Student, 'status') else Student.objects.count()
         
         # Teacher count filter
-        total_teachers_count = Teacher.objects.filter(status="active").count() if hasattr(Teacher, 'status') else Teacher.objects.count()
+        if hasattr(Teacher, 'status'):
+            total_teachers_count = Teacher.objects.filter(status="active").count()
+        elif hasattr(Teacher, 'is_active'):
+            total_teachers_count = Teacher.objects.filter(is_active=True).count()
+        else:
+            total_teachers_count = Teacher.objects.count()
         
         # Staff count filter
-        total_staff_count = StaffProfile.objects.filter(status="active").count() if hasattr(StaffProfile, 'status') else StaffProfile.objects.count()
+        if hasattr(StaffProfile, 'status'):
+            total_staff_count = StaffProfile.objects.filter(status="active").count()
+        elif hasattr(StaffProfile, 'is_active'):
+            total_staff_count = StaffProfile.objects.filter(is_active=True).count()
+        else:
+            total_staff_count = StaffProfile.objects.count()
 
         # 2. Dynamic summary response formatting
         summary_data = {
@@ -115,18 +125,17 @@ class SchoolDashboardStatsAPIView(APIView):
         }
 
         # 3. Dynamic class-wise student counts directly from Student model
+        # class_name_static যদি Foreign Key হয় তবে class_name_static__name ব্যবহার করতে হবে
         class_wise_qs = (
-            Student.objects.filter(status="active")
-            .exclude(class_name_static__isnull=True)
-            .exclude(class_name_static__exact="")
-            .values('class_name_static')
+            Student.objects.exclude(class_name_static__isnull=True)
+            .values('class_name_static__name')
             .annotate(total_students=Count('id'))
-            .order_by('class_name_static')
+            .order_by('class_name_static__name')
         )
 
         class_wise_students = [
             {
-                "class_name": item['class_name_static'],
+                "class_name": item['class_name_static__name'] if item['class_name_static__name'] else "N/A",
                 "total_students": item['total_students']
             }
             for item in class_wise_qs
