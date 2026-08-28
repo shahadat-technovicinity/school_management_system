@@ -103,11 +103,12 @@ class StudentAttendanceListAPIView(ListAPIView):
         elif date_to:
             queryset = queryset.filter(date__lte=date_to)
         else:
-            # Current year automatically
             current_year = timezone.now().year
-            queryset = queryset.filter(date__year=current_year)
+            queryset = queryset.filter(
+                date__year=current_year,
+                student__academic_year__icontains=str(current_year)
+            )
 
-            # প্রতিটি student এর latest attendance
             latest_attendance_ids = Attendance.objects.filter(
                 student=OuterRef('student'),
                 classname_id=class_name if class_name else OuterRef('classname'),
@@ -115,9 +116,3 @@ class StudentAttendanceListAPIView(ListAPIView):
             ).order_by('-date', '-id').values('id')[:1]
 
             queryset = queryset.filter(id__in=Subquery(latest_attendance_ids))
-
-        ordering = self.request.query_params.get('ordering', '-date')
-        if ordering:
-            queryset = queryset.order_by(ordering)
-
-        return queryset
