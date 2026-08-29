@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db import transaction
-from django.db.models import Q
 from django.utils.dateparse import parse_date
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
@@ -18,13 +17,7 @@ from apps.students.models import Student
 from apps.academics.models import AcademicYear
 
 
-##Start code Now
-
 class EnrollmentViewSet(BaseModelViewSet):
-    """
-    CRUD API for Enrollment.
-    Supports filtering, search and ordering via query params.
-    """
     queryset = Enrollment.objects.select_related('student', 'classname', 'section').all()
     serializer_class = EnrollmentSerializer
     pagination_class = StandardPagination
@@ -37,17 +30,19 @@ class EnrollmentViewSet(BaseModelViewSet):
     authentication_classes = [JWTAuthentication]
 
     def _sync_student_info(self, enrollment):
-        """Enrollment পরিবর্তন হলে Student মডেলের Static Class, Section ও Academic Year সিঙ্ক করে"""
         student = enrollment.student
         if student:
             update_fields = []
-            if hasattr(student, 'class_name_static'):
-                student.class_name_static = enrollment.classname
+
+            if enrollment.classname:
+                student.class_name_static = enrollment.classname.name
                 update_fields.append('class_name_static')
-            if hasattr(student, 'section_static'):
-                student.section_static = enrollment.section
+
+            if enrollment.section:
+                student.section_static = enrollment.section.name
                 update_fields.append('section_static')
-            if hasattr(student, 'academic_year') and enrollment.academic_year:
+
+            if enrollment.academic_year:
                 student.academic_year = str(enrollment.academic_year)
                 update_fields.append('academic_year')
 
@@ -97,13 +92,8 @@ class EnrollmentViewSet(BaseModelViewSet):
                 target_year = next((part for part in parts if len(part) == 4 and part.isdigit()), None)
 
         if not target_year:
-            active_year_obj = AcademicYear.objects.filter(is_active=True).first()
-            if active_year_obj:
-                target_year = str(getattr(active_year_obj, 'name', getattr(active_year_obj, 'year', active_year_obj.id)))
-            else:
-                target_year = str(timezone.now().year)
+            target_year = str(timezone.now().year)
 
-        # academic_year CharField হওয়ায় সরাসরি Exact String ফিল্টার করা হলো
         queryset = queryset.filter(academic_year=str(target_year))
 
         return queryset.distinct()
@@ -216,10 +206,20 @@ class EnrollmentViewSet(BaseModelViewSet):
                 roll_no=0,
             ))
 
-            if hasattr(student, 'class_name_static_id'):
-                student.class_name_static_id = class_id
-            if hasattr(student, 'section_static_id'):
-                student.section_static_id = section_id
+            # Class name update
+            class_obj = None
+            section_obj = None
+            try:
+                from apps.academics.models import AcademicClass, Section
+                class_obj = AcademicClass.objects.get(id=class_id)
+                section_obj = Section.objects.get(id=section_id)
+            except Exception:
+                pass
+
+            if class_obj:
+                student.class_name_static = class_obj.name
+            if section_obj:
+                student.section_static = section_obj.name
             if hasattr(student, 'academic_year'):
                 student.academic_year = year_str
 
@@ -228,16 +228,8 @@ class EnrollmentViewSet(BaseModelViewSet):
         with transaction.atomic():
             Enrollment.objects.bulk_create(enrollments)
 
-            update_fields = []
-            if hasattr(Student, 'class_name_static'):
-                update_fields.append('class_name_static')
-            if hasattr(Student, 'section_static'):
-                update_fields.append('section_static')
-            if hasattr(Student, 'academic_year'):
-                update_fields.append('academic_year')
-
-            if update_fields:
-                Student.objects.bulk_update(students_to_update, update_fields)
+            update_fields = ['class_name_static', 'section_static', 'academic_year']
+            Student.objects.bulk_update(students_to_update, update_fields)
 
         return Response(
             {
