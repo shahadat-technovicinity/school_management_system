@@ -13,6 +13,7 @@ class TeachersListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["value", "label"]
+        ref_name = "TeacherMMUserListDropdown"
 
 
 class UserMinimalSerializer(serializers.ModelSerializer):
@@ -20,6 +21,7 @@ class UserMinimalSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "name", "username", "role", "phone_number", "is_active"]
         read_only_fields = ["id", "is_active"]
+        ref_name = "TeacherMMUserMinimal"
 
 
 class TeacherListSerializer(serializers.ModelSerializer):
@@ -33,9 +35,10 @@ class TeacherListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "user", "full_name", "name_bn", "gender", "subject", "subject_name",
             "class_assigned", "class_name", "primary_contact_number", "status",
-            "date_of_joining", "photo", "created_at",
+            "date_of_joining", "photo", "resume", "joining_letter", "office_order_copy",
+            "nid_card_copy", "created_at", "updated_at"
         ]
-        ref_name = "TeacherProfileList"
+        ref_name = "TeacherMMTeacherList"
 
 
 class TeacherDetailSerializer(serializers.ModelSerializer):
@@ -66,6 +69,7 @@ class TeacherDetailSerializer(serializers.ModelSerializer):
             "status", "notes", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+        ref_name = "TeacherMMTeacherDetail"
 
 
 class TeacherCreateSerializer(serializers.ModelSerializer):
@@ -88,7 +92,6 @@ class TeacherCreateSerializer(serializers.ModelSerializer):
         required=False, allow_null=True
     )
     
-    # Social links optional
     facebook = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     instagram = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     linkedin = serializers.CharField(required=False, allow_null=True, allow_blank=True)
@@ -116,6 +119,7 @@ class TeacherCreateSerializer(serializers.ModelSerializer):
             "status", "notes", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+        ref_name = "TeacherMMTeacherCreate"
 
     def validate_user_id(self, user):
         if hasattr(user, 'role') and user.role and user.role.name.lower() != 'teacher':
@@ -180,3 +184,4 @@ class TeacherUpdateSerializer(serializers.ModelSerializer):
             "status", "notes", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "user", "created_at", "updated_at"]
+        ref_name = "TeacherMMTeacherUpdate"
