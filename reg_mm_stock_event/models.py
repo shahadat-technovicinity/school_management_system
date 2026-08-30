@@ -1,10 +1,21 @@
 from django.db import models
 
+
 class StockInventory(models.Model):
     CATEGORY_CHOICES = [
         ('Laboratory Equipment', 'Laboratory Equipment'),
         ('Furniture', 'Furniture'),
         ('Educational Materials', 'Educational Materials'),
+        ('Electronics', 'Electronics'),
+        ('Sports Equipment', 'Sports Equipment'),
+        ('Storage Supplies', 'Storage Supplies'),
+        ('Stationery', 'Stationery'),
+        ('Cleaning Supplies', 'Cleaning Supplies'),
+        ('Safety Equipment', 'Safety Equipment'),
+        ('Art Supplies', 'Art Supplies'),
+        ('Musical Instruments', 'Musical Instruments'),
+        ('IT Equipment', 'IT Equipment'),
+        ('Other', 'Other'),
     ]
 
     category = models.CharField(max_length=100, choices=CATEGORY_CHOICES)
