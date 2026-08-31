@@ -1,3 +1,4 @@
+from email.mime import application
 import io
 import os
 import base64
@@ -5,9 +6,12 @@ import logging
 import json as py_json
 from django.core.serializers import json
 import qrcode
+from django.http import HttpResponse
+
 from datetime import datetime, date
 import zipfile
 from django.core.files.base import ContentFile
+from django.shortcuts import render, get_object_or_404
 
 from django.http import HttpResponse
 from django.conf import settings
@@ -151,8 +155,7 @@ class DownloadTestimonialPDFView(APIView):
 
         # 4. Dynamic Verification QR Code
         base_url = "https://api.harikhalihs.edu.bd"
-        verify_url = f"{base_url}/document_mm_testimonial/applications/{application.id}/?format=html"
-        
+        verify_url = f"{base_url}/document_mm_testimonial/applications/{application.id}/verify/"        
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -374,3 +377,48 @@ class MoveToNothiArchiveView(APIView):
             "nothi_id": nothi_obj.id,
             "nothi_no": nothi_obj.nothi_no
         }, status=status.HTTP_200_OK)
+
+
+
+
+
+
+class VerifyTestimonialView(APIView):
+    
+    def get(self, request, pk, *args, **kwargs):
+        try:
+            application = StudentApplication.objects.get(pk=pk)
+        except StudentApplication.DoesNotExist:
+            return HttpResponse("<h1>Certificate not found</h1>", status=404)
+
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="bn">
+        <head>
+            <meta charset="UTF-8">
+            <title>Certificate Verification</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 20px; }}
+                h1 {{ color: green; }}
+                table {{ border-collapse: collapse; width: 100%; }}
+                td, th {{ border: 1px solid #ddd; padding: 8px; }}
+            </style>
+        </head>
+        <body>
+            <h1>✅ Certificate Verified</h1>
+            <table>
+                <tr><th>Name</th><td>{application.student_name_bn}</td></tr>
+                <tr><th>Father</th><td>{application.father_name_bn}</td></tr>
+                <tr><th>Mother</th><td>{application.mother_name_bn}</td></tr>
+                <tr><th>Roll</th><td>{application.roll}</td></tr>
+                <tr><th>Registration</th><td>{application.registration_no}</td></tr>
+                <tr><th>Board</th><td>{application.board}</td></tr>
+                <tr><th>GPA</th><td>{application.GPA}</td></tr>
+                <tr><th>Grade</th><td>{application.grade}</td></tr>
+                <tr><th>Status</th><td>{application.status}</td></tr>
+            </table>
+        </body>
+        </html>
+        """
+        return HttpResponse(html)
+

@@ -79,14 +79,6 @@ class Teacher(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS_CHOICES, blank=True)
     languages_known = models.JSONField(default=list, blank=True, help_text="List of languages known")
-    class_assigned = models.ForeignKey('academic_mm_class_and_section.AcademicClass', on_delete=models.SET_NULL, null=True, blank=True, related_name="teachers")
-    subject = models.ForeignKey(
-        'academic_create_subject.Subject_Name',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='teachers'
-    )
 
     blood_group = models.CharField(max_length=5, choices=BLOOD_GROUP_CHOICES, blank=True)
     primary_contact_number = models.CharField(max_length=20, blank=True)

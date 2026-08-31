@@ -5,6 +5,7 @@ from .views import (
     StudentApplicationStatusUpdateView,
     DownloadTestimonialPDFView,
     MoveToNothiArchiveView,
+    VerifyTestimonialView,
 )
 
 urlpatterns = [
@@ -12,5 +13,6 @@ urlpatterns = [
     path('applications/<int:pk>/', StudentApplicationDetailView.as_view(), name='application-detail'),
     path('applications/<int:pk>/status/', StudentApplicationStatusUpdateView.as_view(), name='application-status-update'),
     path('applications/<int:pk>/download-pdf/', DownloadTestimonialPDFView.as_view(), name='application-download-pdf'),
-    path('<int:pk>/archive-to-nothi/', MoveToNothiArchiveView.as_view(), name='archive-to-nothi'),
+    path('applications/<int:pk>/archive-to-nothi/', MoveToNothiArchiveView.as_view(), name='archive-to-nothi'),
+    path('applications/<int:pk>/verify/', VerifyTestimonialView.as_view(), name='verify-testimonial'),
 ]
