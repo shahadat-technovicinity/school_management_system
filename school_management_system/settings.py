@@ -146,6 +146,8 @@ from pathlib import Path
 import os
 from datetime import timedelta
 
+from dotenv import load_dotenv
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -339,14 +341,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'school_management_system.wsgi.application'
 
 # Database
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": "neondb",
+#         "USER": "neondb_owner",
+#         "PASSWORD": "npg_G56BpUWmRfKZ",
+#         "HOST": "ep-misty-cell-af7kkmmg-pooler.c-2.us-west-2.aws.neon.tech",
+#         "PORT": "5432",
+#         "OPTIONS": {
+#             "sslmode": "require",
+#         }
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "neondb",
-        "USER": "neondb_owner",
-        "PASSWORD": "npg_G56BpUWmRfKZ",
-        "HOST": "ep-misty-cell-af7kkmmg-pooler.c-2.us-west-2.aws.neon.tech",
-        "PORT": "5432",
+        "ENGINE": os.environ.get("DB_ENGINE", "django.db.backends.postgresql"),
+        "NAME": os.environ.get("DB_NAME", ""),
+        "USER": os.environ.get("DB_USER", ""),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
         "OPTIONS": {
             "sslmode": "require",
         }
