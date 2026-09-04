@@ -1,8 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .models import LeaveType, LeaveBalance, TeacherLeave
-from teacher_mm_teacher.models import Teacher
-
+from teacher_mm_teacher.models import TeacherAndStaffProfile
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Leave Type Serializers
@@ -81,7 +80,7 @@ class TeacherMinimalSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source="full_name", read_only=True)
 
     class Meta:
-        model = Teacher
+        model = TeacherAndStaffProfile
         fields = ["id", "name", "photo"]
 
 

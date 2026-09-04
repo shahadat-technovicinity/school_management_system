@@ -11,10 +11,9 @@ import re
 
 # App Models
 from apps.students.models import Student
-from apps.academics.models import Class
+from academic_mm_class_and_section.models import AcademicClass, Section
 from apps.staff.models import StaffProfile
-from teacher_mm_teacher.models import Teacher  # Teacher model from teacher_mm_teacher app
-
+from teacher_mm_teacher.models import TeacherAndStaffProfile
 from .serializers import SchoolDashboardStatsSerializer
 
 
@@ -102,12 +101,17 @@ class SchoolDashboardStatsAPIView(APIView):
         # 1. Real-time database counts
         total_students_count = Student.objects.filter(status="active").count()
         
-        # Teacher count filter
-        total_teachers_count = Teacher.objects.filter(status="active").count() if hasattr(Teacher, 'status') else Teacher.objects.count()
-        
-        # Staff count filter
-        total_staff_count = StaffProfile.objects.filter(status="active").count() if hasattr(StaffProfile, 'status') else StaffProfile.objects.count()
+       # Active Teachers count
+        total_teachers_count = TeacherAndStaffProfile.objects.filter(
+            employee_type="teacher", 
+            status="active"
+        ).count()
 
+        # Active Staff count
+        total_staff_count = TeacherAndStaffProfile.objects.filter(
+            employee_type="staff", 
+            status="active"
+        ).count()
         # 2. Dynamic summary response formatting
         summary_data = {
             "total_students_summary": f"{total_students_count}+",

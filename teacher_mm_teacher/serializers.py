@@ -1,18 +1,18 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Teacher
+from .models import TeacherAndStaffProfile
 
 User = get_user_model()
 
 
-class TeachersListSerializer(serializers.ModelSerializer):
+class EmployeeUserDropdownSerializer(serializers.ModelSerializer):
     label = serializers.CharField(source="name", read_only=True)
     value = serializers.IntegerField(source="id", read_only=True)
 
     class Meta:
         model = User
         fields = ["value", "label"]
-        ref_name = "TeacherMMUserListDropdown"
+        ref_name = "TeacherStaffUserListDropdowns"
 
 
 class UserMinimalSerializer(serializers.ModelSerializer):
@@ -20,37 +20,37 @@ class UserMinimalSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "name", "username", "role", "phone_number", "is_active"]
         read_only_fields = ["id", "is_active"]
-        ref_name = "TeacherMMUserMinimal"
+        ref_name = "TeacherStaffUserMinimals"
 
 
-class TeacherListSerializer(serializers.ModelSerializer):
+class TeacherAndStaffListSerializer(serializers.ModelSerializer):
     user = UserMinimalSerializer(read_only=True)
     full_name = serializers.CharField(read_only=True)
-    
+
     class Meta:
-        model = Teacher
+        model = TeacherAndStaffProfile
         fields = [
-            "id", "user", "full_name", "name_bn", "gender",
-            "primary_contact_number", "status",
-            "date_of_joining", "photo", "resume", "joining_letter", "office_order_copy",
-            "nid_card_copy", "created_at", "updated_at"
+            "id", "user", "employee_type", "designation", "department",
+            "full_name", "name_bn", "gender", "primary_contact_number",
+            "status", "date_of_joining", "photo", "resume", "joining_letter",
+            "office_order_copy", "nid_card_copy", "created_at", "updated_at"
         ]
-        ref_name = "TeacherMMTeacherList"
+        ref_name = "TeacherStaffLists"
 
 
-class TeacherDetailSerializer(serializers.ModelSerializer):
+class TeacherAndStaffDetailSerializer(serializers.ModelSerializer):
     user = UserMinimalSerializer(read_only=True)
     full_name = serializers.CharField(read_only=True)
     email = serializers.CharField(read_only=True)
-    
+
     class Meta:
-        model = Teacher
+        model = TeacherAndStaffProfile
         fields = [
-            "id", "user", "full_name", "name_bn", "email",
-            "gender", "date_of_birth", "marital_status", "languages_known",
-            "blood_group",
-            "primary_contact_number", "father_name", "father_name_bn", "mother_name", "mother_name_bn",
-            "qualification", "work_experience",
+            "id", "user", "employee_type", "designation", "department",
+            "full_name", "name_bn", "email", "gender", "date_of_birth",
+            "marital_status", "languages_known", "blood_group",
+            "primary_contact_number", "father_name", "father_name_bn",
+            "mother_name", "mother_name_bn", "qualification", "work_experience",
             "previous_school_name", "previous_school_address", "previous_school_phone",
             "district", "permanent_address", "current_address", "nid_number", "pan_number",
             "epf_no", "basic_salary", "contract_type", "work_shift",
@@ -64,28 +64,28 @@ class TeacherDetailSerializer(serializers.ModelSerializer):
             "status", "notes", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
-        ref_name = "TeacherMMTeacherDetail"
+        ref_name = "TeacherStaffDetails"
 
 
-class TeacherCreateSerializer(serializers.ModelSerializer):
+class TeacherAndStaffCreateSerializer(serializers.ModelSerializer):
     user_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
         source="user",
-        help_text="ID of the existing user (role='Teacher') to link this teacher profile to"
+        help_text="ID of the existing user to link this profile to"
     )
-    
+
     # File Fields
     photo = serializers.ImageField(required=False, allow_null=True)
     resume = serializers.FileField(required=False, allow_null=True)
     joining_letter = serializers.FileField(required=False, allow_null=True)
     office_order_copy = serializers.FileField(required=False, allow_null=True)
     nid_card_copy = serializers.FileField(required=False, allow_null=True)
-    
+
     basic_salary = serializers.DecimalField(
         max_digits=12, decimal_places=2,
         required=False, allow_null=True
     )
-    
+
     facebook = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     instagram = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     linkedin = serializers.CharField(required=False, allow_null=True, allow_blank=True)
@@ -93,13 +93,12 @@ class TeacherCreateSerializer(serializers.ModelSerializer):
     twitter = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
-        model = Teacher
+        model = TeacherAndStaffProfile
         fields = [
-            "user_id", "id", "name_bn",
+            "user_id", "id", "employee_type", "designation", "department", "name_bn",
             "gender", "date_of_birth", "marital_status", "languages_known",
-            "blood_group",
-            "primary_contact_number", "father_name", "father_name_bn", "mother_name", "mother_name_bn",
-            "qualification", "work_experience",
+            "blood_group", "primary_contact_number", "father_name", "father_name_bn",
+            "mother_name", "mother_name_bn", "qualification", "work_experience",
             "previous_school_name", "previous_school_address", "previous_school_phone",
             "district", "permanent_address", "current_address", "nid_number", "pan_number",
             "epf_no", "basic_salary", "contract_type", "work_shift",
@@ -113,20 +112,25 @@ class TeacherCreateSerializer(serializers.ModelSerializer):
             "status", "notes", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
-        ref_name = "TeacherMMTeacherCreate"
+        ref_name = "TeacherStaffCreates"
 
     def validate_user_id(self, user):
-        if hasattr(user, 'role') and user.role and user.role.name.lower() != 'teacher':
+        # 1. Role validation (Teacher or Staff check)
+        user_role = getattr(user.role, 'name', '') if user.role else ''
+        if user_role.lower() not in ['teacher', 'staff']:
             raise serializers.ValidationError(
-                "Selected user must have role='Teacher'."
+                "Selected user must have role 'Teacher' or 'Staff'."
             )
+
+        # 2. Existing profile check
         try:
-            _ = user.teacher_profile
+            _ = user.teacher_staff_profile
             raise serializers.ValidationError(
-                "This user already has a teacher profile."
+                "This user already has a teacher or staff profile."
             )
-        except Teacher.DoesNotExist:
+        except TeacherAndStaffProfile.DoesNotExist:
             pass
+
         return user
 
     def to_representation(self, instance):
@@ -135,20 +139,21 @@ class TeacherCreateSerializer(serializers.ModelSerializer):
         return rep
 
 
-class TeacherUpdateSerializer(serializers.ModelSerializer):
-    user = UserMinimalSerializer(read_only=True)    
+class TeacherAndStaffUpdateSerializer(serializers.ModelSerializer):
+    user = UserMinimalSerializer(read_only=True)
+    
     # File Fields
     photo = serializers.ImageField(required=False, allow_null=True)
     resume = serializers.FileField(required=False, allow_null=True)
     joining_letter = serializers.FileField(required=False, allow_null=True)
     office_order_copy = serializers.FileField(required=False, allow_null=True)
     nid_card_copy = serializers.FileField(required=False, allow_null=True)
-    
+
     basic_salary = serializers.DecimalField(
         max_digits=12, decimal_places=2,
         required=False, allow_null=True
     )
-    
+
     facebook = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     instagram = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     linkedin = serializers.CharField(required=False, allow_null=True, allow_blank=True)
@@ -156,13 +161,12 @@ class TeacherUpdateSerializer(serializers.ModelSerializer):
     twitter = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
-        model = Teacher
+        model = TeacherAndStaffProfile
         fields = [
-            "user", "id", "name_bn",
+            "user", "id", "employee_type", "designation", "department", "name_bn",
             "gender", "date_of_birth", "marital_status", "languages_known",
-            "blood_group",
-            "primary_contact_number", "father_name", "father_name_bn", "mother_name", "mother_name_bn",
-            "qualification", "work_experience",
+            "blood_group", "primary_contact_number", "father_name", "father_name_bn",
+            "mother_name", "mother_name_bn", "qualification", "work_experience",
             "previous_school_name", "previous_school_address", "previous_school_phone",
             "district", "permanent_address", "current_address", "nid_number", "pan_number",
             "epf_no", "basic_salary", "contract_type", "work_shift",
@@ -176,4 +180,4 @@ class TeacherUpdateSerializer(serializers.ModelSerializer):
             "status", "notes", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "user", "created_at", "updated_at"]
-        ref_name = "TeacherMMTeacherUpdate"
+        ref_name = "TeacherStaffUpdates"

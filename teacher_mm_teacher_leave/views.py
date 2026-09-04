@@ -23,7 +23,7 @@ from .serializers import (
 )
 from .filters import TeacherLeaveFilter
 from .pagination import LeaveResultsPagination
-from teacher_mm_teacher.models import Teacher
+from teacher_mm_teacher.models import TeacherAndStaffProfile
 
 # Common Swagger tag for all teacher-related APIs
 SWAGGER_TAG = ["Teachers"]
@@ -240,8 +240,8 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
     def summary(self, request, teacher_id=None):
         """Get complete leave summary for a teacher including balance and history."""
         try:
-            teacher = Teacher.objects.get(pk=teacher_id)
-        except Teacher.DoesNotExist:
+            teacher = TeacherAndStaffProfile.objects.get(pk=teacher_id)
+        except TeacherAndStaffProfile.DoesNotExist:
             return Response(
                 {"error": "Teacher not found"},
                 status=status.HTTP_404_NOT_FOUND
@@ -409,8 +409,8 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
     def initialize(self, request, teacher_id=None):
         """Initialize leave balances for a teacher with all active leave types."""
         try:
-            teacher = Teacher.objects.get(pk=teacher_id)
-        except Teacher.DoesNotExist:
+            teacher = TeacherAndStaffProfile.objects.get(pk=teacher_id)
+        except TeacherAndStaffProfile.DoesNotExist:
             return Response(
                 {"error": "Teacher not found"},
                 status=status.HTTP_404_NOT_FOUND

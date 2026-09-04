@@ -1,29 +1,23 @@
-from rest_framework.routers import DefaultRouter
 from django.urls import path, include
-from .views import TeacherViewSet, TeacherListView
-
+from rest_framework.routers import DefaultRouter
+from .views import TeacherAndStaffViewSet, EmployeeUserDropdownView
 
 # Create a router and register our viewset
 router = DefaultRouter()
-router.register(r"", TeacherViewSet, basename="teacher")
+router.register(r"", TeacherAndStaffViewSet, basename="teacher-staff")
 
 # The API URLs are determined automatically by the router
 # Available endpoints:
-# - POST   /teachers/           -> Create a new teacher
-# - GET    /teachers/           -> List all teachers (paginated)
-# - GET    /teachers/{id}/      -> Retrieve a specific teacher
-# - PUT    /teachers/{id}/      -> Update a teacher (full)
-# - PATCH  /teachers/{id}/      -> Update a teacher (partial)
-# - DELETE /teachers/{id}/      -> Delete a teacher
-# - GET    /teachers/statistics/ -> Get teacher statistics
+# - POST   /teachers-staff/            -> Create a new teacher/staff profile
+# - GET    /teachers-staff/            -> List all teachers/staff (paginated)
+# - GET    /teachers-staff/{id}/       -> Retrieve a specific teacher/staff
+# - PUT    /teachers-staff/{id}/       -> Update a profile (full)
+# - PATCH  /teachers-staff/{id}/       -> Update a profile (partial)
+# - DELETE /teachers-staff/{id}/       -> Delete a profile
+# - GET    /teachers-staff/statistics/ -> Get teacher/staff statistics
+# - GET    /teachers-staff/users-dropdown/ -> List users available for profile creation
 
 urlpatterns = [
-    path("list/", TeacherListView.as_view(), name="teacher-list"),
-
+    path("users-dropdown/", EmployeeUserDropdownView.as_view(), name="employee-users-dropdown"),
     path("", include(router.urls)),
 ]
-
-
-
-
-

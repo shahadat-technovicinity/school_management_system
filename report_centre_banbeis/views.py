@@ -1,7 +1,7 @@
 from rest_framework import generics
 from rest_framework.response import Response
 from apps.students.models import Student
-from teacher_mm_teacher.models import Teacher
+from teacher_mm_teacher.models import TeacherAndStaffProfile
 from .serializers import EnrollmentDataSerializer, TeacherInfoSerializer
 
 
@@ -51,7 +51,7 @@ class BANBEISTeacherInfoView(generics.GenericAPIView):
     serializer_class = TeacherInfoSerializer
 
     def get(self, request, *args, **kwargs):
-        teachers = Teacher.objects.filter(status='active')
+        teachers = TeacherAndStaffProfile.objects.filter(status='active')
 
         total = teachers.count()
         male = teachers.filter(gender='male').count()

@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
-from teacher_mm_teacher.models import Teacher
-
+from teacher_mm_teacher.models import TeacherAndStaffProfile
 
 class LeaveType(models.Model):
     """
@@ -33,7 +32,7 @@ class LeaveBalance(models.Model):
     This stores the total allocated and used leaves.
     """
     teacher = models.ForeignKey(
-        Teacher,
+        TeacherAndStaffProfile,
         on_delete=models.CASCADE,
         related_name="leave_balances"
     )
@@ -90,7 +89,7 @@ class TeacherLeave(models.Model):
     ]
 
     teacher = models.ForeignKey(
-        Teacher,
+        TeacherAndStaffProfile,
         on_delete=models.CASCADE,
         related_name="leave_applications"
     )
