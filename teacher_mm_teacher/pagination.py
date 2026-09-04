@@ -2,9 +2,9 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 
-class TeacherPagination(PageNumberPagination):
+class TeacherAndStaffPagination(PageNumberPagination):
     """
-    Custom pagination class for Teacher list endpoint.
+    Custom pagination class for Teacher & Staff list endpoint.
     
     Features:
     - Default page size: 10
@@ -34,7 +34,7 @@ class TeacherPagination(PageNumberPagination):
 
     def get_paginated_response_schema(self, schema):
         """
-        Return the schema for paginated response (for Swagger documentation).
+        Return the schema for paginated response (for Swagger/OpenAPI documentation).
         """
         return {
             "type": "object",
@@ -63,7 +63,7 @@ class TeacherPagination(PageNumberPagination):
                     "type": "string",
                     "nullable": True,
                     "description": "URL to the next page",
-                    "example": "http://api.example.com/teachers/?page=2",
+                    "example": "http://api.example.com/teachers-staff/?page=2",
                 },
                 "previous": {
                     "type": "string",

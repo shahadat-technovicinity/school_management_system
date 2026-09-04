@@ -1,49 +1,35 @@
 import django_filters
 from django.db.models import Q
-from .models import Teacher
+from .models import TeacherAndStaffProfile
 
 
-class TeacherFilter(django_filters.FilterSet):
+class TeacherAndStaffFilter(django_filters.FilterSet):
     """
-    Filter class for Teacher model.
+    Filter class for TeacherAndStaffProfile model.
     """
 
-    status = django_filters.ChoiceFilter(choices=Teacher.STATUS_CHOICES)
-    gender = django_filters.ChoiceFilter(choices=Teacher.GENDER_CHOICES)
-    blood_group = django_filters.ChoiceFilter(choices=Teacher.BLOOD_GROUP_CHOICES)
-    marital_status = django_filters.ChoiceFilter(choices=Teacher.MARITAL_STATUS_CHOICES)
-    contract_type = django_filters.ChoiceFilter(choices=Teacher.CONTRACT_TYPE_CHOICES)
-    work_shift = django_filters.ChoiceFilter(choices=Teacher.WORK_SHIFT_CHOICES)
-
-    # Subject Filtering
-    subject = django_filters.NumberFilter(
-        field_name="subject__id",
-        help_text="Filter by subject ID"
+    # Primary Categorization
+    employee_type = django_filters.ChoiceFilter(
+        choices=TeacherAndStaffProfile.EMPLOYEE_TYPE_CHOICES,
+        help_text="Filter by employee type (e.g., teacher, staff)"
     )
-    subject_name = django_filters.CharFilter(
-        field_name="subject__name",
-        lookup_expr="icontains",
-        help_text="Filter by subject name (partial match)"
-    )
-
-    # Class Filtering
-    class_assigned = django_filters.NumberFilter(
-        field_name="class_assigned__id",
-        help_text="Filter by class ID"
-    )
-    class_name = django_filters.CharFilter(
-        field_name="class_assigned__name",
-        lookup_expr="icontains",
-        help_text="Filter by class name (partial match)"
-    )
+    status = django_filters.ChoiceFilter(choices=TeacherAndStaffProfile.STATUS_CHOICES)
+    gender = django_filters.ChoiceFilter(choices=TeacherAndStaffProfile.GENDER_CHOICES)
+    blood_group = django_filters.ChoiceFilter(choices=TeacherAndStaffProfile.BLOOD_GROUP_CHOICES)
+    marital_status = django_filters.ChoiceFilter(choices=TeacherAndStaffProfile.MARITAL_STATUS_CHOICES)
+    contract_type = django_filters.ChoiceFilter(choices=TeacherAndStaffProfile.CONTRACT_TYPE_CHOICES)
+    work_shift = django_filters.ChoiceFilter(choices=TeacherAndStaffProfile.WORK_SHIFT_CHOICES)
 
     # Text Searches
+    designation = django_filters.CharFilter(lookup_expr="icontains")
+    department = django_filters.CharFilter(lookup_expr="icontains")
     qualification = django_filters.CharFilter(lookup_expr="icontains")
     work_location = django_filters.CharFilter(lookup_expr="icontains")
     district = django_filters.CharFilter(lookup_expr="icontains")
     nid_number = django_filters.CharFilter(lookup_expr="icontains")
-    
-    # Name searches
+    primary_contact_number = django_filters.CharFilter(lookup_expr="icontains")
+
+    # Name Searches
     user_name = django_filters.CharFilter(
         field_name="user__name",
         lookup_expr="icontains",
@@ -51,39 +37,44 @@ class TeacherFilter(django_filters.FilterSet):
     )
     name_bn = django_filters.CharFilter(
         lookup_expr="icontains",
-        help_text="Filter by teacher's Bangla name (partial match)"
+        help_text="Filter by Bangla name (partial match)"
+    )
+
+    # Universal Search Bar Parameter
+    search = django_filters.CharFilter(
+        method="filter_by_search",
+        help_text="Search across name, phone number, designation, and NID number"
     )
 
     # Date Filters
     date_of_joining_after = django_filters.DateFilter(
         field_name="date_of_joining",
         lookup_expr="gte",
-        help_text="Filter teachers who joined on or after this date (YYYY-MM-DD)"
+        help_text="Filter employees who joined on or after this date (YYYY-MM-DD)"
     )
     date_of_joining_before = django_filters.DateFilter(
         field_name="date_of_joining",
         lookup_expr="lte",
-        help_text="Filter teachers who joined on or before this date (YYYY-MM-DD)"
+        help_text="Filter employees who joined on or before this date (YYYY-MM-DD)"
     )
 
-    # File Checks
+    # File Upload Checks
     has_resume = django_filters.BooleanFilter(
         field_name="resume",
         method="filter_has_file",
-        help_text="Filter teachers who have uploaded a resume"
+        help_text="Filter employees who have uploaded a resume"
     )
     has_joining_letter = django_filters.BooleanFilter(
         field_name="joining_letter",
         method="filter_has_file",
-        help_text="Filter teachers who have uploaded a joining letter"
+        help_text="Filter employees who have uploaded a joining letter"
     )
 
     class Meta:
-        model = Teacher
-        # 🟢 Meta.fields শুধুমাত্র মডেলে সরাসরি থাকা নির্দিষ্ট ডিরেক্ট ফিল্ডগুলোতেই সীমাবদ্ধ রাখুন
+        model = TeacherAndStaffProfile
         fields = [
-            "status", "gender", "blood_group", "marital_status",
-            "contract_type", "work_shift",
+            "employee_type", "status", "gender", "blood_group", 
+            "marital_status", "contract_type", "work_shift"
         ]
 
     def filter_has_file(self, queryset, name, value):
@@ -93,3 +84,15 @@ class TeacherFilter(django_filters.FilterSet):
         elif value is False:
             return queryset.filter(Q(**{f"{name}": ""}) | Q(**{f"{name}__isnull": True}))
         return queryset
+
+    def filter_by_search(self, queryset, name, value):
+        """Search across multiple text fields simultaneously."""
+        if not value:
+            return queryset
+        return queryset.filter(
+            Q(user__name__icontains=value) |
+            Q(name_bn__icontains=value) |
+            Q(primary_contact_number__icontains=value) |
+            Q(designation__icontains=value) |
+            Q(nid_number__icontains=value)
+        )
