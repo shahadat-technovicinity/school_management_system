@@ -1,9 +1,17 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.students.models import Student
 from apps.students.serializers.management_serializers import StudentManagementSerializer, StudentDisciplineSerializer
+
+
+# ১. কাস্টম প্যাজিনেশন ক্লাস তৈরি
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
 class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
@@ -14,9 +22,17 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = StudentManagementSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['class_name_static', 'section_static', 'status', 'academic_year']
+    
+    # ২. প্যাজিনেশন ক্লাস যুক্ত করা হলো
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        return Student.objects.prefetch_related(
+        # guardian_info, additional_info এর জন্য select_related এবং disciplinary_records এর জন্য prefetch_related যোগ করা হয়েছে
+        return Student.objects.select_related(
+            'guardian_info',
+            'additional_info'
+        ).prefetch_related(
+            'disciplinary_records',
             'enrollment_set', 
             'enrollment_set__classname', 
             'enrollment_set__section'
