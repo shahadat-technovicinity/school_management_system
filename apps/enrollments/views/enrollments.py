@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db import transaction
+from django.db.models import Q
 from django.utils.dateparse import parse_date
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
@@ -94,9 +95,13 @@ class EnrollmentViewSet(BaseModelViewSet):
         if not target_year:
             target_year = str(timezone.now().year)
 
-        queryset = queryset.filter(academic_year=str(target_year))
+        # academic_year string, name অথবা ID তিনভাবেই ম্যাচ করানোর জন্য Q Filter
+        queryset = queryset.filter(
+            Q(academic_year=target_year) | 
+            Q(academic_year__icontains=target_year)
+        )
 
-        return queryset.distinct()
+        return queryset.order_by('-id').distinct()
 
     @swagger_auto_schema(
         manual_parameters=[
@@ -123,7 +128,7 @@ class EnrollmentViewSet(BaseModelViewSet):
 
         enrollment, created = Enrollment.objects.update_or_create(
             student=student,
-            academic_year=academic_year,
+            academic_year=str(academic_year),
             defaults={
                 'classname': classname,
                 'section': section,
@@ -176,10 +181,13 @@ class EnrollmentViewSet(BaseModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        academic_year_obj = AcademicYear.objects.filter(id=academic_year_id).first()
+        year_str = str(academic_year_obj) if academic_year_obj else str(academic_year_id)
+
         existing_enrollments = set(
             Enrollment.objects.filter(
                 student_id__in=student_ids,
-                academic_year=str(academic_year_id)
+                academic_year=year_str
             ).values_list('student_id', flat=True)
         )
         if existing_enrollments:
@@ -191,8 +199,14 @@ class EnrollmentViewSet(BaseModelViewSet):
         enrollments = []
         students_to_update = []
 
-        academic_year_obj = AcademicYear.objects.filter(id=academic_year_id).first()
-        year_str = str(academic_year_obj) if academic_year_obj else str(academic_year_id)
+        class_obj = None
+        section_obj = None
+        try:
+            from apps.academics.models import AcademicClass, Section
+            class_obj = AcademicClass.objects.get(id=class_id)
+            section_obj = Section.objects.get(id=section_id)
+        except Exception:
+            pass
 
         for item in students_data:
             s_id = item['student_id']
@@ -205,16 +219,6 @@ class EnrollmentViewSet(BaseModelViewSet):
                 academic_year=year_str,
                 roll_no=0,
             ))
-
-            # Class name update
-            class_obj = None
-            section_obj = None
-            try:
-                from apps.academics.models import AcademicClass, Section
-                class_obj = AcademicClass.objects.get(id=class_id)
-                section_obj = Section.objects.get(id=section_id)
-            except Exception:
-                pass
 
             if class_obj:
                 student.class_name_static = class_obj.name
