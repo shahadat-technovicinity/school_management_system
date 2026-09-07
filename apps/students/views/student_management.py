@@ -43,19 +43,36 @@ class StudentManagementViewSet(viewsets.ModelViewSet):
         ).all().order_by('-created_at').distinct()
 
     def _sync_enrollment(self, student):
-        """Student অ্যাড বা এডিট হওয়ার পর Enrollment সেফটি সিঙ্ক"""
-        class_id = self.request.data.get('class_id') or self.request.data.get('classname') or self.request.data.get('academic_class')
-        section_id = self.request.data.get('section_id') or self.request.data.get('section')
-        
+        """
+        Student এর ইনস্ট্যান্স থেকেই সরাসরি Academic Class, Section এবং Academic Year নিয়ে Enrollment তৈরি করবে।
+        """
+        # স্টুডেন্ট মডেল থেকে ক্লাস ও সেকশন ফরেইন কি (FK) অবজেক্ট নেওয়া হচ্ছে
+        class_obj = getattr(student, 'class_name_static', None) or getattr(student, 'classname', None)
+        section_obj = getattr(student, 'section_static', None) or getattr(student, 'section', None)
+
+        # যদি মডেলের অবজেক্ট হিসেবে না পাওয়া যায়, তবে রিকোয়েস্ট ডাটা থেকে ট্রাই করবে
+        if not class_obj:
+            class_id = self.request.data.get('class_name_static') or self.request.data.get('classname') or self.request.data.get('class_id')
+        else:
+            class_id = class_obj.id if hasattr(class_obj, 'id') else class_obj
+
+        if not section_obj:
+            section_id = self.request.data.get('section_static') or self.request.data.get('section') or self.request.data.get('section_id')
+        else:
+            section_id = section_obj.id if hasattr(section_obj, 'id') else section_obj
+
+        academic_year = student.academic_year or self.request.data.get('academic_year') or '2026'
+        roll_no = getattr(student, 'roll_number', None) or self.request.data.get('roll_number') or 0
+
+        # যদি ক্লাস এবং সেকশন আইডি পাওয়া যায় তবেই এনরোলমেন্ট তৈরি বা আপডেট হবে
         if class_id and section_id:
-            year_val = student.academic_year or str(self.request.data.get('academic_year', '2026'))
             Enrollment.objects.update_or_create(
                 student=student,
-                academic_year=year_val,
+                academic_year=str(academic_year),
                 defaults={
                     'classname_id': class_id,
                     'section_id': section_id,
-                    'roll_no': self.request.data.get('roll_number', 0)
+                    'roll_no': roll_no
                 }
             )
 
