@@ -52,6 +52,7 @@ class Student(models.Model):
         ('talentpul scholarship', 'Talentpul Scholarship'),
         ('hf', 'HF'),
         ('f', 'F'),
+        ('non', 'Non'),
     ]
 
     # Core Identifiers
