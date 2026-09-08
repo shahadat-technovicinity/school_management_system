@@ -13,3 +13,6 @@ class AdmissionSkillLink(models.Model):
     
     class Meta:
         unique_together = ('admission', 'skill')
+
+
+
