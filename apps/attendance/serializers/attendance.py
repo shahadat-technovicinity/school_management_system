@@ -29,6 +29,25 @@ class BulkAttendanceSerializer(serializers.Serializer):
         queryset=User.objects.filter(role__name='Teacher')
     )
 
+    def validate(self, attrs):
+        classname = attrs.get('classname')
+        section = attrs.get('section')
+        date = attrs.get('date')
+
+        # ওই তারিখ, ক্লাস এবং সেকশনে ইতোপূর্বে এটেনডেন্স জমা হয়েছে কিনা তা চেক করা
+        existing_attendance = Attendance.objects.filter(
+            classname=classname,
+            section=section,
+            date=date
+        ).exists()
+
+        if existing_attendance:
+            raise serializers.ValidationError({
+                "detail": f"Attendance for class '{classname}' and section '{section}' on {date} has already been submitted."
+            })
+
+        return attrs
+
     def create(self, validated_data):
         user = validated_data['marked_by']
         classname = validated_data['classname']
@@ -36,22 +55,20 @@ class BulkAttendanceSerializer(serializers.Serializer):
         date = validated_data['date']
         records = validated_data['records']
 
-        attendances = []
-
-        for record in records:
-            obj, _ = Attendance.objects.update_or_create(
+        attendances = [
+            Attendance(
                 student=record['student'],
                 classname=classname,
                 section=section,
                 date=date,
-                defaults={
-                    'status': record['status'],
-                    'marked_by': user
-                }
+                status=record['status'],
+                marked_by=user
             )
-            attendances.append(obj)
+            for record in records
+        ]
 
-        return attendances
+        # একবারে ডাটাবেজে এন্ট্রি করার জন্য bulk_create ব্যবহার করা হয়েছে
+        return Attendance.objects.bulk_create(attendances)
 
 
 class AttendancePatchSerializer(serializers.Serializer):
