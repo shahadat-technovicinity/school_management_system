@@ -8,6 +8,8 @@ from apps.admissions.models import (
     LotterySession,
     PreviousAcademicRecord,
 )
+# Section মডেলটি ইম্পোর্ট করুন
+from academic_mm_class_and_section.models import Section  
 
 
 @transaction.atomic
@@ -39,6 +41,12 @@ def finalize_admission(admission_id, uploaded_files_dict):
     active_year = AcademicYear.objects.filter(is_active=True).first()
     academic_year_label = active_year.year_label if active_year else "2025-2026"
 
+    # 2.1 Fetch default Section Object for "A"
+    default_section = Section.objects.filter(name="A").first()
+    if not default_section:
+        # সেকশন 'A' না পাওয়া গেলে ডাটাবেজের ১ম সেকশন ব্যাকআপ হিসেবে নিবে
+        default_section = Section.objects.first()
+
     # 3. Create Core Student Profile
     student_profile = Student.objects.create(
         academic_year=academic_year_label,
@@ -49,7 +57,7 @@ def finalize_admission(admission_id, uploaded_files_dict):
         first_name=admission.student_name_english,
         last_name=admission.student_name_bangla or "",
         class_name_static=admission.desired_class,
-        section_static="A",
+        section_static=default_section,  # <--- স্ট্রিং "A" এর বদলে Section Instance পাস করা হলো
         gender=admission.gender,
         date_of_birth=admission.date_of_birth,
         blood_group="A+",
