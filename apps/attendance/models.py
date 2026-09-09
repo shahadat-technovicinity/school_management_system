@@ -39,3 +39,7 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.student} {self.date} {self.status}"
+
+
+
+
