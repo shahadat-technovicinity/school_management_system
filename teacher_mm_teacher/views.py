@@ -1,6 +1,6 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
@@ -29,7 +29,7 @@ class TeacherAndStaffViewSet(viewsets.ModelViewSet):
 
     # Optimized Queryset avoiding N+1 queries
     queryset = TeacherAndStaffProfile.objects.select_related("user").all()
-    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    parser_classes = [MultiPartParser, FormParser]
     pagination_class = TeacherAndStaffPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = TeacherAndStaffFilter
