@@ -1,8 +1,37 @@
+import json
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import TeacherAndStaffProfile
 
 User = get_user_model()
+
+
+class FlexibleListField(serializers.ListField):
+    """
+    Form-data বা Multipart request হ্যান্ডেল করার জন্য কাস্টম লিস্ট ফিল্ড।
+    এটি JSON array string, standard array অথবা comma-separated string সব ধরনের ইনপুট পার্স করতে পারে।
+    """
+    child = serializers.CharField()
+
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            # ১. চেষ্টা করবে JSON array parse করতে (যেমন: '["English", "Bangla"]')
+            try:
+                parsed = json.loads(data)
+                if isinstance(parsed, list):
+                    return super().to_internal_value(parsed)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+            # ২. কমা সেপারেটেড স্ট্রিং পার্স করবে (যেমন: 'English, Bangla')
+            if ',' in data:
+                data = [item.strip() for item in data.split(',') if item.strip()]
+            elif data.strip():
+                data = [data.strip()]
+            else:
+                data = []
+
+        return super().to_internal_value(data)
 
 
 class EmployeeUserDropdownSerializer(serializers.ModelSerializer):
@@ -42,6 +71,7 @@ class TeacherAndStaffDetailSerializer(serializers.ModelSerializer):
     user = UserMinimalSerializer(read_only=True)
     full_name = serializers.CharField(read_only=True)
     email = serializers.CharField(read_only=True)
+    languages_known = FlexibleListField(required=False, allow_empty=True)
 
     class Meta:
         model = TeacherAndStaffProfile
@@ -72,6 +102,12 @@ class TeacherAndStaffCreateSerializer(serializers.ModelSerializer):
         queryset=User.objects.all(),
         source="user",
         help_text="ID of the existing user to link this profile to"
+    )
+
+    languages_known = FlexibleListField(
+        required=False, 
+        allow_empty=True,
+        help_text="Add items as list of strings (e.g. ['English', 'Bangla'])"
     )
 
     # File Fields
@@ -142,6 +178,12 @@ class TeacherAndStaffCreateSerializer(serializers.ModelSerializer):
 class TeacherAndStaffUpdateSerializer(serializers.ModelSerializer):
     user = UserMinimalSerializer(read_only=True)
     
+    languages_known = FlexibleListField(
+        required=False, 
+        allow_empty=True,
+        help_text="Add items as list of strings (e.g. ['English', 'Bangla'])"
+    )
+
     # File Fields
     photo = serializers.ImageField(required=False, allow_null=True)
     resume = serializers.FileField(required=False, allow_null=True)
