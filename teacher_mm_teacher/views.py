@@ -226,6 +226,12 @@ class TeacherAndStaffViewSet(viewsets.ModelViewSet):
         })
 
 
+
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import generics
+
+
 class EmployeeUserDropdownView(generics.ListAPIView):
     """
     Simple Dropdown/List view to populate User options with role 'Teacher' or 'Staff'
@@ -234,11 +240,31 @@ class EmployeeUserDropdownView(generics.ListAPIView):
     serializer_class = EmployeeUserDropdownSerializer
     pagination_class = None
 
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'role',
+                openapi.IN_QUERY,
+                description="Filter users by role (e.g. teacher or staff)",
+                type=openapi.TYPE_STRING,
+                enum=['teacher', 'staff']  # Swagger UI-তে ড্রপডাউন ফিল্টার দেখাবে
+            )
+        ]
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return User.objects.none()
             
-        return User.objects.filter(
+        queryset = User.objects.filter(
             role__name__in=['Teacher', 'Staff', 'teacher', 'staff'],
             teacher_staff_profile__isnull=True
         )
+
+        role_param = self.request.query_params.get("role")
+        if role_param:
+            queryset = queryset.filter(role__name__iexact=role_param.strip())
+
+        return queryset
