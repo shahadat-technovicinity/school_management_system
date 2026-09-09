@@ -8,8 +8,7 @@ from apps.admissions.models import (
     LotterySession,
     PreviousAcademicRecord,
 )
-# Section মডেলটি ইম্পোর্ট করুন
-from academic_mm_class_and_section.models import Section  
+from academic_mm_class_and_section.models import Section
 
 
 @transaction.atomic
@@ -41,59 +40,39 @@ def finalize_admission(admission_id, uploaded_files_dict):
     active_year = AcademicYear.objects.filter(is_active=True).first()
     academic_year_label = active_year.year_label if active_year else "2025-2026"
 
-    # 2.1 Fetch default Section Object for "A"
-    default_section = Section.objects.filter(name="A").first()
-    if not default_section:
-        # সেকশন 'A' না পাওয়া গেলে ডাটাবেজের ১ম সেকশন ব্যাকআপ হিসেবে নিবে
-        default_section = Section.objects.first()
+    # 2.1 Resolve Section Instance safely
+    default_section = Section.objects.filter(name="A").first() or Section.objects.first()
 
     # 3. Create Core Student Profile
     student_profile = Student.objects.create(
         academic_year=academic_year_label,
         admission_number=f"ADM-{admission.id}",
-        admission_date=admission.admission_date,
-        roll_number=admission.application_number or "",
+        admission_date=getattr(admission, 'admission_date', None),
+        roll_number=getattr(admission, 'application_number', '') or "",
         status="active",
-        first_name=admission.student_name_english,
-        last_name=admission.student_name_bangla or "",
-        class_name_static=admission.desired_class,
-        section_static=default_section,  # <--- স্ট্রিং "A" এর বদলে Section Instance পাস করা হলো
-        gender=admission.gender,
-        date_of_birth=admission.date_of_birth,
+        first_name=getattr(admission, 'student_name_english', '') or "Student",
+        last_name=getattr(admission, 'student_name_bangla', '') or "",
+        class_name_static=getattr(admission, 'desired_class', ''),
+        section_static=default_section,
+        gender=getattr(admission, 'gender', 'male'),
+        date_of_birth=getattr(admission, 'date_of_birth', None),
         blood_group="A+",
-        religion=admission.religion,
+        religion=getattr(admission, 'religion', 'islam'),
         house="Default House",
         scholarship="f",
-        primary_contact_number=admission.mobile_number,
+        primary_contact_number=getattr(admission, 'mobile_number', '') or "",
     )
 
-    # 4. Create Guardian Details from admission parent info
-    present_address = (
-        f"{admission.present_address_village}, "
-        f"{admission.present_address_post_office}, "
-        f"{admission.present_address_sub_district}, "
-        f"{admission.present_address_district}"
-    )
-    permanent_address = ""
-    if not admission.is_permanent_same_as_present:
-        permanent_address = (
-            f"{admission.permanent_address_village}, "
-            f"{admission.permanent_address_post_office}, "
-            f"{admission.permanent_address_sub_district}, "
-            f"{admission.permanent_address_district}"
-        )
-
+    # 4. Create Guardian Details safely (handles missing fields cleanly)
     GuardianDetails.objects.create(
         student=student_profile,
-        father_name=admission.father_name_en,
-        father_nid_or_birth_certificate=admission.father_nid_number,
-        mother_name=admission.mother_name_en,
-        mother_nid_or_birth_certificate=admission.mother_nid_number,
+        father_name=getattr(admission, 'father_name_en', '') or 'TBA',
+        father_nid_or_birth_certificate=getattr(admission, 'father_nid_number', '') or '',
+        mother_name=getattr(admission, 'mother_name_en', '') or 'TBA',
+        mother_nid_or_birth_certificate=getattr(admission, 'mother_nid_number', '') or '',
         guardian_type="Parent",
-        sibling_studying_same_school=bool(admission.sibling_identification_number),
-        sibling_admission_no=admission.sibling_identification_number or "",
-        current_address=present_address,
-        permanent_address=permanent_address,
+        sibling_studying_same_school=bool(getattr(admission, 'sibling_identification_number', None)),
+        sibling_admission_no=getattr(admission, 'sibling_identification_number', '') or '',
     )
 
     # 5. Create Additional Details with TC and previous school info
@@ -103,7 +82,7 @@ def finalize_admission(admission_id, uploaded_files_dict):
         transfer_certificate=uploaded_files_dict.get('tc'),
         previous_school_name=prev_record.school_name if prev_record else "",
         previous_school_address=prev_record.school_address if prev_record else "",
-        admission_reference=admission.additional_comments or "",
+        admission_reference=getattr(admission, 'additional_comments', '') or "",
     )
 
     # 6. Decrement the configured seat count for this class
