@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
-from django.db.models import IntegerField
-from django.db.models.functions import Cast
+from django.db.models import IntegerField, Value
+from django.db.models.functions import Cast, Coalesce, NullIf
 from apps.students.models import Student
 from .serializers import ParentVoterListSerializer
 
@@ -17,19 +17,19 @@ class ParentVoterListView(APIView):
         responses={200: ParentVoterListSerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):
-        # roll_number ফিল্ডটি যদি CharField/CharField টাইপ হয়ে থাকে, 
-        # তবে Cast করে সঠিক সংখ্যা বানিয়ে সর্ট নিশ্চিত করা হয়েছে।
+        # খালি স্ট্রিং "" বা NULL রোল নম্বর হ্যান্ডেল করে নিরাপদভাবে Integer কাস্টিং
         students = Student.objects.select_related(
             'guardian_info', 
             'section_static'
         ).filter(
             status__in=['active', 'enrolled', 'Active']
         ).annotate(
-            roll_int=Cast('roll_number', IntegerField())
+            safe_roll_str=NullIf('roll_number', Value('')),  # "" থাকলে NULL করবে
+            roll_int=Cast(Coalesce('safe_roll_str', Value('0')), IntegerField()) # NULL থাকলে 0 ধরে int কাস্ট করবে
         ).order_by(
             'class_name_static', 
             'section_static__name', 
-            'roll_int'  # রোল নম্বর ১, ২, ৩... অনুযায়ী সর্টিং
+            'roll_int'  # রোল ১, ২, ৩ অনুযায়ী সর্ট হবে
         )
 
         voter_list = []
@@ -60,7 +60,7 @@ class ParentVoterListView(APIView):
 
             clean_voter_name = voter_name.strip().upper()
 
-            # সিবলিং ও ভোটার নাম্বার সিকুয়েন্স
+            # সিবলিং ও ভোটার সিকুয়েন্স
             if clean_voter_name not in EXCLUDE_FROM_GROUPING and clean_voter_name in guardian_voter_map:
                 voter_serial_str = guardian_voter_map[clean_voter_name]
             else:
@@ -74,7 +74,9 @@ class ParentVoterListView(APIView):
             student_class_bn = getattr(student, 'class_label', '') or student.class_name_static or "এন/এ"
             section_name_bn = getattr(student, 'section_label', '') or (student.section_static.name if student.section_static else "এন/এ")
 
-            class_roll_bn = str(student.roll_number).translate(NUM_TO_BN) if student.roll_number else "০"
+            # রোল নম্বরে মান থাকলে ফরম্যাট করবে, খালি থাকলে ০ দেখাবে
+            raw_roll = str(student.roll_number).strip() if student.roll_number else "0"
+            class_roll_bn = raw_roll.translate(NUM_TO_BN) if raw_roll else "০"
             student_id_bn = str(student.id).translate(NUM_TO_BN)
 
             voter_list.append({
