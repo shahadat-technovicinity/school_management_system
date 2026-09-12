@@ -95,3 +95,5 @@ def finalize_admission(admission_id, uploaded_files_dict):
     admission.save()
 
     return student_profile
+
+

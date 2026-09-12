@@ -191,6 +191,7 @@ INSTALLED_APPS = [
     'teacher_mm_teacher',
     'teacher_mm_teacher_leave',
     'teacher_mm_add_salary',
+    'teacher_mm_votarlist',
 
     ## academic management
     'academic_class_routine',
