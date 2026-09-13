@@ -1,11 +1,31 @@
-# exam/serializers.py
 from rest_framework import serializers
-from .models import exm_mm_exam_setup
+from .models import ExamName, ExamSetup
+from academic_mm_class_and_section.models import AcademicClass, Section
 
-class ExamSerializer(serializers.ModelSerializer):
-    # Subject_Name মডেলের 'name' ফিল্ড থেকে রিড করবে
-    subject_name = serializers.CharField(source='subject.name', read_only=True, default=None)
+class ExamNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExamName
+        fields = ['id', 'name', 'description', 'is_active', 'created_at']
+
+
+class ExamSetupSerializer(serializers.ModelSerializer):
+    exam_name_title = serializers.ReadOnlyField(source='exam_name.name')
+    class_name_text = serializers.ReadOnlyField(source='academic_class.name')
+    section_names = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field='name', source='sections'
+    )
 
     class Meta:
-        model = exm_mm_exam_setup
-        fields = "__all__"
+        model = ExamSetup
+        fields = [
+            'id', 
+            'exam_name', 
+            'exam_name_title', 
+            'academic_class', 
+            'class_name_text',
+            'sections', 
+            'section_names', 
+            'shift', 
+            'exam_time', 
+            'created_at'
+        ]
