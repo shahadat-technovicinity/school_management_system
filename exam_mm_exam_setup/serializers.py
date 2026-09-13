@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import ExamName, ExamSetup
-from academic_mm_class_and_section.models import AcademicClass, Section
 
 class ExamNameSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,6 +25,5 @@ class ExamSetupSerializer(serializers.ModelSerializer):
             'sections', 
             'section_names', 
             'shift', 
-            'exam_time', 
             'created_at'
         ]

@@ -26,7 +26,7 @@ class ExamRoutine(models.Model):
         help_text="Automated reference to the configured exam setup"
     )
 
-    # dynamic subject
+    # Dynamic subject
     subject = models.ForeignKey(
         Subject_Name, 
         on_delete=models.CASCADE,
@@ -34,17 +34,19 @@ class ExamRoutine(models.Model):
     )
 
     exam_date = models.DateField()
+    start_time = models.TimeField(null=True, blank=True, help_text="Exam start time (e.g. 10:00:00)")
+    end_time = models.TimeField(null=True, blank=True, help_text="Exam end time (e.g. 13:00:00)")
     total_marks = models.DecimalField(
         max_digits=5, 
         decimal_places=2, 
         help_text="Exam full mark (e.g. 100.00)"
     )
     
-    created_at = models.DateTimeField(null=True, blank=True)
-    updated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['exam_date', 'id']
+        ordering = ['exam_date', 'start_time', 'id']
 
     def save(self, *args, **kwargs):
         setup = ExamSetup.objects.filter(
@@ -57,6 +59,3 @@ class ExamRoutine(models.Model):
 
     def __str__(self):
         return f"{self.exam_name.name} - {self.academic_class.name} - {self.subject.name} ({self.exam_date})"
-
-
-

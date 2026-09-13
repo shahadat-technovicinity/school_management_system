@@ -2,6 +2,7 @@ from rest_framework import serializers
 from apps.students.models import Student
 from academic_create_subject.models import Subject_Name  # ⬅️ আপনার সঠিক অ্যাপ ও মডেল ইম্পোর্ট করা হলো
 from .models import ExamMark
+from exam_mm_exam_setup.models import ExamName  # ⬅️ ExamName মডেল ইম্পোর্ট করা হলো
 
 
 # --- 1. Student Filter Serializer ---
@@ -37,7 +38,7 @@ class StudentMarkInputSerializer(serializers.Serializer):
 # --- 3. Mark Submission Serializer (POST-এর জন্য Bulk / Single Insert) ---
 class MarkSubmissionSerializer(serializers.Serializer):
     subject_id = serializers.IntegerField()  # Subject-এর ID
-    exam_type = serializers.CharField(max_length=20)
+    exam_type = serializers.PrimaryKeyRelatedField(queryset=ExamName.objects.all())
     marks_data = StudentMarkInputSerializer(many=True, allow_empty=False)
 
     def calculate_total(self, data):

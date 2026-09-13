@@ -1,71 +1,45 @@
-from rest_framework import generics
-from rest_framework.permissions import AllowAny
-from rest_framework.exceptions import ValidationError
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from drf_yasg.utils import swagger_auto_schema
 
-from .models import ExmQuestionBank
-from .serializers import (
-    UserQuestionBankSerializer, 
-    AdminQuestionBankSerializer, 
-    QuestionStatusUpdateSerializer
-)
+from .models import QuestionBank
+from .serializers import QuestionBankSerializer, QuestionBankStatusUpdateSerializer
 
 
-# --- 1. Main Questions List & Create (STRICTLY PENDING) ---
-# GET: এখানে শুধুমাত্র 'pending' ডাটা আসবে। নতুন ক্রিয়েট হওয়া প্রশ্ন এখানেই জমা হবে।
-# POST: নতুন প্রশ্ন সাবমিট করলে অটোমেটিক status='pending' হবে।
-class QuestionListCreateAPIView(generics.ListCreateAPIView):
-    serializer_class = UserQuestionBankSerializer
-    permission_classes = [AllowAny]
-
-    def get_queryset(self):
-        # শুধু পেন্ডিং ডাটা আসবে। approved বা rejected হয়ে গেলে এখান থেকে সরে যাবে।
-        return ExmQuestionBank.objects.filter(status='pending').order_by('-date_created')
+class QuestionBankListCreateView(generics.ListCreateAPIView):
+    """
+    List all questions or upload a new question (Default status: pending).
+    """
+    queryset = QuestionBank.objects.all()
+    serializer_class = QuestionBankSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
     def perform_create(self, serializer):
-        user = self.request.user if (hasattr(self.request, 'user') and self.request.user.is_authenticated) else None
+        user = self.request.user if self.request.user.is_authenticated else None
         serializer.save(uploaded_by=user, status='pending')
 
 
-# --- 2. Detail API: Retrieve, Update & Delete ---
-class QuestionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ExmQuestionBank.objects.all()
-    serializer_class = UserQuestionBankSerializer
-    permission_classes = [AllowAny]
+class QuestionBankDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve, update or delete a question bank entry.
+    """
+    queryset = QuestionBank.objects.all()
+    serializer_class = QuestionBankSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
 
-# --- 3. Admin: Strictly Approved Questions List ---
-class AdminApprovedQuestionListAPIView(generics.ListAPIView):
-    serializer_class = AdminQuestionBankSerializer
-    permission_classes = [AllowAny]
+class QuestionBankStatusUpdateView(generics.UpdateAPIView):
+    """
+    Admin action: Change question status to 'approved' or 'rejected'.
+    """
+    queryset = QuestionBank.objects.all()
+    serializer_class = QuestionBankStatusUpdateSerializer
 
-    def get_queryset(self):
-        return ExmQuestionBank.objects.filter(status='approved').order_by('-date_created')
-
-
-# --- 4. Admin: Strictly Rejected Questions List ---
-class AdminRejectedQuestionListAPIView(generics.ListAPIView):
-    serializer_class = AdminQuestionBankSerializer
-    permission_classes = [AllowAny]
-
-    def get_queryset(self):
-        return ExmQuestionBank.objects.filter(status='rejected').order_by('-date_created')
-
-
-# --- 5. Admin: Status Change Only (PATCH ONLY) ---
-class AdminQuestionStatusUpdateAPIView(generics.UpdateAPIView):
-    queryset = ExmQuestionBank.objects.all()
-    serializer_class = QuestionStatusUpdateSerializer
-    permission_classes = [AllowAny]
-    
-    http_method_names = ['patch']
-
-    def perform_update(self, serializer):
-        new_status = self.request.data.get('status')
-        valid_status_values = [choice[0] for choice in ExmQuestionBank.STATUS_CHOICES]
-
-        if not new_status or new_status not in valid_status_values:
-            raise ValidationError(
-                {"detail": f"Invalid status. Must be one of {valid_status_values}."}
-            )
-
-        serializer.save(status=new_status)
+    @swagger_auto_schema(
+        operation_summary="Approve or Reject Question",
+        operation_description="Update status to 'approved' or 'rejected'.",
+        request_body=QuestionBankStatusUpdateSerializer
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)

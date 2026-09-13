@@ -1,40 +1,63 @@
 from rest_framework import serializers
-from .models import ExmQuestionBank
+from .models import QuestionBank
+from academic_mm_class_and_section.models import Section
 
 
-# --- 1. User Serializer (status is read-only) ---
-class UserQuestionBankSerializer(serializers.ModelSerializer):
-    subject_name = serializers.CharField(source='subject.name', read_only=True, default=None)
+class SectionMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Section
+        fields = ['id', 'name']
+
+
+class QuestionBankSerializer(serializers.ModelSerializer):
+    academic_class_name = serializers.CharField(source='academic_class.name', read_only=True)
+    subject_name = serializers.CharField(source='subject.subject_name', read_only=True)
+    sections_details = SectionMiniSerializer(source='sections', many=True, read_only=True)
 
     class Meta:
-        model = ExmQuestionBank
-        fields = '__all__'
-        read_only_fields = ['id', 'date_created', 'uploaded_by', 'status'] 
-        ref_name = 'UserExmQuestionBankSerializer'
+        model = QuestionBank
+        fields = [
+            'id', 
+            'title', 
+            'academic_class', 
+            'academic_class_name', 
+            'subject', 
+            'subject_name', 
+            'sections', 
+            'sections_details', 
+            'file', 
+            'status', 
+            'uploaded_by', 
+            'created_at', 
+            'updated_at'
+        ]
+        read_only_fields = ['status', 'uploaded_by', 'created_at', 'updated_at']
 
-    def validate_pdf_file(self, value):
-        if not value:
-            return value
-        if not value.name.lower().endswith('.pdf'):
-            raise serializers.ValidationError("ফাইলটি PDF (.pdf) হতে হবে।")
-        if value.size > 10 * 1024 * 1024:
-            raise serializers.ValidationError("ফাইল 10MB এর বেশি হতে পারবে না।")
-        return value
+    def to_internal_value(self, data):
+        # Multipart form-data handling for sections input
+        if hasattr(data, 'getlist'):
+            sections = data.getlist('sections')
+            if sections:
+                flat_sections = []
+                for s in sections:
+                    if isinstance(s, str) and ',' in s:
+                        flat_sections.extend([item.strip() for item in s.split(',')])
+                    else:
+                        flat_sections.append(s)
+                
+                mutable_data = data.copy()
+                mutable_data.setlist('sections', flat_sections)
+                data = mutable_data
+
+        return super().to_internal_value(data)
 
 
-# --- 2. Admin Serializer ---
-class AdminQuestionBankSerializer(serializers.ModelSerializer):
-    subject_name = serializers.CharField(source='subject.name', read_only=True, default=None)
-
+class QuestionBankStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ExmQuestionBank
-        fields = '__all__'
-        read_only_fields = ['id', 'date_created', 'uploaded_by'] 
-        ref_name = 'AdminExmQuestionBankSerializer'
-
-
-# --- 3. Admin Status Update Serializer (Swagger-এ শুধু status দেখাবে) ---
-class QuestionStatusUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ExmQuestionBank
+        model = QuestionBank
         fields = ['status']
+
+    def validate_status(self, value):
+        if value not in ['approved', 'rejected']:
+            raise serializers.ValidationError("Status can only be updated to 'approved' or 'rejected'.")
+        return value
