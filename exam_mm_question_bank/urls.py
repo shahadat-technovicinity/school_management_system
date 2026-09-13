@@ -1,21 +1,17 @@
 from django.urls import path
 from .views import (
-    QuestionListCreateAPIView,
-    QuestionDetailAPIView,
-    AdminApprovedQuestionListAPIView,
-    AdminRejectedQuestionListAPIView,
-    AdminQuestionStatusUpdateAPIView,
+    QuestionBankListCreateView,
+    QuestionBankDetailView,
+    QuestionBankStatusUpdateView
 )
 
 urlpatterns = [
-    # Main Questions Endpoint (Get all / Create)
-    path('questions/', QuestionListCreateAPIView.as_view(), name='question-list-create'),
-    path('questions/<int:pk>/', QuestionDetailAPIView.as_view(), name='question-detail-delete'),
+    # List all questions or Upload a new question
+    path('question-bank/', QuestionBankListCreateView.as_view(), name='question-bank-list-create'),
     
-    # Admin Approved & Rejected Endpoints
-    path('admin/questions/approved/', AdminApprovedQuestionListAPIView.as_view(), name='admin-approved-questions'),
-    path('admin/questions/rejected/', AdminRejectedQuestionListAPIView.as_view(), name='admin-rejected-questions'),
+    # Retrieve, Update, or Delete a specific question
+    path('question-bank/<int:pk>/', QuestionBankDetailView.as_view(), name='question-bank-detail'),
     
-    # Admin Status Change Endpoint
-    path('admin/questions/<int:pk>/status/', AdminQuestionStatusUpdateAPIView.as_view(), name='admin-change-status'),
+    # Approve or Reject a question status
+    path('question-bank/<int:pk>/status/', QuestionBankStatusUpdateView.as_view(), name='question-bank-status-update'),
 ]

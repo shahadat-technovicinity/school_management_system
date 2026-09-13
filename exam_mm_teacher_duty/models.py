@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from academic_create_subject.models import Subject_Name
 
 
 STATUS_CHOICES = [
@@ -16,13 +15,9 @@ class ExamDuty(models.Model):
         on_delete=models.CASCADE,
         related_name='exam_duties',
     )
-    subject = models.ForeignKey(
-        Subject_Name,
-        on_delete=models.PROTECT,
-        related_name='exam_duties'
-    )
     exam_date = models.DateField()
-    time_slot = models.CharField(max_length=50)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
     room_number = models.CharField(max_length=50)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     send_notification = models.BooleanField(default=True)
@@ -32,4 +27,4 @@ class ExamDuty(models.Model):
         ordering = ['-exam_date']
 
     def __str__(self):
-        return f"{self.teacher} - {self.subject} ({self.exam_date})"
+        return f"{self.teacher} - Room: {self.room_number} ({self.exam_date})"

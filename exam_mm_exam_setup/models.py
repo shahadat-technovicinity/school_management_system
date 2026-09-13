@@ -22,20 +22,16 @@ class ExamSetup(models.Model):
         on_delete=models.CASCADE, 
         related_name='exam_setups'
     )
-    
     academic_class = models.ForeignKey(
         AcademicClass, 
         on_delete=models.CASCADE, 
         related_name='exam_setups'
     )
-    
     sections = models.ManyToManyField(
         Section, 
         related_name='exam_setups'
     )
-    
     shift = models.CharField(max_length=10, choices=SHIFT_CHOICES)
-    exam_time = models.TimeField(help_text="Format: HH:MM:SS")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -1,5 +1,6 @@
 from django.db import models
 from apps.students.models import Student
+from exam_mm_exam_setup.models import ExamName
 
 
 class ExamMark(models.Model):
@@ -21,7 +22,7 @@ class ExamMark(models.Model):
         on_delete=models.CASCADE,
         related_name="resultarchive"
     )  
-    exam_type = models.CharField(max_length=10, choices=EXAM_TYPES)
+    exam_type = models.ForeignKey(ExamName, on_delete=models.CASCADE, related_name="exam_marks")
     writing = models.IntegerField(default=0)
     practical = models.IntegerField(default=0)
     mcq = models.IntegerField(default=0)
