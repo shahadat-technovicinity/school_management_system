@@ -1,18 +1,7 @@
-from django.urls import path, include
-from .views import *
-
+from django.urls import path
+from .views import ExamRoutineListCreateView, ExamRoutineDetailView
 
 urlpatterns = [
-    path("exam_routine", ExamRoutineListCreateView.as_view(), name='exam_routine'),
-    path("exam_routine_action/<int:pk>/", ExamRoutineDetailView.as_view(), name = 'exam_r_action'),
-
-    ######  admit header   ##########
-
-    path("exam_admit", ExamAdmitListCreateView.as_view(), name='exam_routine'),
-    path("exam_admit_action/<int:pk>/", ExamAdmitDetailView.as_view(), name = 'exam_r_action'),
-
-
-    ######   admit generate summary dashboard api endpoin ########
-    path("admit_card_generate_summary_dashboard/", AdmitCardSummaryDashboardAPIView.as_view(), name = 'admitgeneratesummarydashboard'),
-
+    path("exam-routines/", ExamRoutineListCreateView.as_view(), name='exam-routine-list-create'),
+    path("exam-routines/<int:pk>/", ExamRoutineDetailView.as_view(), name='exam-routine-detail'),
 ]

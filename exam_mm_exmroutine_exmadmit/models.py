@@ -1,95 +1,62 @@
-from xml.parsers.expat import model
-
 from django.db import models
-from academic_mm_class_and_section.models import AcademicClass, Section
+from academic_mm_class_and_section.models import AcademicClass
+from academic_create_subject.models import Subject_Name
+from exam_mm_exam_setup.models import ExamName, ExamSetup
 
 
 class ExamRoutine(models.Model):
-    EXAM_TYPE_CHOICES = [
-        ('MT', 'Mid-Term'),
-        ('FN', 'Final'),
-        ('OT', 'Other'),
-    ]
+    exam_name = models.ForeignKey(
+        ExamName, 
+        on_delete=models.CASCADE, 
+        related_name='exam_routinesss'
+    )
+    
+    academic_class = models.ForeignKey(
+        AcademicClass, 
+        on_delete=models.CASCADE, 
+        related_name='exam_routiness'
+    )
 
-
-    SHIFT_CHOICES = [
-        ('morning', 'Morning'),
-        ('day', 'Day'),
-    ]
-
-    STREAM_CHOICES = [
-        ('SC', 'Science'),
-        ('AR', 'Arts'),
-        ('CM', 'Commerce'),
-        ('VT', 'Vocational'),
-
-    ]
-
-    # Routine Details
-    routine_title = models.CharField(max_length=255)
-    exam_type = models.CharField(max_length=2, choices=EXAM_TYPE_CHOICES)
-    academic_year = models.IntegerField()
-    start_date = models.DateField()
-    end_date = models.DateField()
-    class_selection = models.ForeignKey(AcademicClass, on_delete=models.CASCADE)
-    shift_selection = models.CharField(max_length=50, choices=SHIFT_CHOICES) # Assuming text input/dropdown
-    stream = models.CharField(max_length=2, choices=STREAM_CHOICES, default='SC')
-
-    def __str__(self):
-        return f"{self.routine_title} ({self.academic_year})"
-
-    # Routine Table Builder Fields
-
-    DAY_CHOICES= [
-        ('saturday', 'Saturday'),
-        ('sunday', 'Sunday'),
-        ('monday', 'Monday'),
-        ('tuesday', 'Tuesday'),
-        ('wednesday', 'Wednesday'),
-        ('thursday', 'Thursday'),
-        ('fridaday', 'Friday'),
-
-    ]
-    date = models.DateField()
-    day = models.CharField(max_length=10, choices=DAY_CHOICES) # Auto-calculated or manually entered
-    time_slot = models.CharField(max_length=50) # e.g., "10:00 AM - 1:00 PM"
-    subject = models.ForeignKey(
-        'academic_create_subject.Subject_Name', 
+    exam_setup = models.ForeignKey(
+        ExamSetup,
         on_delete=models.CASCADE,
-        related_name="examsss"
-    )   
-    exam_hall = models.CharField(max_length=50)
+        related_name='exam_routines',
+        null=True,
+        blank=True,
+        help_text="Automated reference to the configured exam setup"
+    )
+
+    # dynamic subject
+    subject = models.ForeignKey(
+        Subject_Name, 
+        on_delete=models.CASCADE,
+        related_name='exam_routiness'
+    )
+
+    exam_date = models.DateField()
+    total_marks = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        help_text="Exam full mark (e.g. 100.00)"
+    )
+    
+    created_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ['date'] # Order slots by date
+        ordering = ['exam_date', 'id']
+
+    def save(self, *args, **kwargs):
+        setup = ExamSetup.objects.filter(
+            exam_name=self.exam_name,
+            academic_class=self.academic_class
+        ).first()
+        if setup:
+            self.exam_setup = setup
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.routine_title} - {self.subject} on {self.date}"
-    
+        return f"{self.exam_name.name} - {self.academic_class.name} - {self.subject.name} ({self.exam_date})"
 
 
 
-class ExamAdmit(models.Model):
-    PAYMENT_STATUS_CHOICES = [
-        ('paid', 'Paid'),
-        ('non paid', 'Non Paid'),
-    ]
-
-    EXAM_TYPE_CHOICES = [
-        ('MT', 'Mid-Term'),
-        ('FN', 'Final'),
-        ('OT', 'Other'),
-    ]
-    student_name = models.CharField(max_length=250)
-    roll_number = models.IntegerField()
-    class_selection = models.ForeignKey(AcademicClass, on_delete=models.CASCADE)
-    subject = models.ForeignKey(
-        'academic_create_subject.Subject_Name', 
-        on_delete=models.CASCADE,
-        related_name="examsadmit"
-    )
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES)
-    exam_type = models.CharField(max_length=2, choices=EXAM_TYPE_CHOICES)
-
-    def __str__(self):
-        return self.student_name
