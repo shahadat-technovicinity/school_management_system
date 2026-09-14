@@ -174,28 +174,4 @@ class GenerateSeatPlanView(APIView):
             status=status.HTTP_201_CREATED
         )
 
-
-
-
-
-
-
-
-from django.core.management import call_command
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-
-class FixMigrationAPIView(APIView):
-    # শুধু সুরক্ষার জন্য একটি Secret Key দিয়ে রাখতে পারো
-    def get(self, request):
-        try:
-            # ১. ডিপেন্ডেন্ট মাইগ্রেশন fake করা
-            call_command('migrate', 'exam_mm_exam_setup', '0002_examname_examsetup_delete_exm_mm_exam_setup', fake=True)
-            
-            # ২. মূল মাইগ্রেশনগুলো সম্পূর্ণ করা
-            call_command('migrate')
-            
-            return Response({"message": "Migration fixed and applied successfully!"}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    

@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     ExamRoomListCreateView, ExamRoomDetailView,
-    ExamSessionListCreateView, ExamSessionDetailView, FixMigrationAPIView,
+    ExamSessionListCreateView, ExamSessionDetailView,
     RoomClassAssignmentListCreateView, RoomClassAssignmentDetailView,
     SeatAssignmentListCreateView, SeatAssignmentDetailView,
     SeatsByRoomView, GenerateSeatPlanView
@@ -21,5 +21,4 @@ urlpatterns = [
     # path('seats/<int:pk>/', SeatAssignmentDetailView.as_view(), name='seat-detail'),
     # path('seats/by-room/', SeatsByRoomView.as_view(), name='seats-by-room'),
     # path('seats/generate/', GenerateSeatPlanView.as_view(), name='generate-seat-plan'),
-    path('api/fix-db-migration-secret-123/', FixMigrationAPIView.as_view()),
 ]
