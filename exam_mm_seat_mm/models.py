@@ -12,6 +12,7 @@ SHIFT_CHOICES = [
 class ExamRoom(models.Model):
     room_number = models.CharField(max_length=50, unique=True)
     number_of_benches = models.PositiveIntegerField(default=0)
+    iiu=models.PositiveIntegerField(default=0)
     students_per_bench = models.PositiveIntegerField(default=2)
     is_available = models.BooleanField(default=True)
 

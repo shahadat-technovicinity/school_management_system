@@ -139,3 +139,6 @@ class FinalResultView(generics.ListAPIView):
         context = super().get_serializer_context()
         context['exam_type'] = getattr(self, 'exam_type', None)
         return context
+
+
+
