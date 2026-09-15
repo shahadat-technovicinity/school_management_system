@@ -4,7 +4,7 @@ from academic_create_subject.models import Subject_Name
 from exam_mm_exam_setup.models import ExamName, ExamSetup
 
 
-class ExamRoutine(models.Model):
+class ExamsRoutine(models.Model):
     exam_name = models.ForeignKey(
         ExamName, 
         on_delete=models.CASCADE, 

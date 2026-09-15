@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ExamRoutine
+from .models import ExamsRoutine
 from academic_create_subject.models import Subject_Name
 from academic_mm_class_and_section.models import AcademicClass
 from exam_mm_exam_setup.models import ExamName, ExamSetup
@@ -15,7 +15,7 @@ class ExamRoutineSerializer(serializers.ModelSerializer):
     exam_shift = serializers.ReadOnlyField(source='exam_setup.shift', default=None)
 
     class Meta:
-        model = ExamRoutine
+        model = ExamsRoutine
         fields = [
             'id',
             'exam_name',
@@ -84,7 +84,7 @@ class ExamRoutineBulkCreateSerializer(serializers.Serializer):
         routines_data = validated_data['routines']
 
         routine_objects = [
-            ExamRoutine(
+            ExamsRoutine(
                 exam_name=exam_name,
                 academic_class=academic_class,
                 exam_setup=exam_setup,
@@ -97,7 +97,7 @@ class ExamRoutineBulkCreateSerializer(serializers.Serializer):
             for item in routines_data
         ]
 
-        return ExamRoutine.objects.bulk_create(routine_objects)
+        return ExamsRoutine.objects.bulk_create(routine_objects)
 
 
 class SingleStudentAdmitCardSerializer(serializers.ModelSerializer):
@@ -120,5 +120,5 @@ class ExamRoutineItemForAdmitCardSerializer(serializers.ModelSerializer):
     subject_name = serializers.ReadOnlyField(source='subject.name')
 
     class Meta:
-        model = ExamRoutine
+        model = ExamsRoutine
         fields = ['subject_name', 'exam_date', 'start_time', 'end_time', 'total_marks']

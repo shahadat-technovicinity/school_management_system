@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from .models import ExamRoutine
+from .models import ExamsRoutine
 from exam_mm_exam_setup.models import ExamSetup
 from apps.students.models import Student
 from .serializers import (
@@ -16,7 +16,7 @@ from .serializers import (
 
 
 class ExamRoutineListCreateView(generics.ListCreateAPIView):
-    queryset = ExamRoutine.objects.select_related(
+    queryset = ExamsRoutine.objects.select_related(
         'exam_name', 
         'academic_class',
         'subject',
@@ -40,7 +40,7 @@ class ExamRoutineListCreateView(generics.ListCreateAPIView):
 
 
 class ExamRoutineDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ExamRoutine.objects.all()
+    queryset = ExamsRoutine.objects.all()
     serializer_class = ExamRoutineSerializer
 
 
@@ -109,7 +109,7 @@ class ClassWiseAdmitCardGenerateView(generics.GenericAPIView):
         academic_class = exam_setup.academic_class
 
         # 2. Fetch Exam Routines
-        routines = ExamRoutine.objects.filter(
+        routines = ExamsRoutine.objects.filter(
             exam_name=exam_name,
             academic_class=academic_class
         ).select_related('subject').order_by('exam_date', 'start_time')
@@ -149,3 +149,6 @@ class ClassWiseAdmitCardGenerateView(generics.GenericAPIView):
             "total_students": len(admit_cards),
             "admit_cards": admit_cards
         }, status=status.HTTP_200_OK)
+
+
+
