@@ -37,7 +37,7 @@ class StudentFeeSearchView(generics.GenericAPIView):
             return Response({'error': 'student_id is required'}, status=400)
 
         try:
-            student = Student.objects.get(id=student_id)
+            student = Student.objects.select_related('class_name_static', 'section_static').get(id=student_id)
         except Student.DoesNotExist:
             return Response({'error': 'Student not found'}, status=404)
 
@@ -70,7 +70,6 @@ class StudentFeeSearchView(generics.GenericAPIView):
         total_amount = 0
 
         for fee in class_fees:
-            # Already paid check
             already_paid = FeeCollectionItem.objects.filter(
                 fee=fee,
                 collection__student=student,
@@ -90,13 +89,29 @@ class StudentFeeSearchView(generics.GenericAPIView):
         discount = stipend_amount + concession_amount
         final_amount = total_amount - discount
 
+        # Dynamic Class Name Extraction
+        if getattr(student, 'class_label', None):
+            class_name = str(student.class_label)
+        elif student.class_name_static:
+            class_name = getattr(student.class_name_static, 'name', str(student.class_name_static))
+        else:
+            class_name = ""
+
+        # Dynamic Section Name Extraction
+        if getattr(student, 'section_label', None):
+            section_name = str(student.section_label)
+        elif student.section_static:
+            section_name = getattr(student.section_static, 'name', str(student.section_static))
+        else:
+            section_name = ""
+
         return Response({
             'student': {
                 'id': student.id,
                 'admission_number': student.admission_number,
                 'name': student.full_name,
-                'class': student.class_name_static,
-                'section': student.section_static,
+                'class': class_name,
+                'section': section_name,
                 'scholarship': student.scholarship,
             },
             'outstanding_fees': outstanding,
