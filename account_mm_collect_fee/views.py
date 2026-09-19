@@ -18,6 +18,7 @@ class FeePagination(pagination.PageNumberPagination):
 
 class StudentFeeSearchView(generics.GenericAPIView):
     serializer_class = OutstandingFeeSerializer
+    queryset = Student.objects.none()  # Swagger schema error এড়ানোর জন্য
 
     @swagger_auto_schema(
         manual_parameters=[
@@ -28,7 +29,8 @@ class StudentFeeSearchView(generics.GenericAPIView):
                 type=openapi.TYPE_INTEGER,
                 required=True
             )
-        ]
+        ],
+        responses={200: OutstandingFeeSerializer()}
     )
     def get(self, request, *args, **kwargs):
         student_id = request.query_params.get('student_id')
