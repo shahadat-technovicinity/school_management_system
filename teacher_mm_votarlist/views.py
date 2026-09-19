@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from django.db.models import IntegerField, Value
 from django.db.models.functions import Cast, Coalesce, NullIf
 
@@ -17,10 +18,9 @@ NUM_TO_BN = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 
 def get_processed_voter_list():
     """
-    ভোটার লিস্ট প্রসেস করার কমন লজিক (API এবং Excel Export উভয়ের জন্য)
-    স্ট্যাটাস ফিল্টার বাদ দেওয়া হয়েছে যাতে সকল স্টুডেন্ট চলে আসে।
+    ভোটার লিস্ট প্রসেস করার কমন লজিক (API এবং Excel Export উভয়ের জন্য)
+    স্ট্যাটাস ফিল্টার বাদ দেওয়া হয়েছে যাতে সকল স্টুডেন্ট চলে আসে।
     """
-    # স্ট্যাটাসের কোনো ফিল্টার রাখা হয়নি - সব স্টুডেন্ট আসবে
     queryset = Student.objects.select_related(
         'guardian_info', 
         'section_static',
@@ -107,8 +107,6 @@ def get_processed_voter_list():
 
 
 class ParentVoterListView(APIView):
-    pagination_class = None
-
     @swagger_auto_schema(
         responses={200: ParentVoterListSerializer(many=True)}
     )
@@ -119,8 +117,14 @@ class ParentVoterListView(APIView):
 
 
 class ExportParentVoterListExcelView(APIView):
-    pagination_class = None
-
+    @swagger_auto_schema(
+        responses={
+            200: openapi.Response(
+                description="Excel File Download",
+                schema=openapi.Schema(type=openapi.TYPE_FILE)
+            )
+        }
+    )
     def get(self, request, *args, **kwargs):
         voter_list = get_processed_voter_list()
 
