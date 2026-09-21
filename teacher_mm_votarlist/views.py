@@ -168,3 +168,5 @@ class ExportParentVoterListExcelView(APIView):
         )
         response['Content-Disposition'] = 'attachment; filename="Parent_Voter_List.xlsx"'
         return response
+
+
