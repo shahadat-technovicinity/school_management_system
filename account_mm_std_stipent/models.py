@@ -37,6 +37,12 @@ class stipend_free_hf(models.Model):
     CONCESSION_TYPE_CHOICHES = [
         ('full free', 'Full Free'),
         ('half free', 'Half Free'),
+        ('quarter free', 'Quarter Free'),
+        ('special free', 'Special Free'),
+        ('hsp', 'HSP'),
+        ('staff children', 'Staff Children'),
+        ('scholarship', 'Scholarship'),
+
         
     ]
         
