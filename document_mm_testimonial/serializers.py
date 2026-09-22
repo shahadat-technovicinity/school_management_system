@@ -39,8 +39,22 @@ class StudentApplicationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['status']
 
+    def validate(self, attrs):
+        """রোল নম্বর এবং পাসিং ইয়ার ফিল্টারের মাধ্যমে ডুপ্লিকেট আবেদন রোধ করা"""
+        roll = attrs.get('roll')
+        passing_year = attrs.get('passing_year')
+
+        # কেবল নতুন আবেদন তৈরির (POST/Create) সময় চেক করবে
+        if not self.instance:
+            if StudentApplication.objects.filter(roll=roll, passing_year=passing_year).exists():
+                raise serializers.ValidationError({
+                    "roll": f"রোল {roll} এবং পাসিং বছর {passing_year} দিয়ে ইতোমধ্যে একটি আবেদন রয়েছে। পুনরায় আবেদন করা সম্ভব নয়।"
+                })
+
+        return attrs
+
     def to_representation(self, instance):
-        """API রেসপন্সে পাঠানোর সময় ডেটাগুলোকে বাংলা ডিজিটে রূপান্তর করবে"""
+        """API রেসপন্সে পাঠানোর সময় ডেটাগুলোকে বাংলা ডিজিটে রূপান্তর করবে"""
         ret = super().to_representation(instance)
         
         target_fields = [

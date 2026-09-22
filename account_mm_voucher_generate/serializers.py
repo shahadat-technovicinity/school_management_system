@@ -6,3 +6,6 @@ class ExpenseVoucherSerializer(serializers.ModelSerializer):
         model = ExpenseVoucher
         fields = ['id', 'date', 'deposit_category', 'amount', 'description']
         read_only_fields = ['id']
+
+
+
