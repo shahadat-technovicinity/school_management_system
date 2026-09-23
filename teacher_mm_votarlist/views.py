@@ -19,7 +19,7 @@ NUM_TO_BN = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 def get_processed_voter_list():
     """
     ভোটার লিস্ট প্রসেস করার কমন লজিক (API এবং Excel Export উভয়ের জন্য)
-    স্ট্যাটাস ফিল্টার বাদ দেওয়া হয়েছে যাতে সকল স্টুডেন্ট চলে আসে।
+    সকল স্টুডেন্ট এবং গার্ডিয়ানের নাম বাধ্যতামূলকভাবে বাংলা ফিল্ড থেকে নেওয়া হবে।
     """
     queryset = Student.objects.select_related(
         'guardian_info', 
@@ -48,17 +48,16 @@ def get_processed_voter_list():
     for student in students:
         guardian = getattr(student, 'guardian_info', None)
         
-        # Guardian Details
+        # Guardian Details (শুধুমাত্র বাংলা নাম ফিল্ড চেক করা হচ্ছে)
         father_name_bn = getattr(guardian, 'father_name_bn', '') if guardian else ''
-        father_name = getattr(guardian, 'father_name', '') if guardian else ''
         mother_name_bn = getattr(guardian, 'mother_name_bn', '') if guardian else ''
-        mother_name = getattr(guardian, 'mother_name', '') if guardian else ''
+
+        father_name_bn_clean = father_name_bn.strip() if father_name_bn else ''
+        mother_name_bn_clean = mother_name_bn.strip() if mother_name_bn else ''
 
         voter_name = (
-            father_name_bn.strip() or 
-            father_name.strip() or 
-            mother_name_bn.strip() or 
-            mother_name.strip() or 
+            father_name_bn_clean or 
+            mother_name_bn_clean or 
             "এন/এ"
         )
 
@@ -76,7 +75,9 @@ def get_processed_voter_list():
                 guardian_voter_map[clean_voter_name] = voter_serial_str
             current_serial += 1
 
-        student_name = getattr(student, 'full_name_bn', '').strip() or getattr(student, 'full_name', '').strip()
+        # Student Name (শুধুমাত্র বাংলা নাম full_name_bn নেওয়া হচ্ছে)
+        raw_student_name_bn = getattr(student, 'full_name_bn', '')
+        student_name = raw_student_name_bn.strip() if raw_student_name_bn else "এন/এ"
 
         # AcademicClass অবজেক্টকে নিরাপদে স্ট্রিং এ কনভার্ট করা
         if getattr(student, 'class_label', ''):
@@ -168,5 +169,3 @@ class ExportParentVoterListExcelView(APIView):
         )
         response['Content-Disposition'] = 'attachment; filename="Parent_Voter_List.xlsx"'
         return response
-
-
