@@ -16,16 +16,22 @@ from .serializers import ParentVoterListSerializer
 NUM_TO_BN = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 
 
-def get_processed_voter_list():
+def get_processed_voter_list(academic_year=None):
     """
-    ভোটার লিস্ট প্রসেস করার কমন লজিক (API এবং Excel Export উভয়ের জন্য)
-    সকল স্টুডেন্ট এবং গার্ডিয়ানের নাম বাধ্যতামূলকভাবে বাংলা ফিল্ড থেকে নেওয়া হবে।
+    ভোটার লিস্ট প্রসেস করার কমন লজিক (API এবং Excel Export উভয়ের জন্য)।
+    Student মডেলের ভেতরে থাকা academic_year দিয়ে ফিল্টার করা হচ্ছে।
     """
     queryset = Student.objects.select_related(
         'guardian_info', 
         'section_static',
         'class_name_static'
-    ).annotate(
+    )
+
+    # Student-এর ভেতর থেকে academic_year ফিল্টার
+    if academic_year:
+        queryset = queryset.filter(academic_year=academic_year)
+
+    queryset = queryset.annotate(
         safe_roll_str=NullIf('roll_number', Value('')),
         roll_int=Cast(Coalesce('safe_roll_str', Value('0')), IntegerField())
     ).order_by(
@@ -75,7 +81,7 @@ def get_processed_voter_list():
                 guardian_voter_map[clean_voter_name] = voter_serial_str
             current_serial += 1
 
-        # Student Name (শুধুমাত্র বাংলা নাম full_name_bn নেওয়া হচ্ছে)
+        # Student Name (শুধুমাত্র বাংলা নাম full_name_bn নেওয়া হচ্ছে)
         raw_student_name_bn = getattr(student, 'full_name_bn', '')
         student_name = raw_student_name_bn.strip() if raw_student_name_bn else "এন/এ"
 
@@ -109,16 +115,33 @@ def get_processed_voter_list():
 
 class ParentVoterListView(APIView):
     @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'academic_year',
+                openapi.IN_QUERY,
+                description="Academic Year ID or Value",
+                type=openapi.TYPE_STRING
+            )
+        ],
         responses={200: ParentVoterListSerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):
-        voter_list = get_processed_voter_list()
+        academic_year = request.query_params.get('academic_year')
+        voter_list = get_processed_voter_list(academic_year=academic_year)
         serializer = ParentVoterListSerializer(voter_list, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ExportParentVoterListExcelView(APIView):
     @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'academic_year',
+                openapi.IN_QUERY,
+                description="Academic Year ID or Value",
+                type=openapi.TYPE_STRING
+            )
+        ],
         responses={
             200: openapi.Response(
                 description="Excel File Download",
@@ -127,7 +150,8 @@ class ExportParentVoterListExcelView(APIView):
         }
     )
     def get(self, request, *args, **kwargs):
-        voter_list = get_processed_voter_list()
+        academic_year = request.query_params.get('academic_year')
+        voter_list = get_processed_voter_list(academic_year=academic_year)
 
         # Excel Workbook ও Sheet তৈরি
         wb = openpyxl.Workbook()
@@ -158,7 +182,6 @@ class ExportParentVoterListExcelView(APIView):
                 item["student_id"]
             ])
 
-        # মেমোরিতে ফাইলটি সেভ করে রেসপন্স আকারে পাঠানো
         buffer = BytesIO()
         wb.save(buffer)
         buffer.seek(0)

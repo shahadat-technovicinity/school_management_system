@@ -1,20 +1,16 @@
 from django.urls import path
 from .views import (
+    SendFlexibleSMSView,
     SMSTemplateListCreateView,
     SMSTemplateDetailView,
-    SendSMSView,
-    SMSSentHistoryListView,
-    SMSStatsView,
-    SMSBalanceView,
-    SMSReportView,
+    SMSHistoryListView,
+    CheckSMSBalanceView
 )
 
 urlpatterns = [
-    path('sms-templates/', SMSTemplateListCreateView.as_view(), name='template-list-create'),
-    path('sms-templates/<int:pk>/', SMSTemplateDetailView.as_view(), name='template-detail'),
-    path('sms/send/', SendSMSView.as_view(), name='sms-send'),
-    path('sms/history/', SMSSentHistoryListView.as_view(), name='sms-history'),
-    path('sms/stats/', SMSStatsView.as_view(), name='sms-stats'),
-    path('sms/balance/', SMSBalanceView.as_view(), name='sms-balance'),
-    path('sms/report/<str:request_id>/', SMSReportView.as_view(), name='sms-report'),
+    path('sms/send/', SendFlexibleSMSView.as_view(), name='sms-send'),
+    path('sms/templates/', SMSTemplateListCreateView.as_view(), name='sms-template-list'),
+    path('sms/templates/<int:pk>/', SMSTemplateDetailView.as_view(), name='sms-template-detail'),
+    path('sms/history/', SMSHistoryListView.as_view(), name='sms-history'),
+    path('sms/balance/', CheckSMSBalanceView.as_view(), name='sms-balance'),
 ]
