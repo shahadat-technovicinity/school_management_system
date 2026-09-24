@@ -1,4 +1,5 @@
 import openpyxl
+import datetime
 from io import BytesIO
 from django.http import HttpResponse
 from rest_framework.views import APIView
@@ -16,31 +17,27 @@ from .serializers import ParentVoterListSerializer
 NUM_TO_BN = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 
 
-def get_processed_voter_list(academic_year=None):
+def get_processed_voter_list():
     """
-    Voter list process korar logic.
-    Student model-er academic_year field shothikbhabe filter kora hochhe.
+    ভোটার লিস্ট প্রসেস করার লজিক:
+    সরাসরি কারেন্ট ইয়ার (Current Year) এর সাথে স্টুডেন্টের academic_year মেলাবে।
+    শুধুমাত্র ম্যাচ করলে (True হলে) ডাটাবেজ থেকে ডাটা আসবে।
     """
+    # ১. বর্তমান সাল বের করা (যেমন: 2026)
+    current_year = str(datetime.date.today().year)
+
     queryset = Student.objects.select_related(
         'guardian_info', 
         'section_static',
         'class_name_static'
     )
 
-    # Academic Year filter logic
-    if academic_year is not None and str(academic_year).strip() != "":
-        clean_year = str(academic_year).strip()
-
-        # If academic_year parameter is ID or numeric
-        if clean_year.isdigit():
-            queryset = queryset.filter(
-                Q(academic_year_id=int(clean_year)) | Q(academic_year=clean_year)
-            )
-        # If academic_year is a String (e.g. "2026")
-        else:
-            queryset = queryset.filter(
-                Q(academic_year__name__icontains=clean_year) | Q(academic_year=clean_year)
-            )
+    # ২. academic_year ফিল্ডের সাথে কারেন্ট ইয়ার তুলনা (Q logic দিয়ে integer, string, name সব হ্যান্ডেল করা)
+    queryset = queryset.filter(
+        Q(academic_year=current_year) | 
+        Q(academic_year__name__icontains=current_year) |
+        Q(academic_year_id=current_year)
+    )
 
     queryset = queryset.annotate(
         safe_roll_str=NullIf('roll_number', Value('')),
@@ -53,9 +50,9 @@ def get_processed_voter_list(academic_year=None):
 
     students = list(queryset)
 
-    # Terminal debug print
-    print(f"--- DEBUG: Filter Parameter Received: '{academic_year}' ---")
-    print(f"--- DEBUG: Total Students Fetched: {len(students)} ---")
+    # টার্মিনালে চেক করার জন্য ప్రింట్
+    print(f"--- DEBUG: Current Year Calculated: {current_year} ---")
+    print(f"--- DEBUG: Total Active Students Fetched: {len(students)} ---")
 
     voter_list = []
     guardian_voter_map = {}
@@ -66,7 +63,7 @@ def get_processed_voter_list(academic_year=None):
     for student in students:
         guardian = getattr(student, 'guardian_info', None)
         
-        # Guardian Details (Bangla name check)
+        # Guardian Details (বাংলা নাম চেক)
         father_name_bn = getattr(guardian, 'father_name_bn', '') if guardian else ''
         mother_name_bn = getattr(guardian, 'mother_name_bn', '') if guardian else ''
 
@@ -84,7 +81,7 @@ def get_processed_voter_list(academic_year=None):
 
         clean_voter_name = voter_name.strip().upper()
 
-        # Sibling and voter sequence grouping
+        # সিবলিং ও ভোটার সিকুয়েন্স
         if clean_voter_name not in EXCLUDE_FROM_GROUPING and clean_voter_name in guardian_voter_map:
             voter_serial_str = guardian_voter_map[clean_voter_name]
         else:
@@ -108,7 +105,7 @@ def get_processed_voter_list(academic_year=None):
         # Section Label
         section_name_bn = getattr(student, 'section_label', '') or (student.section_static.name if student.section_static else "এন/এ")
 
-        # Roll Number and ID formatting
+        # Roll & ID Formatting
         raw_roll = str(student.roll_number).strip() if student.roll_number else "0"
         class_roll_bn = raw_roll.translate(NUM_TO_BN) if raw_roll else "০"
         student_id_bn = str(student.id).translate(NUM_TO_BN)
@@ -128,33 +125,16 @@ def get_processed_voter_list(academic_year=None):
 
 class ParentVoterListView(APIView):
     @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter(
-                'academic_year',
-                openapi.IN_QUERY,
-                description="Academic Year ID or Name (e.g. 1 or 2026)",
-                type=openapi.TYPE_STRING
-            )
-        ],
         responses={200: ParentVoterListSerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):
-        academic_year = request.query_params.get('academic_year')
-        voter_list = get_processed_voter_list(academic_year=academic_year)
+        voter_list = get_processed_voter_list()
         serializer = ParentVoterListSerializer(voter_list, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ExportParentVoterListExcelView(APIView):
     @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter(
-                'academic_year',
-                openapi.IN_QUERY,
-                description="Academic Year ID or Name (e.g. 1 or 2026)",
-                type=openapi.TYPE_STRING
-            )
-        ],
         responses={
             200: openapi.Response(
                 description="Excel File Download",
@@ -163,15 +143,12 @@ class ExportParentVoterListExcelView(APIView):
         }
     )
     def get(self, request, *args, **kwargs):
-        academic_year = request.query_params.get('academic_year')
-        voter_list = get_processed_voter_list(academic_year=academic_year)
+        voter_list = get_processed_voter_list()
 
-        # Excel Workbook creation
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "অভিভাবক ভোটার তালিকা"
 
-        # Headers
         headers = [
             "ভোটার নম্বর", 
             "ভোটারের নাম", 
@@ -183,7 +160,6 @@ class ExportParentVoterListExcelView(APIView):
         ]
         ws.append(headers)
 
-        # Append Data
         for item in voter_list:
             ws.append([
                 item["voter_number"],
