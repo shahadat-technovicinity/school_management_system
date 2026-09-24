@@ -1,140 +1,175 @@
-from rest_framework import generics, status, filters, pagination, parsers
+from rest_framework.views import APIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from .models import SMSTemplate, SMSSentHistory
-from communication_canter_sms_template.serializers import SMSTemplateSerializer
-from .serializers import (
-    SMSSentHistorySerializer,
-    SendSMSSerializer,
-    SMSStatsSerializer,
-)
-from .tasks import send_bulk_sms_task
-from .utils import get_balance, get_report
+from rest_framework import status
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
-User = get_user_model()
+from apps.students.models import Student
+from .models import SMSTemplate, SMSHistory
+from .serializers import SMSTemplateSerializer, SMSHistorySerializer
+from .sms import send_sms_net_bd, check_sms_balance
 
 
-def get_phone_numbers(group):
-    from apps.students.models import Student
-    from apps.students.models import GuardianDetails
+class SendFlexibleSMSView(APIView):
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'class_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="Class Filter ID (Optional)"),
+                'section_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="Section Filter ID (Optional)"),
+                'manual_numbers': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING),
+                    description="Manual phone numbers list ['01700000000'] (Optional)"
+                ),
+                'template_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="Database SMSTemplate ID (Optional)"),
+                'message': openapi.Schema(type=openapi.TYPE_STRING, description="Custom Message Content (Optional)"),
+                'content_id': openapi.Schema(type=openapi.TYPE_STRING, description="sms.net.bd Content ID (Optional)"),
+                'schedule': openapi.Schema(type=openapi.TYPE_STRING, description="Schedule time: Y-m-d H:i:s (Optional)"),
+            }
+        )
+    )
+    def post(self, request, *args, **kwargs):
+        class_id = request.data.get('class_id')
+        section_id = request.data.get('section_id')
+        manual_numbers = request.data.get('manual_numbers', [])
+        template_id = request.data.get('template_id')
+        custom_message = request.data.get('message')
+        content_id = request.data.get('content_id')
+        schedule = request.data.get('schedule')
 
-    numbers = []
+        final_message = None
+        final_content_id = content_id
 
-    if group == 'all_teachers':
-        numbers = list(User.objects.filter(role__name='Teacher').values_list('phone_number', flat=True))
-    elif group == 'all_staff':
-        numbers = list(User.objects.filter(role__name='Staff').values_list('phone_number', flat=True))
-    elif group == 'all_students':
-        numbers = list(Student.objects.values_list('primary_contact_number', flat=True))
-    elif group == 'all_parents':
-        guardians = GuardianDetails.objects.all()
-        for g in guardians:
-            if g.father_phone:
-                numbers.append(g.father_phone)
-            if g.mother_phone:
-                numbers.append(g.mother_phone)
-    elif group.startswith('class_'):
-        class_name = group.replace('_', ' ')
-        numbers = list(Student.objects.filter(
-            class_name_static=class_name
-        ).values_list('primary_contact_number', flat=True))
-
-    return [n for n in numbers if n]
-
-
-class SMSTemplatePagination(pagination.PageNumberPagination):
-    page_size = 5
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-
-class SMSTemplateListCreateView(generics.ListCreateAPIView):
-    queryset = SMSTemplate.objects.all()
-    serializer_class = SMSTemplateSerializer
-    pagination_class = SMSTemplatePagination
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['template_name', 'category', 'template_content']
-
-
-class SMSTemplateDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = SMSTemplate.objects.all()
-    serializer_class = SMSTemplateSerializer
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-
-
-class SendSMSView(generics.CreateAPIView):
-    serializer_class = SendSMSSerializer
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        group = serializer.validated_data['group']
-        template_id = serializer.validated_data.get('template_id')
-        message = serializer.validated_data.get('message', '')
-
+        # ১. টেমপ্লেট কনফিগারেশন
         if template_id:
             try:
-                template = SMSTemplate.objects.get(pk=template_id)
-                message = template.template_content
+                sms_template = SMSTemplate.objects.get(id=template_id)
+                final_message = sms_template.message_body
+                if sms_template.content_id:
+                    final_content_id = sms_template.content_id
             except SMSTemplate.DoesNotExist:
-                return Response({'error': 'Template not found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": "উক্ত টেমপ্লেটটি পাওয়া যায়নি।"}, status=status.HTTP_404_NOT_FOUND)
 
-        phone_numbers = get_phone_numbers(group)
+        if custom_message:
+            final_message = custom_message
 
-        if not phone_numbers:
-            return Response({'error': 'No phone numbers found'}, status=status.HTTP_400_BAD_REQUEST)
+        if not final_message and not final_content_id:
+            return Response(
+                {"error": "মেসেজ পাঠানোর জন্য 'message', 'template_id' অথবা 'content_id' প্রদান করুন।"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        send_bulk_sms_task.delay(message, phone_numbers, group, template_id)
+        target_contacts = []
+        phone_numbers_set = set()
 
-        return Response({'message': 'SMS sending in progress'}, status=status.HTTP_200_OK)
+        # ২. ক্লাস/সেকশন অনুযায়ী নম্বর
+        if class_id or section_id:
+            queryset = Student.objects.select_related('guardian_info').all()
+
+            if class_id:
+                queryset = queryset.filter(class_name_static_id=class_id)
+            if section_id:
+                queryset = queryset.filter(section_static_id=section_id)
+
+            for student in queryset:
+                guardian = getattr(student, 'guardian_info', None)
+                phone = getattr(guardian, 'guardian_phone', None) or getattr(guardian, 'father_phone', None)
+                
+                if phone and str(phone).strip():
+                    clean_phone = str(phone).strip()
+                    target_contacts.append((student, clean_phone))
+                    phone_numbers_set.add(clean_phone)
+
+        # ৩. ম্যানুয়াল নম্বর
+        if manual_numbers and isinstance(manual_numbers, list):
+            for raw_num in manual_numbers:
+                if raw_num and str(raw_num).strip():
+                    clean_num = str(raw_num).strip()
+                    if clean_num not in phone_numbers_set:
+                        target_contacts.append((None, clean_num))
+                        phone_numbers_set.add(clean_num)
+
+        if not target_contacts:
+            return Response({"error": "কোনো বৈধ প্রাপকের ফোন নম্বর পাওয়া যায়নি।"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ৪. SMS পাঠান
+        success, api_response = send_sms_net_bd(
+            recipients=list(phone_numbers_set),
+            message=final_message,
+            content_id=final_content_id,
+            schedule=schedule
+        )
+
+        request_id = None
+        error_msg = None
+
+        if success:
+            req_status = 'SUCCESS'
+            request_id = str(api_response.get('data', {}).get('request_id', ''))
+        else:
+            req_status = 'FAILED'
+            error_msg = str(api_response.get('msg', 'SMS Delivery Failed'))
+
+        # ৫. হিস্ট্রি বাল্ক ক্রিয়েট
+        history_records = []
+        for student_obj, phone in target_contacts:
+            history_records.append(
+                SMSHistory(
+                    student=student_obj,
+                    phone_number=phone,
+                    message=final_message or f"Content ID: {final_content_id}",
+                    request_id=request_id,
+                    status=req_status,
+                    error_message=error_msg
+                )
+            )
+
+        SMSHistory.objects.bulk_create(history_records)
+
+        if success:
+            return Response({
+                "status": "Success",
+                "message": "এসএমএস সফলভাবে পাঠানো হয়েছে।",
+                "total_recipients": len(target_contacts),
+                "api_response": api_response
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                "status": "Failed",
+                "message": "এসএমএস পাঠাতে ব্যর্থ হয়েছে।",
+                "api_response": api_response
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SMSSentHistoryListView(generics.ListAPIView):
-    queryset = SMSSentHistory.objects.all()
-    serializer_class = SMSSentHistorySerializer
-    pagination_class = SMSTemplatePagination
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['group', 'message', 'status']
+class SMSTemplateListCreateView(ListCreateAPIView):
+    queryset = SMSTemplate.objects.all()
+    serializer_class = SMSTemplateSerializer
 
 
-class SMSStatsView(generics.GenericAPIView):
-    serializer_class = SMSStatsSerializer
+class SMSTemplateDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = SMSTemplate.objects.all()
+    serializer_class = SMSTemplateSerializer
 
+
+class SMSHistoryListView(ListAPIView):
+    serializer_class = SMSHistorySerializer
+
+    def get_queryset(self):
+        queryset = SMSHistory.objects.select_related('student').all()
+        student_id = self.request.query_params.get('student_id')
+        status_param = self.request.query_params.get('status')
+
+        if student_id:
+            queryset = queryset.filter(student_id=student_id)
+        if status_param:
+            queryset = queryset.filter(status=status_param.upper())
+
+        return queryset
+
+
+class CheckSMSBalanceView(APIView):
     def get(self, request, *args, **kwargs):
-        today = timezone.now()
-        total_sent = SMSSentHistory.objects.count()
-        sent_this_month = SMSSentHistory.objects.filter(
-            sent_at__month=today.month,
-            sent_at__year=today.year,
-        ).count()
-        success = SMSSentHistory.objects.filter(status='Success').count()
-        failed = SMSSentHistory.objects.filter(status='Failed').count()
-        pending = SMSSentHistory.objects.filter(status='Pending').count()
-
-        return Response({
-            'total_sent': total_sent,
-            'sent_this_month': sent_this_month,
-            'success': success,
-            'failed': failed,
-            'pending': pending,
-        })
-
-
-class SMSBalanceView(generics.GenericAPIView):
-    serializer_class = SMSStatsSerializer
-
-    def get(self, request, *args, **kwargs):
-        result = get_balance()
-        return Response(result)
-
-
-class SMSReportView(generics.GenericAPIView):
-    serializer_class = SMSStatsSerializer
-
-    def get(self, request, request_id, *args, **kwargs):
-        result = get_report(request_id)
-        return Response(result)
+        balance_info = check_sms_balance()
+        return Response(balance_info, status=status.HTTP_200_OK)
