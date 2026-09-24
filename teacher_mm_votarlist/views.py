@@ -13,17 +13,13 @@ from django.db.models.functions import Cast, Coalesce, NullIf
 from apps.students.models import Student
 from .serializers import ParentVoterListSerializer
 
-# English to Bangla digit translation
 NUM_TO_BN = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 
 
 def get_processed_voter_list():
     """
-    ভোটার লিস্ট প্রসেস করার লজিক:
-    সরাসরি কারেন্ট ইয়ার (Current Year) এর সাথে স্টুডেন্টের academic_year মেলাবে।
-    শুধুমাত্র ম্যাচ করলে (True হলে) ডাটাবেজ থেকে ডাটা আসবে।
+    Current Year-er sathe Student-er academic_year match kore voter list generate kore.
     """
-    # ১. বর্তমান সাল বের করা (যেমন: 2026)
     current_year = str(datetime.date.today().year)
 
     queryset = Student.objects.select_related(
@@ -32,11 +28,10 @@ def get_processed_voter_list():
         'class_name_static'
     )
 
-    # ২. academic_year ফিল্ডের সাথে কারেন্ট ইয়ার তুলনা (Q logic দিয়ে integer, string, name সব হ্যান্ডেল করা)
+    # academic_year field CharField/Integer dhoray direct match ebong icontains lookup kora hochhe
     queryset = queryset.filter(
-        Q(academic_year=current_year) | 
-        Q(academic_year__name__icontains=current_year) |
-        Q(academic_year_id=current_year)
+        Q(academic_year__icontains=current_year) | 
+        Q(academic_year=current_year)
     )
 
     queryset = queryset.annotate(
@@ -50,8 +45,7 @@ def get_processed_voter_list():
 
     students = list(queryset)
 
-    # টার্মিনালে চেক করার জন্য ప్రింట్
-    print(f"--- DEBUG: Current Year Calculated: {current_year} ---")
+    print(f"--- DEBUG: Current Year: {current_year} ---")
     print(f"--- DEBUG: Total Active Students Fetched: {len(students)} ---")
 
     voter_list = []
@@ -63,7 +57,6 @@ def get_processed_voter_list():
     for student in students:
         guardian = getattr(student, 'guardian_info', None)
         
-        # Guardian Details (বাংলা নাম চেক)
         father_name_bn = getattr(guardian, 'father_name_bn', '') if guardian else ''
         mother_name_bn = getattr(guardian, 'mother_name_bn', '') if guardian else ''
 
@@ -81,7 +74,6 @@ def get_processed_voter_list():
 
         clean_voter_name = voter_name.strip().upper()
 
-        # সিবলিং ও ভোটার সিকুয়েন্স
         if clean_voter_name not in EXCLUDE_FROM_GROUPING and clean_voter_name in guardian_voter_map:
             voter_serial_str = guardian_voter_map[clean_voter_name]
         else:
@@ -90,11 +82,9 @@ def get_processed_voter_list():
                 guardian_voter_map[clean_voter_name] = voter_serial_str
             current_serial += 1
 
-        # Student Name
         raw_student_name_bn = getattr(student, 'full_name_bn', '')
         student_name = raw_student_name_bn.strip() if raw_student_name_bn else "এন/এ"
 
-        # Class Label
         if getattr(student, 'class_label', ''):
             student_class_bn = student.class_label
         elif student.class_name_static:
@@ -102,10 +92,8 @@ def get_processed_voter_list():
         else:
             student_class_bn = "এন/এ"
 
-        # Section Label
         section_name_bn = getattr(student, 'section_label', '') or (student.section_static.name if student.section_static else "এন/এ")
 
-        # Roll & ID Formatting
         raw_roll = str(student.roll_number).strip() if student.roll_number else "0"
         class_roll_bn = raw_roll.translate(NUM_TO_BN) if raw_roll else "০"
         student_id_bn = str(student.id).translate(NUM_TO_BN)
