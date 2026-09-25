@@ -177,7 +177,7 @@ class TeacherAndStaffViewSet(viewsets.ModelViewSet):
             openapi.Parameter(
                 "employee_type",
                 openapi.IN_QUERY,
-                description="Filter statistics by 'teacher' or 'staff'",
+                description="Filter statistics by 'head_teacher', 'teacher', or 'staff'",
                 type=openapi.TYPE_STRING,
                 required=False,
             )
@@ -187,10 +187,11 @@ class TeacherAndStaffViewSet(viewsets.ModelViewSet):
                 description="Teacher and staff statistics",
                 examples={
                     "application/json": {
-                        "total": 50,
+                        "total": 51,
+                        "head_teachers": 1,
                         "teachers": 30,
                         "staff": 20,
-                        "active": 45,
+                        "active": 46,
                         "inactive": 3,
                         "on_leave": 2,
                     }
@@ -210,6 +211,7 @@ class TeacherAndStaffViewSet(viewsets.ModelViewSet):
             qs = qs.filter(employee_type=employee_type)
 
         total = qs.count()
+        head_teachers = qs.filter(employee_type="head_teacher").count()
         teachers = qs.filter(employee_type="teacher").count()
         staff = qs.filter(employee_type="staff").count()
         active = qs.filter(status="active").count()
@@ -218,6 +220,7 @@ class TeacherAndStaffViewSet(viewsets.ModelViewSet):
 
         return Response({
             "total": total,
+            "head_teachers": head_teachers,
             "teachers": teachers,
             "staff": staff,
             "active": active,
@@ -226,15 +229,9 @@ class TeacherAndStaffViewSet(viewsets.ModelViewSet):
         })
 
 
-
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework import generics
-
-
 class EmployeeUserDropdownView(generics.ListAPIView):
     """
-    Simple Dropdown/List view to populate User options with role 'Teacher' or 'Staff'
+    Simple Dropdown/List view to populate User options with role 'Teacher', 'Staff' or 'Head Teacher'
     who do not have a linked profile yet.
     """
     serializer_class = EmployeeUserDropdownSerializer
@@ -245,9 +242,9 @@ class EmployeeUserDropdownView(generics.ListAPIView):
             openapi.Parameter(
                 'role',
                 openapi.IN_QUERY,
-                description="Filter users by role (e.g. teacher or staff)",
+                description="Filter users by role (e.g. head_teacher, teacher, or staff)",
                 type=openapi.TYPE_STRING,
-                enum=['teacher', 'staff']  # Swagger UI-তে ড্রপডাউন ফিল্টার দেখাবে
+                enum=['head_teacher', 'teacher', 'staff']
             )
         ]
     )
@@ -258,8 +255,13 @@ class EmployeeUserDropdownView(generics.ListAPIView):
         if getattr(self, "swagger_fake_view", False):
             return User.objects.none()
             
+        allowed_roles = [
+            'Teacher', 'Staff', 'Head Teacher', 'Headmaster',
+            'teacher', 'staff', 'head_teacher', 'headmaster', 'head teacher'
+        ]
+
         queryset = User.objects.filter(
-            role__name__in=['Teacher', 'Staff', 'teacher', 'staff'],
+            role__name__in=allowed_roles,
             teacher_staff_profile__isnull=True
         )
 

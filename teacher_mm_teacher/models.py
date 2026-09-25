@@ -9,12 +9,13 @@ from academic_mm_class_and_section.models import AcademicClass, Section
 
 class TeacherAndStaffProfile(models.Model):
     """
-    Unified profile model for Teachers and Staff members,
+    Unified profile model for Teachers, Head Teachers and Staff members,
     linked to User via OneToOne relationship.
     """
 
-    # Category Selection (Teacher vs Staff)
+    # Category Selection (Head Teacher vs Teacher vs Staff)
     EMPLOYEE_TYPE_CHOICES = [
+        ("head_teacher", "Head Teacher"),
         ("teacher", "Teacher"),
         ("staff", "Staff"),
     ]
@@ -73,24 +74,24 @@ class TeacherAndStaffProfile(models.Model):
         blank=True
     )
 
-    # Main flag to separate Teacher from Staff
+    # Main flag to separate Teacher/Head Teacher from Staff
     employee_type = models.CharField(
         max_length=20,
         choices=EMPLOYEE_TYPE_CHOICES,
         default="teacher",
-        help_text="Select whether this profile belongs to a Teacher or Staff"
+        help_text="Select whether this profile belongs to a Head Teacher, Teacher or Staff"
     )
 
     designation = models.CharField(
         max_length=150, 
         blank=True, 
-        help_text="Designation e.g. Senior Math Teacher, Accountant, Office Assistant"
+        help_text="Designation e.g. Headmaster, Senior Math Teacher, Accountant, Office Assistant"
     )
 
     department = models.CharField(
         max_length=150, 
         blank=True, 
-        help_text="Department e.g. Science, Accounts, Administration"
+        help_text="Department e.g. Administration, Science, Accounts"
     )
 
 
@@ -110,7 +111,7 @@ class TeacherAndStaffProfile(models.Model):
     father_name = models.CharField(max_length=150, blank=True)
     father_name_bn = models.CharField(max_length=150, blank=True, help_text="বাবার বাংলা নাম")
     mother_name = models.CharField(max_length=150, blank=True)
-    mother_name_bn = models.CharField(max_length=150, blank=True, help_text="মায়ের বাংলা নাম")
+    mother_name_bn = models.CharField(max_length=150, blank=True, help_text="মায়ের বাংলা নাম")
     
     qualification = models.CharField(max_length=255, blank=True)
     work_experience = models.CharField(max_length=255, blank=True)
