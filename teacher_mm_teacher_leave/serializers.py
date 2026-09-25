@@ -153,8 +153,12 @@ class TeacherLeaveDetailSerializer(serializers.ModelSerializer):
 class TeacherLeaveCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating a leave application.
-    Used by admin to create leave on behalf of teacher.
+    Used by both Admin and logged-in Teachers.
     """
+    teacher = serializers.PrimaryKeyRelatedField(
+        queryset=TeacherAndStaffProfile.objects.all(),
+        required=False
+    )
 
     class Meta:
         model = TeacherLeave
@@ -183,6 +187,12 @@ class TeacherLeaveCreateSerializer(serializers.ModelSerializer):
 
         # Check for overlapping leaves
         teacher = data.get("teacher")
+        request = self.context.get("request")
+        
+        # If teacher is not passed, get teacher from request user
+        if not teacher and request and hasattr(request.user, "teacher_profile"):
+            teacher = request.user.teacher_profile
+
         if teacher and from_date and to_date:
             overlapping = TeacherLeave.objects.filter(
                 teacher=teacher,
@@ -300,6 +310,43 @@ class LeaveApprovalSerializer(serializers.Serializer):
         )
         balance.used += int(leave.no_of_days)
         balance.save()
+
+
+class TeacherLeavePDFFormatSerializer(serializers.ModelSerializer):
+    """
+    Serializer to map leave structure for official PDF document printing.
+    """
+    applied_date_display = serializers.SerializerMethodField()
+    teacher_name = serializers.CharField(source="teacher.full_name", read_only=True)
+    designation = serializers.CharField(source="teacher.designation", read_only=True)
+    leave_type_name = serializers.CharField(source="leave_type.name", read_only=True)
+    from_date_display = serializers.SerializerMethodField()
+    to_date_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TeacherLeave
+        fields = [
+            "id",
+            "applied_date_display",
+            "teacher_name",
+            "designation",
+            "leave_type_name",
+            "from_date_display",
+            "to_date_display",
+            "no_of_days",
+            "reason",
+            "status",
+            "admin_remarks",
+        ]
+
+    def get_applied_date_display(self, obj):
+        return obj.applied_on.strftime("%d.%m.%Y") if getattr(obj, "applied_on", None) else ""
+
+    def get_from_date_display(self, obj):
+        return obj.from_date.strftime("%d.%m.%Y") if getattr(obj, "from_date", None) else ""
+
+    def get_to_date_display(self, obj):
+        return obj.to_date.strftime("%d.%m.%Y") if getattr(obj, "to_date", None) else ""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
