@@ -98,10 +98,18 @@ class SchoolDashboardStatsAPIView(APIView):
         operation_description="Returns real-time counts for students, teachers, staff, and class-wise student stats."
     )
     def get(self, request, *args, **kwargs):
-        # 1. Real-time database counts
-        total_students_count = Student.objects.filter(status="active").count()
-        
-       # Active Teachers count
+        # কারেন্ট একাডেমিক ইয়ার বের করা (যেমন: "2026")
+        current_year = str(timezone.now().year)
+
+        # ১. রানিং ইয়ারের অ্যাক্টিভ স্টুডেন্ট ফিল্টার
+        active_students_qs = Student.objects.filter(
+            status="active",
+            academic_year__icontains=current_year
+        )
+
+        total_students_count = active_students_qs.count()
+
+        # Active Teachers count
         total_teachers_count = TeacherAndStaffProfile.objects.filter(
             employee_type="teacher", 
             status="active"
@@ -112,38 +120,72 @@ class SchoolDashboardStatsAPIView(APIView):
             employee_type="staff", 
             status="active"
         ).count()
-        # 2. Dynamic summary response formatting
+
+        # ২. Dynamic summary response formatting
         summary_data = {
             "total_students_summary": f"{total_students_count}+",
             "total_teachers_summary": f"{total_teachers_count}+",
             "total_staff_summary": f"{total_staff_count}+",
         }
 
-        # 3. Dynamic class-wise student counts (Foreign Key name handles relation dynamically)
+        # ৩. Dynamic class-wise student counts (Class ID এবং Name সহ Query)
         class_wise_qs = (
-            Student.objects.filter(status="active")
+            active_students_qs
             .exclude(class_name_static__isnull=True)
-            .values('class_name_static__name')
+            .values('class_name_static__id', 'class_name_static__name')
             .annotate(total_students=Count('id'))
+            .order_by('class_name_static__id')  # ID বা মডেলের ডিফল্ট সিকোয়েন্স অনুযায়ী ডাটাবেজ থেকেই সর্ট হবে
         )
 
-        class_wise_students = [
-            {
-                "class_name": item['class_name_static__name'] if item['class_name_static__name'] else "N/A",
+        # বাংলা শব্দের জন্য কাস্টম ম্যাপ (যদি ID অনুযায়ী অর্ডার না হয় তবে ফালব্যাক হিসেবে কাজ করবে)
+        class_order_map = {
+            "ষষ্ঠ": 1,
+            "সপ্তম": 2,
+            "অষ্টম": 3,
+            "নবম": 4,
+            "দশম": 5,
+        }
+
+        class_wise_students = []
+        for item in class_wise_qs:
+            c_name = item['class_name_static__name'] if item['class_name_static__name'] else "N/A"
+            
+            # সর্টিং কী নির্ধারণ (প্রথমত ID, দ্বিতীয়ত বাংলা নাম ম্যাপ, না মিললে Regex, নতুবা 999)
+            c_id = item['class_name_static__id'] or 999
+            
+            class_wise_students.append({
+                "class_id": c_id,
+                "class_name": c_name,
                 "total_students": item['total_students']
-            }
-            for item in class_wise_qs
-        ]
+            })
 
-        # 4. Numeric Sorting: Class 6 -> Class 7 -> Class 8 -> Class 9 -> Class 10
-        class_wise_students = sorted(
-            class_wise_students, 
-            key=lambda x: int(re.search(r'\d+', str(x['class_name'])).group()) if re.search(r'\d+', str(x['class_name'])) else 999
-        )
+        # ৪. নিখুঁত সর্টিং: Class ID -> বাংলা ম্যাপ -> ইংরেজি ডিজিট
+        def get_sort_key(item):
+            name = str(item['class_name']).strip()
+            # ১. যদি বাংলা ম্যাপে থাকে
+            if name in class_order_map:
+                return class_order_map[name]
+            # ২. যদি নামের মধ্যে ডিজিট থাকে (যেমন Class 6 বা ৬)
+            digit_match = re.search(r'\d+', name)
+            if digit_match:
+                return int(digit_match.group())
+            # ৩. অন্যথায় Class ID ব্যবহার করবে
+            return item['class_id']
+
+        class_wise_students = sorted(class_wise_students, key=get_sort_key)
+
+        # Serializer-এর ফরম্যাট অনুযায়ী class_id রিমুভ করে ক্লিন লিস্ট প্রস্তুত
+        formatted_class_wise = [
+            {
+                "class_name": item["class_name"],
+                "total_students": item["total_students"]
+            }
+            for item in class_wise_students
+        ]
 
         response_payload = {
             **summary_data,
-            "class_wise_students": class_wise_students
+            "class_wise_students": formatted_class_wise
         }
 
         serializer = SchoolDashboardStatsSerializer(data=response_payload)
