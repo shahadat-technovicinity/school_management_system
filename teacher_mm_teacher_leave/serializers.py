@@ -153,7 +153,7 @@ class TeacherLeaveDetailSerializer(serializers.ModelSerializer):
 class TeacherLeaveCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating a leave application.
-    Used by both Admin and logged-in Teachers.
+    Used by both Admin and logged-in Teachers/Staff.
     """
     teacher = serializers.PrimaryKeyRelatedField(
         queryset=TeacherAndStaffProfile.objects.all(),
@@ -211,7 +211,6 @@ class TeacherLeaveCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Create leave application with auto-calculated days."""
-        # Calculate no_of_days if not provided
         if not validated_data.get("no_of_days"):
             from_date = validated_data["from_date"]
             to_date = validated_data["to_date"]
