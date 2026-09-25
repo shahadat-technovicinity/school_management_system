@@ -374,7 +374,7 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Add these lines for Media files (Uploaded images)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = '/var/www/school_media/'
 
 # Let Whitenoise serve compressed static files
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
