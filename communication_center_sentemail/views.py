@@ -45,9 +45,10 @@ class MailCreateView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED if smtp_ok else status.HTTP_502_BAD_GATEWAY)
 
 
-class MailDetailView(generics.RetrieveAPIView):
+class MailDetaiilllView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = MailDetailSerializer
 
     def get_queryset(self):
         return Mail.objects.filter(sender=self.request.user)
+    
