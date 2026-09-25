@@ -68,7 +68,6 @@ class StudentAttendanceListAPIView(ListAPIView):
             openapi.Parameter('marked_by', openapi.IN_QUERY, description="Teacher User ID who marked attendance", type=openapi.TYPE_INTEGER),
             openapi.Parameter('date', openapi.IN_QUERY, description="Specific date (YYYY-MM-DD)", type=openapi.TYPE_STRING, format=openapi.FORMAT_DATE),
             openapi.Parameter('ordering', openapi.IN_QUERY, description="Order by field (prefix with - for descending)", type=openapi.TYPE_STRING),
-            # Swagger-এ প্যাজিনেশন ইনপুট এনাবল করার জন্য
             openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER),
             openapi.Parameter('page_size', openapi.IN_QUERY, description="Number of items per page", type=openapi.TYPE_INTEGER),
         ]
@@ -101,7 +100,7 @@ class StudentAttendanceListAPIView(ListAPIView):
         if marked_by:
             queryset = queryset.filter(marked_by_id=marked_by)
 
-        # ২. Academic Year গ্লোবাল ফিল্টার (তারিখ পাস করলেও এটি কার্যকর থাকবে)
+        # ২. Academic Year গ্লোবাল ফিল্টার
         if academic_year:
             queryset = queryset.filter(
                 Q(student__academic_year__icontains=str(academic_year)) |
@@ -122,3 +121,63 @@ class StudentAttendanceListAPIView(ListAPIView):
             queryset = queryset.filter(date__lte=date_to)
 
         return queryset.order_by('-date', '-id')
+
+    def list(self, request, *args, **kwargs):
+        # ফিল্টার হওয়া কুয়েরিসেট আনা হচ্ছে
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # ওভারঅল ফিল্টারড কাউন্ট
+        total_records = queryset.count()
+        present_qs = queryset.filter(status='P')
+        absent_qs = queryset.filter(status='A')
+
+        total_present = present_qs.count()
+        total_absent = absent_qs.count()
+
+        # জেন্ডারভিত্তিক কাউন্ট
+        male_present = present_qs.filter(
+            Q(student__gender__iexact='M') | Q(student__gender__iexact='Male')
+        ).count()
+        
+        female_present = present_qs.filter(
+            Q(student__gender__iexact='F') | Q(student__gender__iexact='Female')
+        ).count()
+
+        male_absent = absent_qs.filter(
+            Q(student__gender__iexact='M') | Q(student__gender__iexact='Male')
+        ).count()
+
+        female_absent = absent_qs.filter(
+            Q(student__gender__iexact='F') | Q(student__gender__iexact='Female')
+        ).count()
+
+        # পেজিনেশন রেসপন্স হ্যান্ডলিং
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+
+            response.data['summary'] = {
+                'total_records': total_records,
+                'total_present': total_present,
+                'total_absent': total_absent,
+                'male_present': male_present,
+                'female_present': female_present,
+                'male_absent': male_absent,
+                'female_absent': female_absent,
+            }
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'summary': {
+                'total_records': total_records,
+                'total_present': total_present,
+                'total_absent': total_absent,
+                'male_present': male_present,
+                'female_present': female_present,
+                'male_absent': male_absent,
+                'female_absent': female_absent,
+            },
+            'results': serializer.data
+        })
