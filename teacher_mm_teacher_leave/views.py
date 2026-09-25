@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -20,6 +21,7 @@ from .serializers import (
     TeacherLeaveUpdateSerializer,
     LeaveApprovalSerializer,
     TeacherLeaveSummarySerializer,
+    TeacherLeavePDFFormatSerializer,
 )
 from .filters import TeacherLeaveFilter
 from .pagination import LeaveResultsPagination
@@ -112,6 +114,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
     - PUT /teacher/leaves/{id}/ - Update leave
     - DELETE /teacher/leaves/{id}/ - Delete leave
     - POST /teacher/leaves/{id}/approve/ - Approve/Decline leave
+    - GET /teacher/leaves/{id}/download-application/ - Download approved leave PDF data
     - GET /teacher/leaves/by-teacher/{teacher_id}/ - Get leaves by teacher
     - GET /teacher/leaves/summary/{teacher_id}/ - Get teacher leave summary
     """
@@ -135,7 +138,16 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
             return TeacherLeaveDetailSerializer
         elif self.action == "approve":
             return LeaveApprovalSerializer
+        elif self.action == "download_application":
+            return TeacherLeavePDFFormatSerializer
         return TeacherLeaveListSerializer
+
+    def perform_create(self, serializer):
+        """Auto-assign teacher if logged-in user has teacher_profile and teacher field is not provided."""
+        if hasattr(self.request.user, "teacher_profile") and not serializer.validated_data.get("teacher"):
+            serializer.save(teacher=self.request.user.teacher_profile)
+        else:
+            serializer.save()
 
     @swagger_auto_schema(
         operation_summary="List all teacher leave applications",
@@ -210,6 +222,29 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
             TeacherLeaveDetailSerializer(updated_leave).data,
             status=status.HTTP_200_OK
         )
+
+    @swagger_auto_schema(
+        operation_summary="Download or View Approved Leave Application Data",
+        operation_description="Get formal leave application document response (Allowed only if status is approved).",
+        tags=SWAGGER_TAG,
+        responses={
+            200: TeacherLeavePDFFormatSerializer,
+            400: "Application is not approved yet."
+        }
+    )
+    @action(detail=True, methods=["get"], url_path="download-application")
+    def download_application(self, request, pk=None):
+        """Get leave application data formatted for PDF generation."""
+        leave = self.get_object()
+
+        if leave.status != "approved":
+            return Response(
+                {"error": "Only approved leave applications can be downloaded."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = TeacherLeavePDFFormatSerializer(leave)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Get leaves by teacher",
