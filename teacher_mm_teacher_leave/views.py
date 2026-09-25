@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
-from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -190,6 +189,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
     @swagger_auto_schema(
+        method="post",
         operation_summary="Approve or Decline leave",
         operation_description="""
         Approve or decline a pending leave application.
@@ -204,7 +204,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
             400: "Bad Request - Invalid action or leave already processed"
         }
     )
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], url_path="approve")
     def approve(self, request, pk=None):
         """Approve or decline a leave application."""
         leave = self.get_object()
@@ -214,7 +214,6 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
         )
         serializer.is_valid(raise_exception=True)
         
-        # Use request.user if authenticated, otherwise None
         user = request.user if request.user.is_authenticated else None
         updated_leave = serializer.save(leave=leave, user=user)
         
@@ -224,6 +223,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
         )
 
     @swagger_auto_schema(
+        method="get",
         operation_summary="Download or View Approved Leave Application Data",
         operation_description="Get formal leave application document response (Allowed only if status is approved).",
         tags=SWAGGER_TAG,
@@ -247,6 +247,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
+        method="get",
         operation_summary="Get leaves by teacher",
         operation_description="Get all leave applications for a specific teacher.",
         tags=SWAGGER_TAG
@@ -263,6 +264,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @swagger_auto_schema(
+        method="get",
         operation_summary="Get teacher leave summary",
         operation_description="""
         Get complete leave summary for a teacher.
@@ -334,11 +336,12 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
         return Response(response_data)
 
     @swagger_auto_schema(
+        method="get",
         operation_summary="Get leave statistics",
         operation_description="Get overall leave statistics.",
         tags=SWAGGER_TAG
     )
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get"], url_path="statistics")
     def statistics(self, request):
         """Get overall leave statistics."""
         today = timezone.now().date()
@@ -420,6 +423,7 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     @swagger_auto_schema(
+        method="get",
         operation_summary="Get leave balances by teacher",
         operation_description="Get all leave balances for a specific teacher.",
         tags=SWAGGER_TAG
@@ -433,6 +437,7 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @swagger_auto_schema(
+        method="post",
         operation_summary="Initialize leave balances",
         operation_description="""
         Initialize leave balances for a teacher.
