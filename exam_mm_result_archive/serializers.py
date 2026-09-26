@@ -94,7 +94,13 @@ class FinalResultSerializer(serializers.ModelSerializer):
         model = Student
         fields = ['id', 'student_id', 'full_name', 'roll_number', 'total_marks', 'gpa', 'result_status', 'merit_position']
 
+    def _is_swagger(self):
+        request = self.context.get('request')
+        return request and getattr(request.parser_context.get('view', None), 'swagger_fake_view', False)
+
     def get_total_marks(self, obj):
+        if self._is_swagger():
+            return 0.0
         exam_type = self.context.get('exam_type')
         marks = ExamMark.objects.filter(student=obj, status='approved')
         if exam_type:
@@ -102,6 +108,8 @@ class FinalResultSerializer(serializers.ModelSerializer):
         return sum(m.total for m in marks)
 
     def get_gpa(self, obj):
+        if self._is_swagger():
+            return 0.0
         exam_type = self.context.get('exam_type')
         marks = ExamMark.objects.filter(student=obj, status='approved')
         if exam_type:
@@ -114,8 +122,12 @@ class FinalResultSerializer(serializers.ModelSerializer):
         return round(total_gp / marks.count(), 2)
 
     def get_result_status(self, obj):
+        if self._is_swagger():
+            return "PASSED"
         return "PASSED" if self.get_gpa(obj) > 0 else "FAILED"
 
     def get_merit_position(self, obj):
+        if self._is_swagger():
+            return 1
         merit_map = self.context.get('merit_map', {})
         return merit_map.get(obj.id, None)

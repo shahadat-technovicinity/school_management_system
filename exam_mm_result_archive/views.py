@@ -76,7 +76,6 @@ class StudentFilterView(generics.ListAPIView):
 
         return queryset
 
-
 # Bulk Create & List Marks
 class MarksListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [AllowAny]
