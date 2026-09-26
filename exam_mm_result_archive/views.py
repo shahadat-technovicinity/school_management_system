@@ -5,8 +5,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from django.db.models import IntegerField
 from django.db.models.functions import Cast
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 from apps.students.models import Student
 from .models import ExamMark, SubjectPassMarkConfig, GradeScale
@@ -26,7 +24,6 @@ class StandardLimitOffsetPagination(LimitOffsetPagination):
     max_limit = 500
 
 
-# Admin Pass Mark Config
 class SubjectPassMarkConfigListCreateAPIView(generics.ListCreateAPIView):
     queryset = SubjectPassMarkConfig.objects.all()
     serializer_class = SubjectPassMarkConfigSerializer
@@ -39,7 +36,6 @@ class SubjectPassMarkConfigDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [AllowAny]
 
 
-# Admin Grade Scale Config
 class GradeScaleListCreateAPIView(generics.ListCreateAPIView):
     queryset = GradeScale.objects.all()
     serializer_class = GradeScaleSerializer
@@ -52,7 +48,6 @@ class GradeScaleDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [AllowAny]
 
 
-# Teacher Student Filter
 class StudentFilterView(generics.ListAPIView):
     serializer_class = StudentInfoFilterSerializer
     permission_classes = [AllowAny]
@@ -76,7 +71,7 @@ class StudentFilterView(generics.ListAPIView):
 
         return queryset
 
-# Bulk Create & List Marks
+
 class MarksListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [AllowAny]
 
@@ -96,14 +91,12 @@ class MarksListCreateAPIView(generics.ListCreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Single Mark Detail & Edit
 class MarkRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ExamMark.objects.all()
     serializer_class = MarksSerializer
     permission_classes = [AllowAny]
 
 
-# Admin Status Views
 class AdminApprovedMarksListAPIView(generics.ListAPIView):
     serializer_class = MarksSerializer
     permission_classes = [AllowAny]
@@ -136,14 +129,12 @@ class AdminMarkStatusUpdateAPIView(generics.UpdateAPIView):
         serializer.save(status=new_status)
 
 
-# Final Result View
 class FinalResultView(generics.ListAPIView):
     serializer_class = FinalResultSerializer
     permission_classes = [AllowAny]
     pagination_class = StandardLimitOffsetPagination
 
     def get_queryset(self):
-        # Swagger fake view bypass
         if getattr(self, "swagger_fake_view", False):
             return Student.objects.none()
 
@@ -163,7 +154,6 @@ class FinalResultView(generics.ListAPIView):
         return queryset
 
     def list(self, request, *args, **kwargs):
-        # Prevent execution during Swagger schema generation
         if getattr(self, "swagger_fake_view", False):
             return Response([])
         return super().list(request, *args, **kwargs)
@@ -171,7 +161,6 @@ class FinalResultView(generics.ListAPIView):
     def get_serializer_context(self):
         context = super().get_serializer_context()
 
-        # Safely return empty context for Swagger calls
         if getattr(self, "swagger_fake_view", False) or not hasattr(self, 'request'):
             context['exam_type'] = None
             context['merit_map'] = {}
