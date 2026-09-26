@@ -143,7 +143,7 @@ class FinalResultView(generics.ListAPIView):
     pagination_class = StandardLimitOffsetPagination
 
     def get_queryset(self):
-        # Swagger Schema জেনারেট করার সময় যেন ফাঁকা queryset ফেরত দেয়
+        # Swagger fake view bypass
         if getattr(self, "swagger_fake_view", False):
             return Student.objects.none()
 
@@ -162,39 +162,48 @@ class FinalResultView(generics.ListAPIView):
         self.exam_type = self.request.query_params.get('exam_type')
         return queryset
 
+    def list(self, request, *args, **kwargs):
+        # Prevent execution during Swagger schema generation
+        if getattr(self, "swagger_fake_view", False):
+            return Response([])
+        return super().list(request, *args, **kwargs)
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        
-        # ⚠️ Swagger Generator/Fake View হলে Merit Map বের না করে সরাসরি ফাঁকা context রিটার্ন করবে
-        if getattr(self, "swagger_fake_view", False):
+
+        # Safely return empty context for Swagger calls
+        if getattr(self, "swagger_fake_view", False) or not hasattr(self, 'request'):
             context['exam_type'] = None
             context['merit_map'] = {}
             return context
 
         context['exam_type'] = getattr(self, 'exam_type', None)
 
-        students = self.get_queryset()
-        student_scores = []
+        try:
+            students = self.get_queryset()
+            student_scores = []
 
-        for student in students:
-            serializer = FinalResultSerializer(student, context={'exam_type': getattr(self, 'exam_type', None)})
-            gpa = serializer.get_gpa(student)
-            total_marks = serializer.get_total_marks(student)
-            roll = student.roll_int or 999999
+            for student in students:
+                serializer = FinalResultSerializer(student, context={'exam_type': getattr(self, 'exam_type', None)})
+                gpa = serializer.get_gpa(student)
+                total_marks = serializer.get_total_marks(student)
+                roll = getattr(student, 'roll_int', 999999) or 999999
 
-            student_scores.append({
-                'student_id': student.id,
-                'gpa': gpa,
-                'total_marks': total_marks,
-                'roll': roll
-            })
+                student_scores.append({
+                    'student_id': student.id,
+                    'gpa': gpa,
+                    'total_marks': total_marks,
+                    'roll': roll
+                })
 
-        sorted_students = sorted(
-            student_scores,
-            key=lambda x: (-x['gpa'], -x['total_marks'], x['roll'])
-        )
+            sorted_students = sorted(
+                student_scores,
+                key=lambda x: (-x['gpa'], -x['total_marks'], x['roll'])
+            )
 
-        merit_map = {item['student_id']: idx + 1 for idx, item in enumerate(sorted_students)}
-        context['merit_map'] = merit_map
+            merit_map = {item['student_id']: idx + 1 for idx, item in enumerate(sorted_students)}
+            context['merit_map'] = merit_map
+        except Exception:
+            context['merit_map'] = {}
 
         return context
