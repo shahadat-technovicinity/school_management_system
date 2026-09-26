@@ -10,7 +10,6 @@ class SubjectPassMarkConfig(models.Model):
     subject = models.ForeignKey(Subject_Name, on_delete=models.CASCADE, related_name="pass_configs")
     exam_type = models.ForeignKey(ExamName, on_delete=models.CASCADE, related_name="pass_configs")
 
-    # Full & Pass Marks Criteria
     writing_full_mark = models.FloatField(default=0)
     writing_pass_mark = models.FloatField(default=0)
 
@@ -20,7 +19,6 @@ class SubjectPassMarkConfig(models.Model):
     practical_full_mark = models.FloatField(default=0)
     practical_pass_mark = models.FloatField(default=0)
 
-    # Total auto calculated in backend
     total_full_mark = models.FloatField(default=0, editable=False)
     is_active = models.BooleanField(default=True)
 
@@ -28,7 +26,6 @@ class SubjectPassMarkConfig(models.Model):
         unique_together = ('academic_class', 'subject', 'exam_type')
 
     def save(self, *args, **kwargs):
-        # Total Full Mark calculation in backend
         self.total_full_mark = (self.writing_full_mark or 0) + (self.mcq_full_mark or 0) + (self.practical_full_mark or 0)
         super().save(*args, **kwargs)
 
@@ -37,10 +34,10 @@ class SubjectPassMarkConfig(models.Model):
 
 
 class GradeScale(models.Model):
-    letter_grade = models.CharField(max_length=5, unique=True)  # A+, A, A-, B...
-    grade_point = models.FloatField()                          # 5.0, 4.0, 3.5...
-    min_mark = models.FloatField()                             # Percentage: 80.0
-    max_mark = models.FloatField()                             # Percentage: 100.0
+    letter_grade = models.CharField(max_length=5, unique=True)
+    grade_point = models.FloatField()
+    min_mark = models.FloatField()
+    max_mark = models.FloatField()
 
     class Meta:
         ordering = ['-grade_point']
@@ -64,7 +61,6 @@ class ExamMark(models.Model):
     mcq = models.FloatField(default=0)
     practical = models.FloatField(default=0)
 
-    # Auto Calculated Fields
     total = models.FloatField(default=0, editable=False)
     grade_point = models.FloatField(default=0.0, editable=False)
     letter_grade = models.CharField(max_length=5, default="F", editable=False)
@@ -77,10 +73,8 @@ class ExamMark(models.Model):
         unique_together = ('student', 'subject', 'exam_type')
 
     def save(self, *args, **kwargs):
-        # 1. Total Obtained Mark calculation
         self.total = (self.writing or 0) + (self.mcq or 0) + (self.practical or 0)
 
-        # 2. Config check
         config = SubjectPassMarkConfig.objects.filter(
             academic_class=self.student.class_name_static,
             subject=self.subject,
@@ -98,7 +92,6 @@ class ExamMark(models.Model):
         else:
             self.is_passed = self.total >= (subject_full_mark * 0.33)
 
-        # 3. Grade Scale Matching via Percentage (%)
         if self.is_passed:
             percentage = (self.total / subject_full_mark) * 100.0
             grade_obj = GradeScale.objects.filter(
