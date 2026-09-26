@@ -7,6 +7,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework import generics
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 
 from .models import TeacherAndStaffProfile
 from .serializers import (
@@ -208,10 +209,14 @@ class TeacherAndStaffViewSet(viewsets.ModelViewSet):
         # Optional filter by query param
         employee_type = request.query_params.get("employee_type")
         if employee_type:
-            qs = qs.filter(employee_type=employee_type)
+            # Flexible filtering for head teacher variants
+            if employee_type in ["head_teacher", "headmaster", "head_master"]:
+                qs = qs.filter(employee_type__in=["head_teacher", "headmaster", "head_master"])
+            else:
+                qs = qs.filter(employee_type=employee_type)
 
         total = qs.count()
-        head_teachers = qs.filter(employee_type="head_teacher").count()
+        head_teachers = qs.filter(employee_type__in=["head_teacher", "headmaster", "head_master"]).count()
         teachers = qs.filter(employee_type="teacher").count()
         staff = qs.filter(employee_type="staff").count()
         active = qs.filter(status="active").count()
@@ -231,7 +236,7 @@ class TeacherAndStaffViewSet(viewsets.ModelViewSet):
 
 class EmployeeUserDropdownView(generics.ListAPIView):
     """
-    Simple Dropdown/List view to populate User options with role 'Teacher', 'Staff' or 'Head Teacher'
+    Simple Dropdown/List view to populate User options with role 'Teacher', 'Staff' or 'Head Teacher' / 'Head master'
     who do not have a linked profile yet.
     """
     serializer_class = EmployeeUserDropdownSerializer
@@ -256,8 +261,8 @@ class EmployeeUserDropdownView(generics.ListAPIView):
             return User.objects.none()
             
         allowed_roles = [
-            'Teacher', 'Staff', 'Head Teacher', 'Headmaster',
-            'teacher', 'staff', 'head_teacher', 'headmaster', 'head teacher'
+            'Teacher', 'Staff', 'Head Teacher', 'Headmaster', 'Head master',
+            'teacher', 'staff', 'head_teacher', 'headmaster', 'head_master', 'head teacher'
         ]
 
         queryset = User.objects.filter(
@@ -267,6 +272,16 @@ class EmployeeUserDropdownView(generics.ListAPIView):
 
         role_param = self.request.query_params.get("role")
         if role_param:
-            queryset = queryset.filter(role__name__iexact=role_param.strip())
+            role_clean = role_param.strip().lower()
+            
+            # Map head teacher variants to match 'Head master', 'Head Teacher', etc.
+            if role_clean in ['head_teacher', 'headmaster', 'head_master', 'head teacher']:
+                head_teacher_roles = [
+                    'Head Teacher', 'Headmaster', 'Head master',
+                    'head_teacher', 'headmaster', 'head_master', 'head teacher'
+                ]
+                queryset = queryset.filter(role__name__in=head_teacher_roles)
+            else:
+                queryset = queryset.filter(role__name__iexact=role_clean)
 
         return queryset
