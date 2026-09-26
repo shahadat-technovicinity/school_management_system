@@ -151,13 +151,18 @@ class TeacherAndStaffCreateSerializer(serializers.ModelSerializer):
         ref_name = "TeacherStaffCreates"
 
     def validate_user_id(self, user):
-        # 1. Role validation (Head Teacher, Teacher or Staff check)
+        # 1. Role validation (Head Teacher, Head Master, Teacher or Staff check)
         user_role = getattr(user.role, 'name', '') if user.role else ''
-        allowed_roles = ['teacher', 'staff', 'head_teacher', 'headmaster', 'head teacher']
+        
+        # Added 'head_master' and 'head master' variants to allowed roles
+        allowed_roles = [
+            'teacher', 'staff', 'head_teacher', 'headmaster', 
+            'head teacher', 'head_master', 'head master'
+        ]
 
         if user_role.lower() not in allowed_roles:
             raise serializers.ValidationError(
-                "Selected user must have role 'Head Teacher', 'Teacher', or 'Staff'."
+                "Selected user must have role 'Head Teacher', 'Head Master', 'Teacher', or 'Staff'."
             )
 
         # 2. Existing profile check
