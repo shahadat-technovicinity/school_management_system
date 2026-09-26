@@ -1,3 +1,4 @@
+import json
 from rest_framework import serializers
 from django.utils import timezone
 from .models import LeaveType, LeaveBalance, TeacherLeave
@@ -314,13 +315,15 @@ class LeaveApprovalSerializer(serializers.Serializer):
 class TeacherLeavePDFFormatSerializer(serializers.ModelSerializer):
     """
     Serializer to map leave structure for official PDF document printing.
+    Fixes designation lookup & data precision issue dynamically.
     """
     applied_date_display = serializers.SerializerMethodField()
     teacher_name = serializers.CharField(source="teacher.full_name", read_only=True)
-    designation = serializers.CharField(source="teacher.designation", read_only=True)
-    leave_type_name = serializers.CharField(source="leave_type.name", read_only=True)
+    designation = serializers.SerializerMethodField()
+    leave_type_name = serializers.CharField(source="leave_type.name", read_only=True, default="")
     from_date_display = serializers.SerializerMethodField()
     to_date_display = serializers.SerializerMethodField()
+    no_of_days = serializers.SerializerMethodField()
 
     class Meta:
         model = TeacherLeave
@@ -346,6 +349,23 @@ class TeacherLeavePDFFormatSerializer(serializers.ModelSerializer):
 
     def get_to_date_display(self, obj):
         return obj.to_date.strftime("%d.%m.%Y") if getattr(obj, "to_date", None) else ""
+
+    def get_designation(self, obj):
+        """Dynamic designation lookup ensuring exact user profile mapping."""
+        if hasattr(obj, "teacher") and obj.teacher:
+            designation = getattr(obj.teacher, "designation", None)
+            if designation:
+                return designation
+            if hasattr(obj.teacher, "user") and getattr(obj.teacher.user, "role", None):
+                return getattr(obj.teacher.user.role, "name", "N/A")
+        return "N/A"
+
+    def get_no_of_days(self, obj):
+        """Format no_of_days accurately."""
+        if obj.no_of_days is not None:
+            val = float(obj.no_of_days)
+            return str(int(val)) if val.is_integer() else str(val)
+        return "0"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
