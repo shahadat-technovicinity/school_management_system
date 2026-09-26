@@ -1,4 +1,5 @@
 import json
+from django.db.models import Sum
 from rest_framework import serializers
 from django.utils import timezone
 from .models import LeaveType, LeaveBalance, TeacherLeave
@@ -315,15 +316,15 @@ class LeaveApprovalSerializer(serializers.Serializer):
 class TeacherLeavePDFFormatSerializer(serializers.ModelSerializer):
     """
     Serializer to map leave structure for official PDF document printing.
-    Fixes designation lookup & data precision issue dynamically.
     """
     applied_date_display = serializers.SerializerMethodField()
-    teacher_name = serializers.CharField(source="teacher.full_name", read_only=True)
-    designation = serializers.SerializerMethodField()
+    teacher_name = serializers.CharField(source="teacher.full_name", read_only=True, default="")
+    designation = serializers.CharField(source="teacher.designation", read_only=True, default="")
     leave_type_name = serializers.CharField(source="leave_type.name", read_only=True, default="")
     from_date_display = serializers.SerializerMethodField()
     to_date_display = serializers.SerializerMethodField()
     no_of_days = serializers.SerializerMethodField()
+    total_previous_leave_days = serializers.SerializerMethodField()
 
     class Meta:
         model = TeacherLeave
@@ -336,6 +337,7 @@ class TeacherLeavePDFFormatSerializer(serializers.ModelSerializer):
             "from_date_display",
             "to_date_display",
             "no_of_days",
+            "total_previous_leave_days",
             "reason",
             "status",
             "admin_remarks",
@@ -350,22 +352,32 @@ class TeacherLeavePDFFormatSerializer(serializers.ModelSerializer):
     def get_to_date_display(self, obj):
         return obj.to_date.strftime("%d.%m.%Y") if getattr(obj, "to_date", None) else ""
 
-    def get_designation(self, obj):
-        """Dynamic designation lookup ensuring exact user profile mapping."""
-        if hasattr(obj, "teacher") and obj.teacher:
-            designation = getattr(obj.teacher, "designation", None)
-            if designation:
-                return designation
-            if hasattr(obj.teacher, "user") and getattr(obj.teacher.user, "role", None):
-                return getattr(obj.teacher.user.role, "name", "N/A")
-        return "N/A"
-
     def get_no_of_days(self, obj):
-        """Format no_of_days accurately."""
         if obj.no_of_days is not None:
             val = float(obj.no_of_days)
             return str(int(val)) if val.is_integer() else str(val)
         return "0"
+
+    def get_total_previous_leave_days(self, obj):
+        """
+        Calculates total approved leave days taken by this teacher
+        prior to this leave application.
+        """
+        if not getattr(obj, "teacher", None):
+            return "0"
+
+        previous_leaves = TeacherLeave.objects.filter(
+            teacher=obj.teacher,
+            status="approved",
+        ).exclude(id=obj.id)
+
+        if getattr(obj, "applied_on", None):
+            previous_leaves = previous_leaves.filter(applied_on__lt=obj.applied_on)
+
+        total_days = previous_leaves.aggregate(total=Sum("no_of_days"))["total"] or 0
+        
+        val = float(total_days)
+        return str(int(val)) if val.is_integer() else str(val)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
