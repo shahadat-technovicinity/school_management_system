@@ -1,11 +1,22 @@
 from rest_framework import serializers
 from apps.students.models import Student
 from academic_create_subject.models import Subject_Name
-from .models import ExamMark
 from exam_mm_exam_setup.models import ExamName
+from .models import ExamMark, SubjectPassMarkConfig, GradeScale
 
 
-# --- 1. Student Filter Serializer ---
+class SubjectPassMarkConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubjectPassMarkConfig
+        fields = '__all__'
+
+
+class GradeScaleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GradeScale
+        fields = '__all__'
+
+
 class StudentInfoFilterSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
 
@@ -14,35 +25,24 @@ class StudentInfoFilterSerializer(serializers.ModelSerializer):
         fields = ['id', 'roll_number', 'student_name', 'class_name_static', 'section_static']
 
     def get_student_name(self, obj):
-        if hasattr(obj, 'full_name') and obj.full_name:
+        if getattr(obj, 'full_name', None):
             return obj.full_name
-        if hasattr(obj, 'name') and obj.name:
+        if getattr(obj, 'name', None):
             return obj.name
-        
-        first_name = getattr(obj, 'first_name', '')
-        last_name = getattr(obj, 'last_name', '')
-        return f"{first_name} {last_name}".strip() or "N/A"
+        return f"{getattr(obj, 'first_name', '')} {getattr(obj, 'last_name', '')}".strip() or "N/A"
 
 
-# --- 2. Student Mark Input Serializer ---
 class StudentMarkInputSerializer(serializers.Serializer):
     student_id = serializers.IntegerField()
-    writing = serializers.FloatField(required=False, allow_null=True, default=0)
-    practical = serializers.FloatField(required=False, allow_null=True, default=0)
-    mcq = serializers.FloatField(required=False, allow_null=True, default=0)
+    writing = serializers.FloatField(required=False, default=0)
+    mcq = serializers.FloatField(required=False, default=0)
+    practical = serializers.FloatField(required=False, default=0)
 
 
-# --- 3. Mark Submission Serializer ---
 class MarkSubmissionSerializer(serializers.Serializer):
     subject_id = serializers.IntegerField()
     exam_type = serializers.PrimaryKeyRelatedField(queryset=ExamName.objects.all())
     marks_data = StudentMarkInputSerializer(many=True, allow_empty=False)
-
-    def calculate_total(self, data):
-        writing = data.get('writing') or 0
-        practical = data.get('practical') or 0
-        mcq = data.get('mcq') or 0
-        return writing + practical + mcq
 
     def create(self, validated_data):
         subject_id = validated_data.pop('subject_id')
@@ -62,23 +62,20 @@ class MarkSubmissionSerializer(serializers.Serializer):
             except Student.DoesNotExist:
                 raise serializers.ValidationError({"error": f"Student with ID {student_id} not found."})
 
-            total_marks = self.calculate_total(mark_data)
-
             mark_obj, created = ExamMark.objects.update_or_create(
                 student=student_obj,
                 subject=subject_obj,
                 exam_type=exam_type,
                 defaults={
                     'writing': mark_data.get('writing', 0),
-                    'practical': mark_data.get('practical', 0),
                     'mcq': mark_data.get('mcq', 0),
-                    'total': total_marks,
+                    'practical': mark_data.get('practical', 0),
                     'status': 'pending'
                 }
             )
             score_objects.append(mark_obj)
 
-        return {'message': 'Marks successfully processed.', 'count': len(score_objects)}
+        return {'message': 'Marks successfully submitted for admin approval.', 'count': len(score_objects)}
 
     def to_representation(self, instance):
         return {
@@ -88,103 +85,117 @@ class MarkSubmissionSerializer(serializers.Serializer):
         }
 
 
-# --- 4. Marks Serializer ---
 class MarksSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)
     student_roll_number = serializers.CharField(source='student.roll_number', read_only=True)
-    student_class_name = serializers.CharField(source='student.class_name', read_only=True)
-    student_section = serializers.CharField(source='student.section', read_only=True)
     subject_name = serializers.CharField(source='subject.name', read_only=True)
 
     class Meta:
         model = ExamMark
         fields = [
             'id', 'student', 'student_name', 'student_roll_number',
-            'student_class_name', 'student_section', 'subject', 'subject_name',
-            'exam_type', 'writing', 'practical', 'mcq', 'total', 'status'
+            'subject', 'subject_name', 'exam_type', 'writing', 'mcq', 'practical',
+            'total', 'grade_point', 'letter_grade', 'is_passed', 'status'
         ]
-        read_only_fields = ['total', 'status']
+        read_only_fields = ['total', 'grade_point', 'letter_grade', 'is_passed', 'status']
 
 
-# --- 5. Admin Status Update Serializer ---
 class MarkStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExamMark
         fields = ['status']
 
 
-# --- 6. Final Result Serializer (500 Error Fixed) ---
 class FinalResultSerializer(serializers.ModelSerializer):
     student_roll_number = serializers.CharField(source='roll_number', read_only=True)
     student_name = serializers.SerializerMethodField()
-    all_subjects_marks = serializers.SerializerMethodField()
+    subject_marks = serializers.SerializerMethodField()
     grand_total = serializers.SerializerMethodField()
-    percentage = serializers.SerializerMethodField()
-    pass_fail_status = serializers.SerializerMethodField()
+    gpa = serializers.SerializerMethodField()
+    final_grade = serializers.SerializerMethodField()
+    result_status = serializers.SerializerMethodField()
+    merit_position = serializers.SerializerMethodField()
 
     class Meta:
         model = Student
-        fields = ('student_roll_number', 'student_name', 'all_subjects_marks',
-                  'grand_total', 'percentage', 'pass_fail_status')
+        fields = [
+            'id', 'student_roll_number', 'student_name', 'subject_marks',
+            'grand_total', 'gpa', 'final_grade', 'result_status', 'merit_position'
+        ]
 
     def get_student_name(self, obj):
-        if hasattr(obj, 'full_name') and obj.full_name:
+        if getattr(obj, 'full_name', None):
             return obj.full_name
-        if hasattr(obj, 'name') and obj.name:
-            return obj.name
         return f"{getattr(obj, 'first_name', '')} {getattr(obj, 'last_name', '')}".strip() or "N/A"
 
-    def get_filtered_marks(self, student):
+    def get_approved_marks(self, student):
         exam_type = self.context.get('exam_type')
-        marks_records = ExamMark.objects.filter(student=student, status='approved')
+        queryset = ExamMark.objects.filter(student=student, status='approved')
         if exam_type:
-            marks_records = marks_records.filter(exam_type=exam_type)
-        return marks_records
+            queryset = queryset.filter(exam_type=exam_type)
+        return queryset
 
-    def get_all_subjects_marks(self, student):
-        marks_records = self.get_filtered_marks(student)
-        subject_data = {}
-        
-        for mark in marks_records:
-            subject_full_mark = getattr(mark.subject, 'full_mark', 100) or 100
-            pass_mark = (subject_full_mark * 0.33)
-
-            is_pass = mark.total is not None and mark.total >= pass_mark
-            
-            subject_data[mark.subject.name] = {
-                'total_score': mark.total,
-                'status': 'Pass' if is_pass else 'Fail'
-            }
-        return subject_data
+    def get_subject_marks(self, student):
+        marks = self.get_approved_marks(student)
+        return {
+            m.subject.name: {
+                'writing': m.writing,
+                'mcq': m.mcq,
+                'practical': m.practical,
+                'total': m.total,
+                'grade_point': m.grade_point,
+                'letter_grade': m.letter_grade,
+                'is_passed': m.is_passed
+            } for m in marks
+        }
 
     def get_grand_total(self, student):
-        marks_records = self.get_filtered_marks(student)
-        return sum(mark.total for mark in marks_records if mark.total is not None)
+        return sum(m.total for m in self.get_approved_marks(student))
 
-    def get_percentage(self, student):
-        marks_records = self.get_filtered_marks(student)
-        if not marks_records.exists():
-            return 0
-            
-        total_possible_marks = sum(
-            getattr(mark.subject, 'full_mark', 100) or 100 for mark in marks_records
-        )
+    def _calculate_gpa_details(self, student):
+        marks = self.get_approved_marks(student)
+        if not marks.exists():
+            return {"gpa": 0.0, "grade": "F", "status": "N/A"}
 
-        if total_possible_marks == 0:
-            return 0
+        has_failed = any(not m.is_passed for m in marks)
+        if has_failed:
+            return {"gpa": 0.0, "grade": "F", "status": "Fail"}
 
-        grand_total = self.get_grand_total(student)
-        return round((grand_total / total_possible_marks) * 100, 2)
+        # Optional/4th subject separation logic
+        compulsory_marks = []
+        optional_mark = None
 
-    def get_pass_fail_status(self, student):
-        marks_records = self.get_filtered_marks(student)
-        if not marks_records.exists():
-            return "N/A"
-            
-        for mark in marks_records:
-            subject_full_mark = getattr(mark.subject, 'full_mark', 100) or 100
-            pass_mark = (subject_full_mark * 0.33)
-            
-            if mark.total is None or mark.total < pass_mark:
-                return "Fail"
-        return "Pass"
+        for m in marks:
+            if getattr(m.subject, 'is_optional', False):
+                optional_mark = m
+            else:
+                compulsory_marks.append(m)
+
+        if not compulsory_marks:
+            return {"gpa": 0.0, "grade": "F", "status": "Fail"}
+
+        total_gp = sum(m.grade_point for m in compulsory_marks)
+
+        # 4th subject bonus calculation (GP - 2.00)
+        if optional_mark and optional_mark.grade_point > 2.0:
+            total_gp += (optional_mark.grade_point - 2.0)
+
+        calculated_gpa = round(min(5.00, total_gp / len(compulsory_marks)), 2)
+
+        grade_obj = GradeScale.objects.filter(grade_point__lte=calculated_gpa).order_by('-grade_point').first()
+        final_grade = grade_obj.letter_grade if grade_obj else "D"
+
+        return {"gpa": calculated_gpa, "grade": final_grade, "status": "Pass"}
+
+    def get_gpa(self, student):
+        return self._calculate_gpa_details(student)["gpa"]
+
+    def get_final_grade(self, student):
+        return self._calculate_gpa_details(student)["grade"]
+
+    def get_result_status(self, student):
+        return self._calculate_gpa_details(student)["status"]
+
+    def get_merit_position(self, student):
+        merit_dict = self.context.get('merit_map', {})
+        return merit_dict.get(student.id, "N/A")

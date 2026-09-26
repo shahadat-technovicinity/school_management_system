@@ -9,13 +9,15 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from apps.students.models import Student
-from .models import ExamMark
+from .models import ExamMark, SubjectPassMarkConfig, GradeScale
 from .serializers import (
     StudentInfoFilterSerializer,
     MarkSubmissionSerializer,
     MarksSerializer,
     MarkStatusUpdateSerializer,
-    FinalResultSerializer
+    FinalResultSerializer,
+    SubjectPassMarkConfigSerializer,
+    GradeScaleSerializer
 )
 
 
@@ -23,6 +25,19 @@ from .serializers import (
 class StandardLimitOffsetPagination(LimitOffsetPagination):
     default_limit = 100
     max_limit = 500
+
+
+# --- Admin Configuration Views (NEW) ---
+class SubjectPassMarkConfigListCreateAPIView(generics.ListCreateAPIView):
+    queryset = SubjectPassMarkConfig.objects.all()
+    serializer_class = SubjectPassMarkConfigSerializer
+    permission_classes = [AllowAny]
+
+
+class GradeScaleListCreateAPIView(generics.ListCreateAPIView):
+    queryset = GradeScale.objects.all()
+    serializer_class = GradeScaleSerializer
+    permission_classes = [AllowAny]
 
 
 # --- 1. Student Filter View ---
@@ -123,7 +138,7 @@ class AdminMarkStatusUpdateAPIView(generics.UpdateAPIView):
         serializer.save(status=new_status)
 
 
-# --- 7. Final Result Sheet View ---
+# --- 7. Final Result Sheet & Merit List View ---
 class FinalResultView(generics.ListAPIView):
     serializer_class = FinalResultSerializer
     permission_classes = [AllowAny]
@@ -148,19 +163,46 @@ class FinalResultView(generics.ListAPIView):
         queryset = Student.objects.annotate(
             roll_int=Cast('roll_number', output_field=IntegerField())
         ).order_by('roll_int')
-        
+
         class_name = self.request.query_params.get('class_name')
         section = self.request.query_params.get('section')
-        
+
         if class_name:
             queryset = queryset.filter(class_name_static_id=class_name)
         if section:
             queryset = queryset.filter(section_static_id=section)
-        
+
         self.exam_type = self.request.query_params.get('exam_type')
         return queryset
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['exam_type'] = getattr(self, 'exam_type', None)
+
+        # Build Merit Ranking with Tie-Breaking Logic
+        students = self.get_queryset()
+        student_scores = []
+
+        for student in students:
+            serializer = FinalResultSerializer(student, context={'exam_type': getattr(self, 'exam_type', None)})
+            gpa = serializer.get_gpa(student)
+            grand_total = serializer.get_grand_total(student)
+            roll = student.roll_int or 999999
+
+            student_scores.append({
+                'student_id': student.id,
+                'gpa': gpa,
+                'grand_total': grand_total,
+                'roll': roll
+            })
+
+        # Tie-Breaking Sorting: 1. GPA (DESC), 2. Grand Total (DESC), 3. Roll Number (ASC)
+        sorted_students = sorted(
+            student_scores,
+            key=lambda x: (-x['gpa'], -x['grand_total'], x['roll'])
+        )
+
+        merit_map = {item['student_id']: idx + 1 for idx, item in enumerate(sorted_students)}
+        context['merit_map'] = merit_map
+
         return context
