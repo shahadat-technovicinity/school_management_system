@@ -316,10 +316,11 @@ class LeaveApprovalSerializer(serializers.Serializer):
 class TeacherLeavePDFFormatSerializer(serializers.ModelSerializer):
     """
     Serializer to map leave structure for official PDF document printing.
+    Ensures name and designation appear correctly for Teachers, Staff, and Headmasters.
     """
     applied_date_display = serializers.SerializerMethodField()
-    teacher_name = serializers.CharField(source="teacher.full_name", read_only=True, default="")
-    designation = serializers.CharField(source="teacher.designation", read_only=True, default="")
+    teacher_name = serializers.SerializerMethodField()
+    designation = serializers.SerializerMethodField()
     leave_type_name = serializers.CharField(source="leave_type.name", read_only=True, default="")
     from_date_display = serializers.SerializerMethodField()
     to_date_display = serializers.SerializerMethodField()
@@ -352,6 +353,56 @@ class TeacherLeavePDFFormatSerializer(serializers.ModelSerializer):
     def get_to_date_display(self, obj):
         return obj.to_date.strftime("%d.%m.%Y") if getattr(obj, "to_date", None) else ""
 
+    def get_teacher_name(self, obj):
+        """
+        Dynamically extracts full name regardless of role (Teacher, Staff, Headmaster).
+        Checks profile first, then falls back to linked User model fields.
+        """
+        if not getattr(obj, "teacher", None):
+            return "N/A"
+
+        profile = obj.teacher
+
+        # 1. Check profile direct name fields
+        if getattr(profile, "full_name", None):
+            return str(profile.full_name)
+        if getattr(profile, "name", None):
+            return str(profile.name)
+
+        # 2. Check linked User object name fields
+        if hasattr(profile, "user") and profile.user:
+            user = profile.user
+            if getattr(user, "full_name", None):
+                return str(user.full_name)
+            if getattr(user, "name", None):
+                return str(user.name)
+            if getattr(user, "first_name", None):
+                last_name = getattr(user, "last_name", "")
+                return f"{user.first_name} {last_name}".strip()
+
+        return str(profile)
+
+    def get_designation(self, obj):
+        """
+        Extracts designation correctly for Teachers, Staff, and Headmasters.
+        """
+        if not getattr(obj, "teacher", None):
+            return "N/A"
+
+        profile = obj.teacher
+
+        if getattr(profile, "designation", None):
+            return str(profile.designation)
+        if getattr(profile, "designation_title", None):
+            return str(profile.designation_title)
+
+        if hasattr(profile, "user") and profile.user:
+            user = profile.user
+            if hasattr(user, "role") and user.role:
+                return getattr(user.role, "name", "N/A")
+
+        return "N/A"
+
     def get_no_of_days(self, obj):
         if obj.no_of_days is not None:
             val = float(obj.no_of_days)
@@ -360,7 +411,7 @@ class TeacherLeavePDFFormatSerializer(serializers.ModelSerializer):
 
     def get_total_previous_leave_days(self, obj):
         """
-        Calculates total approved leave days taken by this teacher
+        Calculates total approved leave days taken by this person
         prior to this leave application.
         """
         if not getattr(obj, "teacher", None):
