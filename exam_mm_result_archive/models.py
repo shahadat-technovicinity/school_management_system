@@ -5,19 +5,10 @@ from academic_create_subject.models import Subject_Name
 from exam_mm_exam_setup.models import ExamName
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 1. Subject Pass & Full Mark Configuration (Admin Setup)
-# ─────────────────────────────────────────────────────────────────────────────
 class SubjectPassMarkConfig(models.Model):
-    academic_class = models.ForeignKey(
-        AcademicClass, on_delete=models.CASCADE, related_name="pass_configs"
-    )
-    subject = models.ForeignKey(
-        Subject_Name, on_delete=models.CASCADE, related_name="pass_configs"
-    )
-    exam_type = models.ForeignKey(
-        ExamName, on_delete=models.CASCADE, related_name="pass_configs"
-    )
+    academic_class = models.ForeignKey(AcademicClass, on_delete=models.CASCADE, related_name="pass_configs")
+    subject = models.ForeignKey(Subject_Name, on_delete=models.CASCADE, related_name="pass_configs")
+    exam_type = models.ForeignKey(ExamName, on_delete=models.CASCADE, related_name="pass_configs")
 
     # Full & Pass Marks Criteria
     writing_full_mark = models.FloatField(default=0)
@@ -29,48 +20,35 @@ class SubjectPassMarkConfig(models.Model):
     practical_full_mark = models.FloatField(default=0)
     practical_pass_mark = models.FloatField(default=0)
 
-    total_full_mark = models.FloatField(default=100, editable=False)
+    # Total auto calculated in backend
+    total_full_mark = models.FloatField(default=0, editable=False)
     is_active = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ('academic_class', 'subject', 'exam_type')
-        verbose_name = "Subject Pass Mark Config"
-        verbose_name_plural = "Subject Pass Mark Configs"
 
     def save(self, *args, **kwargs):
-        # Auto calculate total full mark
-        self.total_full_mark = (
-            (self.writing_full_mark or 0)
-            + (self.mcq_full_mark or 0)
-            + (self.practical_full_mark or 0)
-        )
+        # Total Full Mark calculation in backend
+        self.total_full_mark = (self.writing_full_mark or 0) + (self.mcq_full_mark or 0) + (self.practical_full_mark or 0)
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.academic_class} - {self.subject} ({self.exam_type})"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2. Grade Scale Configuration (GPA Range Setup)
-# ─────────────────────────────────────────────────────────────────────────────
 class GradeScale(models.Model):
-    letter_grade = models.CharField(max_length=5, unique=True)  # A+, A, A-, B, C, D, F
-    grade_point = models.FloatField()                          # 5.0, 4.0, 3.5, 3.0, 2.0, 1.0, 0.0
-    min_mark = models.FloatField()                             # e.g., 80.0
-    max_mark = models.FloatField()                             # e.g., 100.0
+    letter_grade = models.CharField(max_length=5, unique=True)  # A+, A, A-, B...
+    grade_point = models.FloatField()                          # 5.0, 4.0, 3.5...
+    min_mark = models.FloatField()                             # Percentage: 80.0
+    max_mark = models.FloatField()                             # Percentage: 100.0
 
     class Meta:
         ordering = ['-grade_point']
-        verbose_name = "Grade Scale"
-        verbose_name_plural = "Grade Scales"
 
     def __str__(self):
-        return f"{self.letter_grade} ({self.grade_point}) [{self.min_mark}-{self.max_mark}]"
+        return f"{self.letter_grade} ({self.grade_point}) [{self.min_mark}%-{self.max_mark}%]"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. Main Exam Mark Entry Model
-# ─────────────────────────────────────────────────────────────────────────────
 class ExamMark(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -78,70 +56,54 @@ class ExamMark(models.Model):
         ('rejected', 'Rejected'),
     ]
 
-    student = models.ForeignKey(
-        Student, on_delete=models.CASCADE, related_name='exam_marks'
-    )
-    subject = models.ForeignKey(
-        Subject_Name, on_delete=models.CASCADE, related_name="resultarchive"
-    )
-    exam_type = models.ForeignKey(
-        ExamName, on_delete=models.CASCADE, related_name="exam_marks"
-    )
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='exam_marks')
+    subject = models.ForeignKey(Subject_Name, on_delete=models.CASCADE, related_name="resultarchive")
+    exam_type = models.ForeignKey(ExamName, on_delete=models.CASCADE, related_name="exam_marks")
 
     writing = models.FloatField(default=0)
     mcq = models.FloatField(default=0)
     practical = models.FloatField(default=0)
 
+    # Auto Calculated Fields
     total = models.FloatField(default=0, editable=False)
     grade_point = models.FloatField(default=0.0, editable=False)
     letter_grade = models.CharField(max_length=5, default="F", editable=False)
     is_passed = models.BooleanField(default=False, editable=False)
 
-    status = models.CharField(
-        max_length=10, choices=STATUS_CHOICES, default='pending'
-    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('student', 'subject', 'exam_type')
-        verbose_name = "Exam Mark"
-        verbose_name_plural = "Exam Marks"
 
     def save(self, *args, **kwargs):
-        # Calculate Total Obtained Mark
+        # 1. Total Obtained Mark calculation
         self.total = (self.writing or 0) + (self.mcq or 0) + (self.practical or 0)
 
-        # Auto Calculate Pass/Fail status from SubjectPassMarkConfig if exists
+        # 2. Config check
         config = SubjectPassMarkConfig.objects.filter(
             academic_class=self.student.class_name_static,
             subject=self.subject,
             exam_type=self.exam_type
         ).first()
 
+        subject_full_mark = config.total_full_mark if (config and config.total_full_mark > 0) else 100.0
+
         if config:
-            pass_writing = (
-                self.writing >= config.writing_pass_mark
-                if config.writing_full_mark > 0 else True
-            )
-            pass_mcq = (
-                self.mcq >= config.mcq_pass_mark
-                if config.mcq_full_mark > 0 else True
-            )
-            pass_practical = (
-                self.practical >= config.practical_pass_mark
-                if config.practical_full_mark > 0 else True
-            )
+            pass_writing = self.writing >= config.writing_pass_mark if config.writing_full_mark > 0 else True
+            pass_mcq = self.mcq >= config.mcq_pass_mark if config.mcq_full_mark > 0 else True
+            pass_practical = self.practical >= config.practical_pass_mark if config.practical_full_mark > 0 else True
 
             self.is_passed = pass_writing and pass_mcq and pass_practical
         else:
-            # Default pass mark threshold if config is missing
-            self.is_passed = self.total >= 33.0
+            self.is_passed = self.total >= (subject_full_mark * 0.33)
 
-        # Calculate Letter Grade & Grade Point from GradeScale
+        # 3. Grade Scale Matching via Percentage (%)
         if self.is_passed:
+            percentage = (self.total / subject_full_mark) * 100.0
             grade_obj = GradeScale.objects.filter(
-                min_mark__lte=self.total,
-                max_mark__gte=self.total
+                min_mark__lte=percentage,
+                max_mark__gte=percentage
             ).first()
 
             if grade_obj:
