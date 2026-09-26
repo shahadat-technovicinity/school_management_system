@@ -21,26 +21,47 @@ from .serializers import (
 )
 
 
-# --- Pagination Setup ---
 class StandardLimitOffsetPagination(LimitOffsetPagination):
     default_limit = 100
     max_limit = 500
 
 
-# --- Admin Configuration Views (NEW) ---
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. Admin Pass Mark & Grade Configuration APIs (NEW)
+# ─────────────────────────────────────────────────────────────────────────────
+
 class SubjectPassMarkConfigListCreateAPIView(generics.ListCreateAPIView):
+    """Admin configuration for subject-wise pass & full marks."""
+    queryset = SubjectPassMarkConfig.objects.all()
+    serializer_class = SubjectPassMarkConfigSerializer
+    permission_classes = [AllowAny]
+
+
+class SubjectPassMarkConfigDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """Admin update/delete for subject-wise pass & full marks."""
     queryset = SubjectPassMarkConfig.objects.all()
     serializer_class = SubjectPassMarkConfigSerializer
     permission_classes = [AllowAny]
 
 
 class GradeScaleListCreateAPIView(generics.ListCreateAPIView):
+    """Admin configuration for GPA & Letter Grade ranges."""
     queryset = GradeScale.objects.all()
     serializer_class = GradeScaleSerializer
     permission_classes = [AllowAny]
 
 
-# --- 1. Student Filter View ---
+class GradeScaleDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """Admin update/delete for Grade Scale."""
+    queryset = GradeScale.objects.all()
+    serializer_class = GradeScaleSerializer
+    permission_classes = [AllowAny]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. Teacher Student Filter View
+# ─────────────────────────────────────────────────────────────────────────────
+
 class StudentFilterView(generics.ListAPIView):
     serializer_class = StudentInfoFilterSerializer
     permission_classes = [AllowAny]
@@ -76,8 +97,12 @@ class StudentFilterView(generics.ListAPIView):
         return queryset
 
 
-# --- 2. Main Marks List (STRICTLY PENDING) & Create ---
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. Bulk Marks Entry (Teacher) & Marks List / Single Edit
+# ─────────────────────────────────────────────────────────────────────────────
+
 class MarksListCreateAPIView(generics.ListCreateAPIView):
+    """List pending marks or bulk create student marks."""
     permission_classes = [AllowAny]
 
     def get_serializer_class(self):
@@ -96,14 +121,17 @@ class MarksListCreateAPIView(generics.ListCreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# --- 3. Single Mark Retrieve, Update, Delete ---
 class MarkRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, Edit (PUT/PATCH), or Delete single student mark (Admin/Teacher)."""
     queryset = ExamMark.objects.all()
     serializer_class = MarksSerializer
     permission_classes = [AllowAny]
 
 
-# --- 4. Admin Approved Marks ---
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Admin Approved, Rejected & Status Update Views
+# ─────────────────────────────────────────────────────────────────────────────
+
 class AdminApprovedMarksListAPIView(generics.ListAPIView):
     serializer_class = MarksSerializer
     permission_classes = [AllowAny]
@@ -112,7 +140,6 @@ class AdminApprovedMarksListAPIView(generics.ListAPIView):
         return ExamMark.objects.filter(status='approved').order_by('-updated_at')
 
 
-# --- 5. Admin Rejected Marks ---
 class AdminRejectedMarksListAPIView(generics.ListAPIView):
     serializer_class = MarksSerializer
     permission_classes = [AllowAny]
@@ -121,8 +148,8 @@ class AdminRejectedMarksListAPIView(generics.ListAPIView):
         return ExamMark.objects.filter(status='rejected').order_by('-updated_at')
 
 
-# --- 6. Admin Status Change (PATCH ONLY) ---
 class AdminMarkStatusUpdateAPIView(generics.UpdateAPIView):
+    """Admin Status Change (approved / rejected / pending)."""
     queryset = ExamMark.objects.all()
     serializer_class = MarkStatusUpdateSerializer
     permission_classes = [AllowAny]
@@ -138,7 +165,10 @@ class AdminMarkStatusUpdateAPIView(generics.UpdateAPIView):
         serializer.save(status=new_status)
 
 
-# --- 7. Final Result Sheet & Merit List View ---
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. Final Result Sheet & Merit List View
+# ─────────────────────────────────────────────────────────────────────────────
+
 class FinalResultView(generics.ListAPIView):
     serializer_class = FinalResultSerializer
     permission_classes = [AllowAny]
@@ -179,7 +209,6 @@ class FinalResultView(generics.ListAPIView):
         context = super().get_serializer_context()
         context['exam_type'] = getattr(self, 'exam_type', None)
 
-        # Build Merit Ranking with Tie-Breaking Logic
         students = self.get_queryset()
         student_scores = []
 
@@ -196,7 +225,7 @@ class FinalResultView(generics.ListAPIView):
                 'roll': roll
             })
 
-        # Tie-Breaking Sorting: 1. GPA (DESC), 2. Grand Total (DESC), 3. Roll Number (ASC)
+        # Tie-Breaking Logic: 1. GPA (DESC), 2. Grand Total (DESC), 3. Roll (ASC)
         sorted_students = sorted(
             student_scores,
             key=lambda x: (-x['gpa'], -x['grand_total'], x['roll'])
