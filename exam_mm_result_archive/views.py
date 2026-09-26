@@ -144,6 +144,7 @@ class FinalResultView(generics.ListAPIView):
     pagination_class = StandardLimitOffsetPagination
 
     def get_queryset(self):
+        # Swagger Schema জেনারেট করার সময় যেন ফাঁকা queryset ফেরত দেয়
         if getattr(self, "swagger_fake_view", False):
             return Student.objects.none()
 
@@ -164,6 +165,13 @@ class FinalResultView(generics.ListAPIView):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
+        
+        # ⚠️ Swagger Generator/Fake View হলে Merit Map বের না করে সরাসরি ফাঁকা context রিটার্ন করবে
+        if getattr(self, "swagger_fake_view", False):
+            context['exam_type'] = None
+            context['merit_map'] = {}
+            return context
+
         context['exam_type'] = getattr(self, 'exam_type', None)
 
         students = self.get_queryset()
