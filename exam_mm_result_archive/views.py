@@ -3,6 +3,7 @@ import base64
 import logging
 from django.conf import settings
 from django.http import HttpResponse
+from django.utils.decorators import method_decorator
 from rest_framework.views import APIView
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -46,7 +47,10 @@ class BinaryPDFRenderer(BaseRenderer):
         return data
 
 
-# --- Admin Configurations ---
+# ==========================================
+# 1. Admin Pass Mark & Grade Configurations
+# ==========================================
+
 class SubjectPassMarkConfigListCreateAPIView(generics.ListCreateAPIView):
     queryset = SubjectPassMarkConfig.objects.all()
     serializer_class = SubjectPassMarkConfigSerializer
@@ -79,20 +83,20 @@ class GradeScaleDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [AllowAny]
 
 
-# --- Student Filter ---
+# ==========================================
+# 2. Student Filter API (With Swagger Parameters)
+# ==========================================
+
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    manual_parameters=[
+        openapi.Parameter('class_name', openapi.IN_QUERY, description="Class ID", type=openapi.TYPE_INTEGER),
+        openapi.Parameter('section', openapi.IN_QUERY, description="Section ID", type=openapi.TYPE_INTEGER),
+    ]
+))
 class StudentFilterView(generics.ListAPIView):
     serializer_class = StudentInfoFilterSerializer
     permission_classes = [AllowAny]
     pagination_class = StandardLimitOffsetPagination
-
-    @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('class_name', openapi.IN_QUERY, description="Class ID", type=openapi.TYPE_INTEGER),
-            openapi.Parameter('section', openapi.IN_QUERY, description="Section ID", type=openapi.TYPE_INTEGER),
-        ]
-    )
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -113,7 +117,10 @@ class StudentFilterView(generics.ListAPIView):
         return queryset
 
 
-# --- Marks Submission & Operations ---
+# ==========================================
+# 3. Marks Submission & Management Views
+# ==========================================
+
 class MarksListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [AllowAny]
 
@@ -162,21 +169,21 @@ class AdminMarkStatusUpdateAPIView(generics.UpdateAPIView):
     http_method_names = ['patch']
 
 
-# --- Final Results View ---
+# ==========================================
+# 4. Final Result & Merit Calculation View
+# ==========================================
+
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    manual_parameters=[
+        openapi.Parameter('class_name', openapi.IN_QUERY, description="Class ID", type=openapi.TYPE_INTEGER),
+        openapi.Parameter('section', openapi.IN_QUERY, description="Section ID", type=openapi.TYPE_INTEGER),
+        openapi.Parameter('exam_type', openapi.IN_QUERY, description="Exam Type Name", type=openapi.TYPE_STRING),
+    ]
+))
 class FinalResultView(generics.ListAPIView):
     serializer_class = FinalResultSerializer
     permission_classes = [AllowAny]
     pagination_class = StandardLimitOffsetPagination
-
-    @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('class_name', openapi.IN_QUERY, description="Class ID", type=openapi.TYPE_INTEGER),
-            openapi.Parameter('section', openapi.IN_QUERY, description="Section ID", type=openapi.TYPE_INTEGER),
-            openapi.Parameter('exam_type', openapi.IN_QUERY, description="Exam Type Name", type=openapi.TYPE_STRING),
-        ]
-    )
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -237,7 +244,10 @@ class FinalResultView(generics.ListAPIView):
         return context
 
 
-# --- Playwright PDF Report Download View ---
+# ==========================================
+# 5. Playwright PDF Download View
+# ==========================================
+
 class DownloadTabulationSheetPDFView(APIView):
     renderer_classes = [BinaryPDFRenderer]
     permission_classes = [AllowAny]
