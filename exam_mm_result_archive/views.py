@@ -153,27 +153,23 @@ class FinalResultView(generics.ListAPIView):
         self.exam_type = self.request.query_params.get('exam_type')
         return queryset
 
-    def list(self, request, *args, **kwargs):
-        if getattr(self, "swagger_fake_view", False):
-            return Response([])
-        return super().list(request, *args, **kwargs)
-
     def get_serializer_context(self):
         context = super().get_serializer_context()
 
-        if getattr(self, "swagger_fake_view", False) or not hasattr(self, 'request'):
+        if getattr(self, "swagger_fake_view", False):
             context['exam_type'] = None
             context['merit_map'] = {}
             return context
 
-        context['exam_type'] = getattr(self, 'exam_type', None)
+        exam_type = self.request.query_params.get('exam_type') if hasattr(self, 'request') else None
+        context['exam_type'] = exam_type
 
         try:
             students = self.get_queryset()
             student_scores = []
 
             for student in students:
-                serializer = FinalResultSerializer(student, context={'exam_type': getattr(self, 'exam_type', None)})
+                serializer = FinalResultSerializer(student, context={'request': self.request, 'exam_type': exam_type})
                 gpa = serializer.get_gpa(student)
                 total_marks = serializer.get_total_marks(student)
                 roll = getattr(student, 'roll_int', 999999) or 999999

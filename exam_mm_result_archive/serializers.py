@@ -96,7 +96,9 @@ class FinalResultSerializer(serializers.ModelSerializer):
 
     def _is_swagger(self):
         request = self.context.get('request')
-        return request and getattr(request.parser_context.get('view', None), 'swagger_fake_view', False)
+        if not request:
+            return True
+        return getattr(request.parser_context.get('view', None), 'swagger_fake_view', False)
 
     def get_total_marks(self, obj):
         if self._is_swagger():
