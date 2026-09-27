@@ -23,6 +23,8 @@ class GradeScaleSerializer(serializers.ModelSerializer):
 
 
 class StudentInfoFilterSerializer(serializers.ModelSerializer):
+    student_id = serializers.IntegerField(source='id', read_only=True)
+
     class Meta:
         model = Student
         fields = ['id', 'student_id', 'full_name', 'roll_number', 'class_name_static', 'section_static']
