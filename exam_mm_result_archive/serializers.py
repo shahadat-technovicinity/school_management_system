@@ -85,6 +85,9 @@ class MarkStatusUpdateSerializer(serializers.ModelSerializer):
 
 
 class FinalResultSerializer(serializers.ModelSerializer):
+    # Auto-generated primary key 'id'-কেই student_id হিসেবে দেখানোর নির্দেশ দেওয়া হলো
+    student_id = serializers.IntegerField(source='id', read_only=True)
+    
     total_marks = serializers.SerializerMethodField()
     gpa = serializers.SerializerMethodField()
     result_status = serializers.SerializerMethodField()
