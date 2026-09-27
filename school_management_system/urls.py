@@ -138,6 +138,7 @@ urlpatterns = [
     path("document_mm_document_storage/", include('document_mm_document_storage.urls')),
     path("document_mm_testimonial/", include('document_mm_testimonial.urls')),
     path("documment_mm_nothi/", include('documment_mm_nothi.urls')),
+    path("document_mm_tcapplication/", include('document_mm_tcapplication.urls')),
 
 
 
