@@ -129,66 +129,55 @@ class AdminMarkStatusUpdateAPIView(generics.UpdateAPIView):
         serializer.save(status=new_status)
 
 
-class FinalResultView(generics.ListAPIView):
-    serializer_class = FinalResultSerializer
-    permission_classes = [AllowAny]
-    pagination_class = StandardLimitOffsetPagination
+class FinalResultSerializer(serializers.ModelSerializer):
+    # Auto-generated primary key 'id'-কেই student_id হিসেবে দেখানোর নির্দেশ দেওয়া হলো
+    student_id = serializers.IntegerField(source='id', read_only=True)
+    
+    total_marks = serializers.SerializerMethodField()
+    gpa = serializers.SerializerMethodField()
+    result_status = serializers.SerializerMethodField()
+    merit_position = serializers.SerializerMethodField()
 
-    def get_queryset(self):
-        if getattr(self, "swagger_fake_view", False):
-            return Student.objects.none()
+    class Meta:
+        model = Student
+        fields = ['id', 'student_id', 'full_name', 'roll_number', 'total_marks', 'gpa', 'result_status', 'merit_position']
 
-        queryset = Student.objects.annotate(
-            roll_int=Cast('roll_number', output_field=IntegerField())
-        ).order_by('roll_int')
+    def _is_swagger(self):
+        request = self.context.get('request')
+        if not request:
+            return True
+        return getattr(request.parser_context.get('view', None), 'swagger_fake_view', False)
 
-        class_name = self.request.query_params.get('class_name')
-        section = self.request.query_params.get('section')
+    def get_total_marks(self, obj):
+        if self._is_swagger():
+            return 0.0
+        exam_type = self.context.get('exam_type')
+        marks = ExamMark.objects.filter(student=obj, status='approved')
+        if exam_type:
+            marks = marks.filter(exam_type_id=exam_type)
+        return sum(m.total for m in marks)
 
-        if class_name:
-            queryset = queryset.filter(class_name_static_id=class_name)
-        if section:
-            queryset = queryset.filter(section_static_id=section)
+    def get_gpa(self, obj):
+        if self._is_swagger():
+            return 0.0
+        exam_type = self.context.get('exam_type')
+        marks = ExamMark.objects.filter(student=obj, status='approved')
+        if exam_type:
+            marks = marks.filter(exam_type_id=exam_type)
 
-        self.exam_type = self.request.query_params.get('exam_type')
-        return queryset
+        if not marks.exists() or any(not m.is_passed for m in marks):
+            return 0.0
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
+        total_gp = sum(m.grade_point for m in marks)
+        return round(total_gp / marks.count(), 2)
 
-        if getattr(self, "swagger_fake_view", False):
-            context['exam_type'] = None
-            context['merit_map'] = {}
-            return context
+    def get_result_status(self, obj):
+        if self._is_swagger():
+            return "PASSED"
+        return "PASSED" if self.get_gpa(obj) > 0 else "FAILED"
 
-        exam_type = self.request.query_params.get('exam_type') if hasattr(self, 'request') else None
-        context['exam_type'] = exam_type
-
-        try:
-            students = self.get_queryset()
-            student_scores = []
-
-            for student in students:
-                serializer = FinalResultSerializer(student, context={'request': self.request, 'exam_type': exam_type})
-                gpa = serializer.get_gpa(student)
-                total_marks = serializer.get_total_marks(student)
-                roll = getattr(student, 'roll_int', 999999) or 999999
-
-                student_scores.append({
-                    'student_id': student.id,
-                    'gpa': gpa,
-                    'total_marks': total_marks,
-                    'roll': roll
-                })
-
-            sorted_students = sorted(
-                student_scores,
-                key=lambda x: (-x['gpa'], -x['total_marks'], x['roll'])
-            )
-
-            merit_map = {item['student_id']: idx + 1 for idx, item in enumerate(sorted_students)}
-            context['merit_map'] = merit_map
-        except Exception:
-            context['merit_map'] = {}
-
-        return context
+    def get_merit_position(self, obj):
+        if self._is_swagger():
+            return 1
+        merit_map = self.context.get('merit_map', {})
+        return merit_map.get(obj.id, None)
