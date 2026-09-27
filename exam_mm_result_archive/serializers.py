@@ -3,23 +3,25 @@ from apps.students.models import Student
 from .models import ExamMark, SubjectPassMarkConfig, GradeScale
 
 
+def convert_eng_to_bng_digits(text):
+    if text is None:
+        return ""
+    text_str = str(text).strip()
+    eng_to_bng_map = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
+    return text_str.translate(eng_to_bng_map)
+
+
 class SubjectPassMarkConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubjectPassMarkConfig
-        fields = [
-            'id', 'academic_class', 'subject', 'exam_type',
-            'writing_full_mark', 'writing_pass_mark',
-            'mcq_full_mark', 'mcq_pass_mark',
-            'practical_full_mark', 'practical_pass_mark',
-            'total_full_mark', 'is_active'
-        ]
+        fields = '__all__'
         read_only_fields = ['total_full_mark']
 
 
 class GradeScaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = GradeScale
-        fields = ['id', 'letter_grade', 'grade_point', 'min_mark', 'max_mark']
+        fields = '__all__'
 
 
 class StudentInfoFilterSerializer(serializers.ModelSerializer):
@@ -38,13 +40,13 @@ class SingleMarkInputSerializer(serializers.Serializer):
 
 
 class MarkSubmissionSerializer(serializers.Serializer):
-    subject_id = serializers.IntegerField()
-    exam_type_id = serializers.IntegerField()
+    subject = serializers.CharField(max_length=100)
+    exam_type = serializers.CharField(max_length=100)
     marks_data = SingleMarkInputSerializer(many=True)
 
     def create(self, validated_data):
-        subject_id = validated_data['subject_id']
-        exam_type_id = validated_data['exam_type_id']
+        subject = validated_data['subject']
+        exam_type = validated_data['exam_type']
         marks_list = validated_data['marks_data']
 
         created_or_updated = []
@@ -52,8 +54,8 @@ class MarkSubmissionSerializer(serializers.Serializer):
             student_obj = Student.objects.get(id=mark_item['student_id'])
             exam_mark, _ = ExamMark.objects.update_or_create(
                 student=student_obj,
-                subject_id=subject_id,
-                exam_type_id=exam_type_id,
+                subject=subject,
+                exam_type=exam_type,
                 defaults={
                     'writing': mark_item.get('writing', 0),
                     'mcq': mark_item.get('mcq', 0),
@@ -87,17 +89,20 @@ class MarkStatusUpdateSerializer(serializers.ModelSerializer):
 
 
 class FinalResultSerializer(serializers.ModelSerializer):
-    # Auto-generated primary key 'id'-কেই student_id হিসেবে দেখানোর নির্দেশ দেওয়া হলো
     student_id = serializers.IntegerField(source='id', read_only=True)
-    
     total_marks = serializers.SerializerMethodField()
     gpa = serializers.SerializerMethodField()
     result_status = serializers.SerializerMethodField()
+    failed_subject_count = serializers.SerializerMethodField()
     merit_position = serializers.SerializerMethodField()
 
     class Meta:
         model = Student
-        fields = ['id', 'student_id', 'full_name', 'roll_number', 'total_marks', 'gpa', 'result_status', 'merit_position']
+        fields = [
+            'id', 'student_id', 'full_name', 'roll_number', 
+            'total_marks', 'gpa', 'result_status', 
+            'failed_subject_count', 'merit_position'
+        ]
 
     def _is_swagger(self):
         request = self.context.get('request')
@@ -111,18 +116,31 @@ class FinalResultSerializer(serializers.ModelSerializer):
         exam_type = self.context.get('exam_type')
         marks = ExamMark.objects.filter(student=obj, status='approved')
         if exam_type:
-            marks = marks.filter(exam_type_id=exam_type)
+            marks = marks.filter(exam_type=exam_type)
         return sum(m.total for m in marks)
+
+    def get_failed_subject_count(self, obj):
+        if self._is_swagger():
+            return 0
+        exam_type = self.context.get('exam_type')
+        marks = ExamMark.objects.filter(student=obj, status='approved')
+        if exam_type:
+            marks = marks.filter(exam_type=exam_type)
+        return marks.filter(is_passed=False).count()
 
     def get_gpa(self, obj):
         if self._is_swagger():
             return 0.0
+        
+        if self.get_failed_subject_count(obj) > 0:
+            return 0.0
+
         exam_type = self.context.get('exam_type')
         marks = ExamMark.objects.filter(student=obj, status='approved')
         if exam_type:
-            marks = marks.filter(exam_type_id=exam_type)
+            marks = marks.filter(exam_type=exam_type)
 
-        if not marks.exists() or any(not m.is_passed for m in marks):
+        if not marks.exists():
             return 0.0
 
         total_gp = sum(m.grade_point for m in marks)
@@ -131,10 +149,16 @@ class FinalResultSerializer(serializers.ModelSerializer):
     def get_result_status(self, obj):
         if self._is_swagger():
             return "PASSED"
-        return "PASSED" if self.get_gpa(obj) > 0 else "FAILED"
+        failed_count = self.get_failed_subject_count(obj)
+        if failed_count > 0:
+            return f"FAILED ({failed_count} Subject{'s' if failed_count > 1 else ''})"
+        return "PASSED"
 
     def get_merit_position(self, obj):
         if self._is_swagger():
             return 1
+        if self.get_failed_subject_count(obj) > 0:
+            return None
+            
         merit_map = self.context.get('merit_map', {})
         return merit_map.get(obj.id, None)
