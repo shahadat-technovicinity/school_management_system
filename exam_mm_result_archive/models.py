@@ -1,32 +1,26 @@
 from django.db import models
 from apps.students.models import Student
-from academic_mm_class_and_section.models import AcademicClass, Section
-from academic_create_subject.models import Subject_Name
-from exam_mm_exam_setup.models import ExamName
 
 
 class SubjectPassMarkConfig(models.Model):
-    academic_class = models.ForeignKey(AcademicClass, on_delete=models.CASCADE, related_name="pass_configs")
-    subject = models.ForeignKey(Subject_Name, on_delete=models.CASCADE, related_name="pass_configs")
-    exam_type = models.ForeignKey(ExamName, on_delete=models.CASCADE, related_name="pass_configs")
-
+    academic_class = models.CharField(max_length=50)
+    subject = models.CharField(max_length=100)
+    exam_type = models.CharField(max_length=100)
+    
     writing_full_mark = models.FloatField(default=0)
     writing_pass_mark = models.FloatField(default=0)
-
+    
     mcq_full_mark = models.FloatField(default=0)
     mcq_pass_mark = models.FloatField(default=0)
-
+    
     practical_full_mark = models.FloatField(default=0)
     practical_pass_mark = models.FloatField(default=0)
-
-    total_full_mark = models.FloatField(default=0, editable=False)
+    
+    total_full_mark = models.FloatField(default=0)
     is_active = models.BooleanField(default=True)
 
-    class Meta:
-        unique_together = ('academic_class', 'subject', 'exam_type')
-
     def save(self, *args, **kwargs):
-        self.total_full_mark = (self.writing_full_mark or 0) + (self.mcq_full_mark or 0) + (self.practical_full_mark or 0)
+        self.total_full_mark = self.writing_full_mark + self.mcq_full_mark + self.practical_full_mark
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -34,16 +28,15 @@ class SubjectPassMarkConfig(models.Model):
 
 
 class GradeScale(models.Model):
-    letter_grade = models.CharField(max_length=5, unique=True)
+    academic_class = models.CharField(max_length=50, blank=True, null=True)
+    subject = models.CharField(max_length=100, blank=True, null=True)
+    letter_grade = models.CharField(max_length=5)
     grade_point = models.FloatField()
     min_mark = models.FloatField()
     max_mark = models.FloatField()
 
-    class Meta:
-        ordering = ['-grade_point']
-
     def __str__(self):
-        return f"{self.letter_grade} ({self.grade_point}) [{self.min_mark}%-{self.max_mark}%]"
+        return f"{self.letter_grade} ({self.grade_point}) : {self.min_mark}-{self.max_mark}"
 
 
 class ExamMark(models.Model):
@@ -54,62 +47,65 @@ class ExamMark(models.Model):
     ]
 
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='exam_marks')
-    subject = models.ForeignKey(Subject_Name, on_delete=models.CASCADE, related_name="resultarchive")
-    exam_type = models.ForeignKey(ExamName, on_delete=models.CASCADE, related_name="exam_marks")
-
+    subject = models.CharField(max_length=100)
+    exam_type = models.CharField(max_length=100)
+    
     writing = models.FloatField(default=0)
     mcq = models.FloatField(default=0)
     practical = models.FloatField(default=0)
-
-    total = models.FloatField(default=0, editable=False)
-    grade_point = models.FloatField(default=0.0, editable=False)
-    letter_grade = models.CharField(max_length=5, default="F", editable=False)
-    is_passed = models.BooleanField(default=False, editable=False)
-
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    total = models.FloatField(default=0)
+    
+    grade_point = models.FloatField(default=0.0)
+    letter_grade = models.CharField(max_length=5, default='F')
+    is_passed = models.BooleanField(default=False)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        unique_together = ('student', 'subject', 'exam_type')
-
     def save(self, *args, **kwargs):
-        self.total = (self.writing or 0) + (self.mcq or 0) + (self.practical or 0)
-
+        self.total = self.writing + self.mcq + self.practical
+        
+        # Section-wise pass mark checking
         config = SubjectPassMarkConfig.objects.filter(
-            academic_class=self.student.class_name_static,
             subject=self.subject,
             exam_type=self.exam_type
         ).first()
 
-        subject_full_mark = config.total_full_mark if (config and config.total_full_mark > 0) else 100.0
+        is_writing_pass = True
+        is_mcq_pass = True
+        is_practical_pass = True
 
         if config:
-            pass_writing = self.writing >= config.writing_pass_mark if config.writing_full_mark > 0 else True
-            pass_mcq = self.mcq >= config.mcq_pass_mark if config.mcq_full_mark > 0 else True
-            pass_practical = self.practical >= config.practical_pass_mark if config.practical_full_mark > 0 else True
+            if config.writing_pass_mark > 0 and self.writing < config.writing_pass_mark:
+                is_writing_pass = False
+            if config.mcq_pass_mark > 0 and self.mcq < config.mcq_pass_mark:
+                is_mcq_pass = False
+            if config.practical_pass_mark > 0 and self.practical < config.practical_pass_mark:
+                is_practical_pass = False
 
-            self.is_passed = pass_writing and pass_mcq and pass_practical
+        if is_writing_pass and is_mcq_pass and is_practical_pass and self.total >= 33:
+            self.is_passed = True
+            
+            # Grade Scale Calculation
+            grades = GradeScale.objects.all().order_by('-min_mark')
+            matched = False
+            for g in grades:
+                if g.min_mark <= self.total <= g.max_mark:
+                    self.letter_grade = g.letter_grade
+                    self.grade_point = g.grade_point
+                    matched = True
+                    break
+            
+            if not matched:
+                self.letter_grade = 'D'
+                self.grade_point = 1.0
         else:
-            self.is_passed = self.total >= (subject_full_mark * 0.33)
-
-        if self.is_passed:
-            percentage = (self.total / subject_full_mark) * 100.0
-            grade_obj = GradeScale.objects.filter(
-                min_mark__lte=percentage,
-                max_mark__gte=percentage
-            ).first()
-
-            if grade_obj:
-                self.grade_point = grade_obj.grade_point
-                self.letter_grade = grade_obj.letter_grade
-            else:
-                self.grade_point = 0.0
-                self.letter_grade = "F"
-        else:
+            self.is_passed = False
+            self.letter_grade = 'F'
             self.grade_point = 0.0
-            self.letter_grade = "F"
 
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.student} - {self.subject} ({self.exam_type})"
+        return f"{self.student.full_name} - {self.subject} - {self.total}"
