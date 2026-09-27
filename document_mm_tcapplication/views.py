@@ -198,7 +198,6 @@ class DownloadTCPDFView(APIView):
                 <tr>
                     <td>
                         প্রধান শিক্ষক<br/>
-                        রামরাইল শহীদ ধীরেণ দত্ত উচ্চ বিদ্যালয়
                     </td>
                 </tr>
             </table>
