@@ -1,6 +1,5 @@
 from django.db import models
-from django.conf import settings
-
+from teacher_mm_teacher.models import TeacherAndStaffProfile  # Apnar teacher model-er shothik app path din
 
 STATUS_CHOICES = [
     ('Pending', 'Pending'),
@@ -10,10 +9,12 @@ STATUS_CHOICES = [
 
 
 class ExamDuty(models.Model):
+    # TeacherAndStaffProfile model-er shathe direct ForeignKey relation
     teacher = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        TeacherAndStaffProfile,
         on_delete=models.CASCADE,
         related_name='exam_duties',
+        limit_choices_to={'employee_type__in': ['head_teacher', 'teacher']}  # Shudhu teacher-der show korar jonne
     )
     exam_date = models.DateField()
     start_time = models.TimeField()
