@@ -1,47 +1,28 @@
 from rest_framework import generics, permissions
-from rest_framework.exceptions import PermissionDenied
 from .models import ExamDuty
 from .serializers import ExamDutySerializer, ExamDutyStatusUpdateSerializer
 
 
 class ExamDutyListCreateView(generics.ListCreateAPIView):
     """
-    List exam duties:
-    - Admin/Staff see all teacher duties.
-    - Logged-in Teacher sees ONLY their own duties.
-    - Filter by ?teacher_id=X for specific teacher (Admin only).
+    Public View: Anyone can view all duties or create a new duty (AllowAny).
     """
+    queryset = ExamDuty.objects.select_related('teacher__user').all()
     serializer_class = ExamDutySerializer
+    permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        user = self.request.user
-        queryset = ExamDuty.objects.select_related('teacher__user').all()
-
-        # ১. অ্যাডমিন / সুপারইউজার হলে সব দেখতে পারবেন
-        if user.is_staff or user.is_superuser:
-            # অ্যাডমিন চাইলে নির্দিষ্ট কোনো টিচারের ID দিয়েও ফিল্টার করতে পারবে
-            teacher_id = self.request.query_params.get('teacher_id')
-            if teacher_id and teacher_id.isdigit():
-                queryset = queryset.filter(teacher_id=int(teacher_id))
-            return queryset
-
-        # ২. সাধারণ টিচার হলে শুধু তার নিজের Profile-এর সাথে ম্যাচ করা ডিউটিগুলো ফিল্টার হবে
-        if hasattr(user, 'teacher_staff_profile'):
-            return queryset.filter(teacher=user.teacher_staff_profile)
-
-        # ৩. যদি ইউজার টিচারও না হয় এবং অ্যাডমিনও না হয়
-        return ExamDuty.objects.none()
-
-    def perform_create(self, serializer):
-        # শুধু অ্যাডমিন বা স্টাফ নতুন ডিউটি তৈরি / অ্যাসাইন করতে পারবে
-        if not (self.request.user.is_staff or self.request.user.is_superuser):
-            raise PermissionDenied("Only administrators can assign exam duties.")
-        serializer.save()
+        queryset = super().get_queryset()
+        # Optional filter: ?teacher_id=1
+        teacher_id = self.request.query_params.get('teacher_id')
+        if teacher_id and teacher_id.isdigit():
+            queryset = queryset.filter(teacher_id=int(teacher_id))
+        return queryset
 
 
 class TeacherMyExamDutyListView(generics.ListAPIView):
     """
-    Dedicated View: লগইন করা টিচারের নিজের ডিউটি দেখার জন্য (Explicit Endpoint)
+    Authenticated View: Only logged-in teacher can see their OWN duties.
     """
     serializer_class = ExamDutySerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -57,15 +38,17 @@ class TeacherMyExamDutyListView(generics.ListAPIView):
 
 class ExamDutyDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    Retrieve, update or delete a specific teacher duty.
+    Public View: Retrieve, update or delete specific duty (AllowAny).
     """
     queryset = ExamDuty.objects.select_related('teacher__user').all()
     serializer_class = ExamDutySerializer
+    permission_classes = [permissions.AllowAny]
 
 
 class ExamDutyStatusUpdateView(generics.UpdateAPIView):
     """
-    Update status of an exam duty (Pending / Confirmed / Conflict).
+    Public View: Update duty status (AllowAny).
     """
     queryset = ExamDuty.objects.all()
     serializer_class = ExamDutyStatusUpdateSerializer
+    permission_classes = [permissions.AllowAny]
