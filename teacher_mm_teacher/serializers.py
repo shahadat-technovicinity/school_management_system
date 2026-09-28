@@ -59,7 +59,7 @@ class TeacherAndStaffListSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeacherAndStaffProfile
         fields = [
-            "id", "user", "employee_type", "designation", "department",
+            "user", "employee_type", "designation", "department",
             "full_name", "name_bn", "gender", "primary_contact_number",
             "status", "date_of_joining", "photo", "resume", "joining_letter",
             "office_order_copy", "nid_card_copy", "created_at", "updated_at"
@@ -76,7 +76,7 @@ class TeacherAndStaffDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeacherAndStaffProfile
         fields = [
-            "id", "user", "employee_type", "designation", "department",
+            "user", "employee_type", "designation", "department",
             "full_name", "name_bn", "email", "gender", "date_of_birth",
             "marital_status", "languages_known", "blood_group",
             "primary_contact_number", "father_name", "father_name_bn",
@@ -93,7 +93,7 @@ class TeacherAndStaffDetailSerializer(serializers.ModelSerializer):
             "photo", "resume", "joining_letter", "office_order_copy", "nid_card_copy",
             "status", "notes", "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["created_at", "updated_at"]
         ref_name = "TeacherStaffDetails"
 
 
@@ -131,7 +131,7 @@ class TeacherAndStaffCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeacherAndStaffProfile
         fields = [
-            "user_id", "id", "employee_type", "designation", "department", "name_bn",
+            "user_id", "employee_type", "designation", "department", "name_bn",
             "gender", "date_of_birth", "marital_status", "languages_known",
             "blood_group", "primary_contact_number", "father_name", "father_name_bn",
             "mother_name", "mother_name_bn", "qualification", "work_experience",
@@ -147,7 +147,7 @@ class TeacherAndStaffCreateSerializer(serializers.ModelSerializer):
             "photo", "resume", "joining_letter", "office_order_copy", "nid_card_copy",
             "status", "notes", "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["created_at", "updated_at"]
         ref_name = "TeacherStaffCreates"
 
     def validate_user_id(self, user):
@@ -212,7 +212,7 @@ class TeacherAndStaffUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeacherAndStaffProfile
         fields = [
-            "user", "id", "employee_type", "designation", "department", "name_bn",
+            "user", "employee_type", "designation", "department", "name_bn",
             "gender", "date_of_birth", "marital_status", "languages_known",
             "blood_group", "primary_contact_number", "father_name", "father_name_bn",
             "mother_name", "mother_name_bn", "qualification", "work_experience",
@@ -228,5 +228,5 @@ class TeacherAndStaffUpdateSerializer(serializers.ModelSerializer):
             "photo", "resume", "joining_letter", "office_order_copy", "nid_card_copy",
             "status", "notes", "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "user", "created_at", "updated_at"]
+        read_only_fields = ["user", "created_at", "updated_at"]
         ref_name = "TeacherStaffUpdates"
