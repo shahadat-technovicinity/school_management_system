@@ -10,7 +10,7 @@ from academic_mm_class_and_section.models import AcademicClass, Section
 class TeacherAndStaffProfile(models.Model):
     """
     Unified profile model for Teachers, Head Teachers and Staff members,
-    linked to User via OneToOne relationship.
+    linked to User via OneToOne relationship where User ID serves as the Primary Key.
     """
 
     # Category Selection (Head Teacher vs Teacher vs Staff)
@@ -68,10 +68,9 @@ class TeacherAndStaffProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        primary_key=True,
         related_name="teacher_staff_profile",
-        help_text="Linked user account created during Auth",
-        null=True,
-        blank=True
+        help_text="Linked user account created during Auth"
     )
 
     # Main flag to separate Teacher/Head Teacher from Staff
@@ -225,7 +224,7 @@ class TeacherAndStaffProfile(models.Model):
         if self.user:
             name = self.user.get_full_name() or self.user.username
             return f"{name} ({self.get_employee_type_display()})"
-        return f"Profile ID {self.id} ({self.get_employee_type_display()})"
+        return f"Profile ID {self.pk} ({self.get_employee_type_display()})"
 
 
     @property
