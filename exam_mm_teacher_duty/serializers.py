@@ -70,3 +70,17 @@ class ExamDutyStatusUpdateSerializer(serializers.ModelSerializer):
         if value not in allowed_statuses:
             raise serializers.ValidationError(f"Status must be one of: {', '.join(allowed_statuses)}")
         return value
+
+
+
+    #teacherduty
+
+
+
+
+
+
+
+
+
+    
