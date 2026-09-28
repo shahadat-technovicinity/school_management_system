@@ -28,23 +28,27 @@ class ExamDutySerializer(serializers.ModelSerializer):
     def get_teacher_name(self, obj):
         if not obj.teacher:
             return ""
-        
-        # 1. First check user account full name
+
+        # ১. প্রফাইলে বাংলা নাম থাকলে আগে সেটা নিবে
+        if getattr(obj.teacher, 'name_bn', None):
+            return obj.teacher.name_bn
+
+        # ২. ইউজার অ্যাকাউন্টের Full Name / First & Last Name চেক করবে
         if obj.teacher.user:
             if hasattr(obj.teacher.user, 'get_full_name') and callable(obj.teacher.user.get_full_name):
                 full_name = obj.teacher.user.get_full_name()
                 if full_name:
                     return full_name
-            if getattr(obj.teacher.user, 'first_name', None):
-                return f"{obj.teacher.user.first_name} {getattr(obj.teacher.user, 'last_name', '')}".strip()
+
+            first_name = getattr(obj.teacher.user, 'first_name', '')
+            last_name = getattr(obj.teacher.user, 'last_name', '')
+            if first_name or last_name:
+                return f"{first_name} {last_name}".strip()
+
             if getattr(obj.teacher.user, 'username', None):
                 return obj.teacher.user.username
 
-        # 2. Fallback to Bangla name
-        if obj.teacher.name_bn:
-            return obj.teacher.name_bn
-
-        return f"Teacher ID: {obj.teacher.id}"
+        return f"Teacher #{obj.teacher.id}"
 
     def validate(self, attrs):
         start_time = attrs.get('start_time')
