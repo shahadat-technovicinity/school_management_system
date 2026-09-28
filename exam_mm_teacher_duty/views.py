@@ -12,7 +12,6 @@ class ExamDutyListCreateView(generics.ListCreateAPIView):
     - Filter by ?teacher_id=X for specific teacher (Admin only).
     """
     serializer_class = ExamDutySerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
@@ -62,7 +61,6 @@ class ExamDutyDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = ExamDuty.objects.select_related('teacher__user').all()
     serializer_class = ExamDutySerializer
-    permission_classes = [permissions.IsAuthenticated]
 
 
 class ExamDutyStatusUpdateView(generics.UpdateAPIView):
@@ -71,4 +69,3 @@ class ExamDutyStatusUpdateView(generics.UpdateAPIView):
     """
     queryset = ExamDuty.objects.all()
     serializer_class = ExamDutyStatusUpdateSerializer
-    permission_classes = [permissions.IsAuthenticated]
