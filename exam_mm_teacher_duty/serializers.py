@@ -3,8 +3,9 @@ from .models import ExamDuty
 
 
 class ExamDutySerializer(serializers.ModelSerializer):
-    teacher_name = serializers.CharField(source='teacher.get_full_name', read_only=True)
-    teacher_email = serializers.CharField(source='teacher.email', read_only=True)
+    teacher_name = serializers.SerializerMethodField()
+    teacher_designation = serializers.ReadOnlyField(source='teacher.designation', default="")
+    teacher_phone = serializers.ReadOnlyField(source='teacher.primary_contact_number', default="")
 
     class Meta:
         model = ExamDuty
@@ -12,7 +13,8 @@ class ExamDutySerializer(serializers.ModelSerializer):
             'id',
             'teacher',
             'teacher_name',
-            'teacher_email',
+            'teacher_designation',
+            'teacher_phone',
             'exam_date',
             'start_time',
             'end_time',
@@ -22,6 +24,27 @@ class ExamDutySerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = ['status', 'created_at']
+
+    def get_teacher_name(self, obj):
+        if not obj.teacher:
+            return ""
+        
+        # 1. First check user account full name
+        if obj.teacher.user:
+            if hasattr(obj.teacher.user, 'get_full_name') and callable(obj.teacher.user.get_full_name):
+                full_name = obj.teacher.user.get_full_name()
+                if full_name:
+                    return full_name
+            if getattr(obj.teacher.user, 'first_name', None):
+                return f"{obj.teacher.user.first_name} {getattr(obj.teacher.user, 'last_name', '')}".strip()
+            if getattr(obj.teacher.user, 'username', None):
+                return obj.teacher.user.username
+
+        # 2. Fallback to Bangla name
+        if obj.teacher.name_bn:
+            return obj.teacher.name_bn
+
+        return f"Teacher ID: {obj.teacher.id}"
 
     def validate(self, attrs):
         start_time = attrs.get('start_time')
