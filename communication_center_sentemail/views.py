@@ -21,7 +21,7 @@ class MailListView(generics.ListAPIView):
 
 class MailCreateView(generics.CreateAPIView):
     """ একক বা bulk মেইল পাঠানো (to_emails এ কমা দিয়ে একাধিক email দিন) """
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     serializer_class = MailCreateSerializer
     parser_classes = [MultiPartParser, FormParser]
 
