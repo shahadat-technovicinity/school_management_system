@@ -257,6 +257,7 @@ INSTALLED_APPS = [
     'document_mm_testimonial',
     'documment_mm_nothi',
     'document_mm_tcapplication',
+    'document_mm_caracter_certificate',
 
 
     ### home page
