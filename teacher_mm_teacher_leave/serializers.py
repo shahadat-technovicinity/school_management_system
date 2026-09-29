@@ -78,7 +78,8 @@ class LeaveBalanceSummarySerializer(serializers.Serializer):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TeacherMinimalSerializer(serializers.ModelSerializer):
-    """Minimal teacher info for leave list."""
+    """Minimal teacher/staff info for leave list."""
+    id = serializers.ReadOnlyField(source="pk")
     name = serializers.CharField(source="full_name", read_only=True)
 
     class Meta:
