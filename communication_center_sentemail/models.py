@@ -1,5 +1,5 @@
 from django.db import models
-from django.conf import settings  # ১. এটি ইম্পোর্ট করুন
+from django.conf import settings
 
 class Mail(models.Model):
     FOLDER_CHOICES = [
@@ -11,7 +11,6 @@ class Mail(models.Model):
         ('teachers', 'Teachers'),
     ]
 
-    # ২. User এর বদলে settings.AUTH_USER_MODEL ব্যবহার করুন
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         related_name='sent_mails', 
