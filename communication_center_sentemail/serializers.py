@@ -78,36 +78,52 @@ class MailCreateSerializer(serializers.ModelSerializer):
         section_id = attrs.pop('section_id', None)
         to_emails = attrs.get('to_emails', '').strip()
 
-        # --- 1. Recipient Filter Logic ---
+        # --- ১. ইমেইল প্রাপক প্রস্তুতকরণের লজিক ---
         final_emails = []
 
         if to_emails:
+            # ম্যানুয়ালি দেওয়া ইমেইলগুলো প্রসেস করবে
             final_emails = [e.strip() for e in to_emails.split(',') if e.strip()]
+            
         elif class_id and section_id:
-            parent_emails = Student.objects.filter(
-                current_class_id=class_id,
-                section_id=section_id,
-                guardian_email__isnull=False
-            ).exclude(guardian_email='').values_list('guardian_email', flat=True)
+            # Class এবং Section অনুযায়ী স্টুডেন্ট অভিভাবকের ইমেইল ফিল্টার
+            students = Student.objects.filter(
+                class_name_static_id=class_id,
+                section_static_id=section_id,
+                status="active"
+            ).select_related('guardian_info')
 
-            final_emails = list(set(parent_emails))
+            collected_emails = []
+            for st in students:
+                if hasattr(st, 'guardian_info'):
+                    # guardian_email না পাওয়া গেলে বাবা বা মায়ের ইমেইল চেক করবে
+                    email = (
+                        st.guardian_info.guardian_email 
+                        or st.guardian_info.father_email 
+                        or st.guardian_info.mother_email
+                    )
+                    if email and email.strip():
+                        collected_emails.append(email.strip())
+
+            # ডুপ্লিকেট ইমেইল বাদ দেওয়ার জন্য set ব্যবহার
+            final_emails = list(set(collected_emails))
 
         if not final_emails:
             raise serializers.ValidationError({
-                "to_emails": "হয় 'to_emails' ফিল্ডে ইমেইল দিন, অথবা 'class_id' এবং 'section_id' নির্বাচন করুন।"
+                "to_emails": "হয় 'to_emails' ফিল্ডে ইমেইল দিন, অথবা 'class_id' ও 'section_id' নির্বাচন করুন যেখানে অভিভাবকদের ইমেইল যুক্ত আছে।"
             })
 
         attrs['to_emails'] = ', '.join(final_emails)
 
-        # --- 2. Dynamic Template Logic ---
+        # --- ২. ডাইনামিক টেমপ্লেট লজিক ---
         if template:
             attrs['subject'] = attrs.get('subject') or template.template_name
             attrs['body'] = attrs.get('body') or template.template_content
 
         if not attrs.get('subject'):
-            raise serializers.ValidationError({"subject": "subject অথবা template — যেকোনো একটি দিতে হবে।"})
+            raise serializers.ValidationError({"subject": "subject অথবা template — যেকোনো একটি নির্বাচন করতে হবে।"})
         if not attrs.get('body'):
-            raise serializers.ValidationError({"body": "body অথবা template — যেকোনো একটি দিতে হবে।"})
+            raise serializers.ValidationError({"body": "body অথবা template — যেকোনো একটি নির্বাচন করতে হবে।"})
 
         return attrs
 
