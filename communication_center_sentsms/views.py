@@ -12,6 +12,9 @@ from .sms import send_sms_net_bd, check_sms_balance
 
 
 class SendFlexibleSMSView(APIView):
+    """
+    একক, bulk, ম্যানুয়াল অথবা Class/Section ভিত্তিক স্টুডেন্টদের অভিভাবকদের SMS পাঠানোর ভিউ।
+    """
     @swagger_auto_schema(
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -39,21 +42,25 @@ class SendFlexibleSMSView(APIView):
         content_id = request.data.get('content_id')
         schedule = request.data.get('schedule')
 
-        final_message = None
+        final_message = custom_message
         final_content_id = content_id
 
-        # ১. টেমপ্লেট কনফিগারেশন
+        # ১. টেমপ্লেট সেটিং এবং ভ্যালিডেশন
         if template_id:
             try:
                 sms_template = SMSTemplate.objects.get(id=template_id)
-                final_message = sms_template.message_body
-                if sms_template.content_id:
+                # কাস্টম মেসেজ না থাকলে টেমপ্লেটের বডি সরাসরি ব্যবহার করবে
+                if not final_message:
+                    final_message = sms_template.message_body
+                if sms_template.content_id and not final_content_id:
                     final_content_id = sms_template.content_id
             except SMSTemplate.DoesNotExist:
-                return Response({"error": "উক্ত টেমপ্লেটটি পাওয়া যায়নি।"}, status=status.HTTP_404_NOT_FOUND)
-
-        if custom_message:
-            final_message = custom_message
+                # কাস্টম মেসেজ বা কনটেন্ট আইডি না থাকলে তবেই ৪০৪ এরর দিবে
+                if not final_message and not final_content_id:
+                    return Response(
+                        {"error": f"ID {template_id} এর কোনো SMS টেমপ্লেট ডাটাবেজে পাওয়া যায়নি।"}, 
+                        status=status.HTTP_404_NOT_FOUND
+                    )
 
         if not final_message and not final_content_id:
             return Response(
@@ -64,9 +71,9 @@ class SendFlexibleSMSView(APIView):
         target_contacts = []
         phone_numbers_set = set()
 
-        # ২. ক্লাস/সেকশন অনুযায়ী নম্বর
+        # ২. Class & Section ভিত্তিক স্টুডেন্ট ফিল্টারিং
         if class_id or section_id:
-            queryset = Student.objects.select_related('guardian_info').all()
+            queryset = Student.objects.filter(status="active").select_related('guardian_info')
 
             if class_id:
                 queryset = queryset.filter(class_name_static_id=class_id)
@@ -75,14 +82,15 @@ class SendFlexibleSMSView(APIView):
 
             for student in queryset:
                 guardian = getattr(student, 'guardian_info', None)
-                phone = getattr(guardian, 'guardian_phone', None) or getattr(guardian, 'father_phone', None)
-                
-                if phone and str(phone).strip():
-                    clean_phone = str(phone).strip()
-                    target_contacts.append((student, clean_phone))
-                    phone_numbers_set.add(clean_phone)
+                if guardian:
+                    # guardian_phone না থাকলে father_phone ব্যবহার করবে
+                    phone = getattr(guardian, 'guardian_phone', None) or getattr(guardian, 'father_phone', None)
+                    if phone and str(phone).strip():
+                        clean_phone = str(phone).strip()
+                        target_contacts.append((student, clean_phone))
+                        phone_numbers_set.add(clean_phone)
 
-        # ৩. ম্যানুয়াল নম্বর
+        # ৩. ম্যানুয়াল ফোন নম্বর হ্যান্ডলিং
         if manual_numbers and isinstance(manual_numbers, list):
             for raw_num in manual_numbers:
                 if raw_num and str(raw_num).strip():
@@ -92,9 +100,12 @@ class SendFlexibleSMSView(APIView):
                         phone_numbers_set.add(clean_num)
 
         if not target_contacts:
-            return Response({"error": "কোনো বৈধ প্রাপকের ফোন নম্বর পাওয়া যায়নি।"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "কোনো বৈধ প্রাপকের ফোন নম্বর পাওয়া যায়নি। নির্বাচিত Class/Section-এ সক্রিয় স্টুডেন্ট বা অভিভাবকের নম্বর আছে কিনা চেক করুন।"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # ৪. SMS পাঠান
+        # ৪. SMS Gateway (sms.net.bd) কল করা
         success, api_response = send_sms_net_bd(
             recipients=list(phone_numbers_set),
             message=final_message,
@@ -112,19 +123,18 @@ class SendFlexibleSMSView(APIView):
             req_status = 'FAILED'
             error_msg = str(api_response.get('msg', 'SMS Delivery Failed'))
 
-        # ৫. হিস্ট্রি বাল্ক ক্রিয়েট
-        history_records = []
-        for student_obj, phone in target_contacts:
-            history_records.append(
-                SMSHistory(
-                    student=student_obj,
-                    phone_number=phone,
-                    message=final_message or f"Content ID: {final_content_id}",
-                    request_id=request_id,
-                    status=req_status,
-                    error_message=error_msg
-                )
+        # ৫. বাল্ক হিস্ট্রি রেকর্ড তৈরি
+        history_records = [
+            SMSHistory(
+                student=student_obj,
+                phone_number=phone,
+                message=final_message or f"Content ID: {final_content_id}",
+                request_id=request_id,
+                status=req_status,
+                error_message=error_msg
             )
+            for student_obj, phone in target_contacts
+        ]
 
         SMSHistory.objects.bulk_create(history_records)
 
@@ -144,16 +154,19 @@ class SendFlexibleSMSView(APIView):
 
 
 class SMSTemplateListCreateView(ListCreateAPIView):
+    """ টেমপ্লেট তৈরি এবং তালিকা দেখার জন্য API """
     queryset = SMSTemplate.objects.all()
     serializer_class = SMSTemplateSerializer
 
 
 class SMSTemplateDetailView(RetrieveUpdateDestroyAPIView):
+    """ নির্দিষ্ট টেমপ্লেট দেখা, এডিট বা ডিলিট করার জন্য API """
     queryset = SMSTemplate.objects.all()
     serializer_class = SMSTemplateSerializer
 
 
 class SMSHistoryListView(ListAPIView):
+    """ পাঠানো SMS-এর ইতিহাস (History) দেখার API """
     serializer_class = SMSHistorySerializer
 
     def get_queryset(self):
@@ -170,6 +183,7 @@ class SMSHistoryListView(ListAPIView):
 
 
 class CheckSMSBalanceView(APIView):
+    """ Gateway-এর বর্তমান SMS ব্যালেন্স চেক করার API """
     def get(self, request, *args, **kwargs):
         balance_info = check_sms_balance()
         return Response(balance_info, status=status.HTTP_200_OK)
