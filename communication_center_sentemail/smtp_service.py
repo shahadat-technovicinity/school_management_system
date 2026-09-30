@@ -21,8 +21,8 @@ def send_via_smtp(mail_obj):
         email = EmailMessage(
             subject=mail_obj.subject,
             body=mail_obj.body,
-            from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else settings.EMAIL_HOST_USER,
-            to=[],  # To ফাঁকা রাখছি, সবাইকে BCC তে পাঠাচ্ছি
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', getattr(settings, 'EMAIL_HOST_USER', '')),
+            to=[],
             bcc=recipient_list,
         )
 

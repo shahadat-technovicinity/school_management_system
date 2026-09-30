@@ -1,6 +1,6 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 
 from .models import Mail, Attachment
@@ -20,7 +20,7 @@ class MailListView(generics.ListAPIView):
 
 
 class MailCreateView(generics.CreateAPIView):
-    """ একক বা bulk মেইল পাঠানো (to_emails এ কমা দিয়ে একাধিক email দিন) """
+    """ একক, bulk অথবা class-section অনুযায়ী মেইল পাঠানো """
     permission_classes = [IsAuthenticated]
     serializer_class = MailCreateSerializer
     parser_classes = [MultiPartParser, FormParser]
@@ -30,10 +30,12 @@ class MailCreateView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         mail = serializer.save()
 
+        # Attachments Processing
         for f in request.FILES.getlist('attachments'):
-            if f.size <= 10 * 1024 * 1024:  # ম্যাক্স ১০ এমবি প্রতি ফাইল
+            if f.size <= 10 * 1024 * 1024:  # ম্যাক্স ১০ এমবি
                 Attachment.objects.create(mail=mail, file=f, filename=f.name, file_size=f.size)
 
+        # Send Email via SMTP Service
         smtp_ok = send_via_smtp(mail)
         recipient_count = len([e for e in mail.to_emails.split(',') if e.strip()])
 
@@ -45,10 +47,9 @@ class MailCreateView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED if smtp_ok else status.HTTP_502_BAD_GATEWAY)
 
 
-class MailDetaiilllView(generics.RetrieveAPIView):
+class MailDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = MailDetailSerializer
 
     def get_queryset(self):
         return Mail.objects.filter(sender=self.request.user)
-    
