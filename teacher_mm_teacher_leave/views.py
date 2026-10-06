@@ -39,18 +39,19 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
     API for managing Leave Types.
     
     Endpoints:
-    - GET /teacher/leave-types/ - List all leave types
+    - GET /teacher/leave-types/ - List all leave types (Paginated)
     - POST /teacher/leave-types/ - Create a new leave type
     - GET /teacher/leave-types/{id}/ - Get leave type details
     - PUT /teacher/leave-types/{id}/ - Update leave type
     - DELETE /teacher/leave-types/{id}/ - Delete leave type
     """
     queryset = LeaveType.objects.all()
-    # permission_classes = [AllowAny]  # Change to IsAuthenticated in production
+    # permission_classes = [AllowAny]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "description"]
     ordering_fields = ["name", "default_days", "created_at"]
     ordering = ["name"]
+    pagination_class = LeaveResultsPagination  # <-- ADDED PAGINATION
 
     def get_serializer_class(self):
         if self.action in ["create", "update", "partial_update"]:
@@ -59,7 +60,7 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
 
     @swagger_auto_schema(
         operation_summary="List all leave types",
-        operation_description="Get all available leave types (Medical, Casual, Maternity, Paternity, etc.).",
+        operation_description="Get all available leave types with pagination.",
         tags=SWAGGER_TAG
     )
     def list(self, request, *args, **kwargs):
@@ -105,22 +106,10 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
 class TeacherLeaveViewSet(viewsets.ModelViewSet):
     """
     API for managing Teacher Leave Applications.
-    
-    Endpoints:
-    - GET /teacher/leaves/ - List all leave applications
-    - POST /teacher/leaves/ - Create leave application
-    - GET /teacher/leaves/{id}/ - Get leave details
-    - PUT /teacher/leaves/{id}/ - Update leave
-    - DELETE /teacher/leaves/{id}/ - Delete leave
-    - POST /teacher/leaves/{id}/approve/ - Approve/Decline leave
-    - GET /teacher/leaves/{id}/download-application/ - Download approved leave PDF data
-    - GET /teacher/leaves/by-teacher/{teacher_id}/ - Get leaves by teacher
-    - GET /teacher/leaves/summary/{teacher_id}/ - Get teacher leave summary
     """
     queryset = TeacherLeave.objects.select_related(
         "teacher", "teacher__user", "leave_type", "reviewed_by"
     ).all()
-    # permission_classes = [AllowAny]  # Change to IsAuthenticated in production
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = TeacherLeaveFilter
     search_fields = ["teacher__teacher_id", "teacher__user__name", "reason"]
@@ -193,9 +182,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
         operation_summary="Approve or Decline leave",
         operation_description="""
         Approve or decline a pending leave application.
-        
         Send `action` as either "approve" or "decline".
-        Optionally include `admin_remarks` for feedback.
         """,
         tags=SWAGGER_TAG,
         request_body=LeaveApprovalSerializer,
@@ -249,19 +236,22 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         method="get",
         operation_summary="Get leaves by teacher",
-        operation_description="Get all leave applications for a specific teacher.",
+        operation_description="Get all leave applications for a specific teacher with pagination.",
         tags=SWAGGER_TAG
     )
     @action(detail=False, methods=["get"], url_path="by-teacher/(?P<teacher_id>[^/.]+)")
     def by_teacher(self, request, teacher_id=None):
-        """Get all leaves for a specific teacher."""
+        """Get all leaves for a specific teacher with pagination."""
         leaves = self.queryset.filter(teacher_id=teacher_id)
+        
+        # Paginate queryset
         page = self.paginate_queryset(leaves)
         if page is not None:
             serializer = TeacherLeaveListSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
+
         serializer = TeacherLeaveListSerializer(leaves, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         method="get",
@@ -269,7 +259,6 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
         operation_description="""
         Get complete leave summary for a teacher.
         Includes leave balance cards and recent leave history.
-        This is used in the teacher details page.
         """,
         tags=SWAGGER_TAG
     )
@@ -286,7 +275,6 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
 
         year = request.query_params.get("year", timezone.now().year)
 
-        # Get leave balances for this teacher
         leave_types = LeaveType.objects.filter(is_active=True)
         leave_balances = []
 
@@ -306,7 +294,6 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
                     "available": balance.available,
                 })
             else:
-                # No balance record, use defaults
                 leave_balances.append({
                     "leave_type_id": leave_type.id,
                     "leave_type_name": leave_type.name,
@@ -315,12 +302,11 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
                     "available": leave_type.default_days,
                 })
 
-        # Get recent leaves
+        # Limit recent leaves to 10 for summary
         recent_leaves = TeacherLeave.objects.filter(
             teacher=teacher
         ).select_related("leave_type").order_by("-applied_on")[:10]
 
-        # Calculate statistics
         stats = TeacherLeave.objects.filter(teacher=teacher).aggregate(
             total_leaves_taken=Count("id", filter=Q(status="approved")),
             pending_applications=Count("id", filter=Q(status="pending"))
@@ -333,7 +319,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
             "pending_applications": stats["pending_applications"] or 0,
         }
 
-        return Response(response_data)
+        return Response(response_data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         method="get",
@@ -371,7 +357,7 @@ class TeacherLeaveViewSet(viewsets.ModelViewSet):
             ),
         }
 
-        return Response(stats)
+        return Response(stats, status=status.HTTP_200_OK)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -383,24 +369,25 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
     API for managing Teacher Leave Balances.
     
     Endpoints:
-    - GET /teacher/leave-balances/ - List all leave balances
+    - GET /teacher/leave-balances/ - List all leave balances (Paginated)
     - POST /teacher/leave-balances/ - Create/allocate leave balance
     - PUT /teacher/leave-balances/{id}/ - Update leave balance
-    - GET /teacher/leave-balances/by-teacher/{teacher_id}/ - Get balances by teacher
+    - GET /teacher/leave-balances/by-teacher/{teacher_id}/ - Get balances by teacher (Paginated)
     """
     queryset = LeaveBalance.objects.select_related(
         "teacher", "teacher__user", "leave_type"
     ).all()
     serializer_class = LeaveBalanceSerializer
-    # permission_classes = [AllowAny]  # Change to IsAuthenticated in production
+    # permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["teacher", "leave_type", "year"]
     ordering_fields = ["year", "leave_type__name", "total_allocated", "used"]
     ordering = ["-year", "leave_type__name"]
+    pagination_class = LeaveResultsPagination  # <-- ADDED PAGINATION
 
     @swagger_auto_schema(
         operation_summary="List all leave balances",
-        operation_description="Get all teacher leave balances.",
+        operation_description="Get all teacher leave balances with pagination.",
         tags=SWAGGER_TAG
     )
     def list(self, request, *args, **kwargs):
@@ -425,16 +412,23 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         method="get",
         operation_summary="Get leave balances by teacher",
-        operation_description="Get all leave balances for a specific teacher.",
+        operation_description="Get all leave balances for a specific teacher with pagination.",
         tags=SWAGGER_TAG
     )
     @action(detail=False, methods=["get"], url_path="by-teacher/(?P<teacher_id>[^/.]+)")
     def by_teacher(self, request, teacher_id=None):
-        """Get all leave balances for a specific teacher."""
+        """Get all leave balances for a specific teacher with pagination."""
         year = request.query_params.get("year", timezone.now().year)
         balances = self.queryset.filter(teacher_id=teacher_id, year=year)
+
+        # Added pagination for by_teacher action
+        page = self.paginate_queryset(balances)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = self.get_serializer(balances, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         method="post",
@@ -481,5 +475,3 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
 AdminLeaveTypeViewSet = LeaveTypeViewSet
 AdminTeacherLeaveViewSet = TeacherLeaveViewSet
 AdminLeaveBalanceViewSet = LeaveBalanceViewSet
-
-##full viewset for leave management
