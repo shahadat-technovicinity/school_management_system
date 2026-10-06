@@ -113,12 +113,76 @@ def get_processed_voter_list():
 
 class ParentVoterListView(APIView):
     @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'search', 
+                openapi.IN_QUERY, 
+                description="A search term (শিক্ষার্থী বা ভোটারের নাম দিয়ে খুঁজুন)।", 
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'page', 
+                openapi.IN_QUERY, 
+                description="A page number within the paginated result set.", 
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'page_size', 
+                openapi.IN_QUERY, 
+                description="Number of results to return per page.", 
+                type=openapi.TYPE_INTEGER
+            ),
+        ],
         responses={200: ParentVoterListSerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):
+        search_query = request.query_params.get('search', '').strip().lower()
         voter_list = get_processed_voter_list()
-        serializer = ParentVoterListSerializer(voter_list, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        # ১. সার্চ ফিল্টারিং (যদি সার্চ টার্ম পাঠানো হয়)
+        if search_query:
+            voter_list = [
+                item for item in voter_list
+                if search_query in item['voter_name'].lower() or search_query in item['student_name'].lower()
+            ]
+
+        # ২. Query params থেকে page এবং page_size হ্যান্ডলিং
+        try:
+            page = int(request.query_params.get('page', 1))
+            if page < 1:
+                page = 1
+        except ValueError:
+            page = 1
+
+        try:
+            page_size = int(request.query_params.get('page_size', 10))
+            if page_size < 1:
+                page_size = 10
+        except ValueError:
+            page_size = 10
+
+        total_count = len(voter_list)
+
+        # ৩. ম্যানুয়াল পাইথন লিস্ট স্লাইসিং (পেজিনেশন)
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_data = voter_list[start:end]
+
+        # ৪. Next এবং Previous URL ডায়নামিক জেনারেট করা
+        base_url = request.build_absolute_uri(request.path)
+        search_param = f"&search={search_query}" if search_query else ""
+        
+        next_url = f"{base_url}?page={page + 1}&page_size={page_size}{search_param}" if end < total_count else None
+        previous_url = f"{base_url}?page={page - 1}&page_size={page_size}{search_param}" if page > 1 else None
+
+        serializer = ParentVoterListSerializer(paginated_data, many=True)
+
+        return Response({
+            "count": total_count,
+            "next": next_url,
+            "previous": previous_url,
+            "results": serializer.data
+        }, status=status.HTTP_200_OK)
 
 
 class ExportParentVoterListExcelView(APIView):
