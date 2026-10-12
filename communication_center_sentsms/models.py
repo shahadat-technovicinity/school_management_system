@@ -1,15 +1,7 @@
 from django.db import models
 from apps.students.models import Student
 
-
-class SMSTemplate(models.Model):
-    title = models.CharField(max_length=100, help_text="টেমপ্লেটের নাম (যেমন: ফি রসিদ, নোটিশ)")
-    content_id = models.CharField(max_length=50, blank=True, null=True, help_text="sms.net.bd Content ID (যদি থাকে)")
-    message_body = models.TextField(help_text="মেসেজের মূল টেক্সট")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.title
+from communication_canter_sms_template.models import SMSTemplate
 
 
 class SMSHistory(models.Model):
@@ -21,6 +13,13 @@ class SMSHistory(models.Model):
 
     student = models.ForeignKey(
         Student, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='sms_histories'
+    )
+    template = models.ForeignKey(
+        SMSTemplate, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True, 
