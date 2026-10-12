@@ -4,8 +4,9 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-SMS_NET_BD_SEND_URL = "https://api.sms.net.bd/sendsms"
-SMS_NET_BD_BALANCE_URL = "https://api.sms.net.bd/user/balance/"
+# আপনার settings.py থেকে endpoint এবং key তুলে নেওয়ার ব্যবস্থা করা হলো
+SMS_NET_BD_SEND_URL = getattr(settings, 'SMS_API_ENDPOINT', "https://api.sms.net.bd/sendsms")
+SMS_NET_BD_BALANCE_URL = getattr(settings, 'SMS_BALANCE_ENDPOINT', "https://api.sms.net.bd/user/balance/")
 
 
 def format_bd_phone_number(phone_number):
@@ -19,11 +20,12 @@ def format_bd_phone_number(phone_number):
 
 
 def send_sms_net_bd(recipients, message=None, content_id=None, sender_id=None, schedule=None):
-    """sms.net.bd API দিয়ে মেসেজ সেন্ড করার ফাংশন"""
-    api_key = getattr(settings, 'SMS_NET_BD_API_KEY', '')
+    """sms.net.bd API দিয়ে মেসেজ সেন্ড করার ফাংশন"""
+    # আপনার settings.py এর SMS_API_KEY সরাসরি ফেচ করা হচ্ছে
+    api_key = getattr(settings, 'SMS_API_KEY', '')
 
     if not api_key:
-        return False, {"error": 405, "msg": "API Key configured properly নয়"}
+        return False, {"error": 405, "msg": "API Key settings.py এ কনফিগার করা নেই"}
 
     if isinstance(recipients, (list, tuple, set)):
         formatted_numbers = [format_bd_phone_number(num) for num in recipients if num]
@@ -70,7 +72,8 @@ def send_sms_net_bd(recipients, message=None, content_id=None, sender_id=None, s
 
 def check_sms_balance():
     """sms.net.bd একাউন্টের ব্যালেন্স চেক করার ফাংশন"""
-    api_key = getattr(settings, 'SMS_NET_BD_API_KEY', '')
+    # আপনার settings.py এর SMS_API_KEY সরাসরি ফেচ করা হচ্ছে
+    api_key = getattr(settings, 'SMS_API_KEY', '')
     try:
         response = requests.get(SMS_NET_BD_BALANCE_URL, params={'api_key': api_key}, timeout=10)
         return response.json()
