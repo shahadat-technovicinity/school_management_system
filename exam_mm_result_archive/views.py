@@ -203,8 +203,9 @@ class BulkResultInputView(generics.GenericAPIView):
 class StudentDetailedMarksheetView(APIView):
 
     def get(self, request, student_id):
+        # select_related এ exam_setup এর বদলে exam_routine ব্যবহার করা হলো
         results = StudentExamResult.objects.filter(student_id=student_id).select_related(
-            'result_config', 'result_config__exam_setup', 'student', 'section'
+            'result_config', 'result_config__exam_routine', 'student', 'section'
         )
 
         if not results.exists():
@@ -221,8 +222,8 @@ class StudentDetailedMarksheetView(APIView):
 
         for res in results:
             config = res.result_config
-            # সাবজেক্টের নাম (আপনার ExamSetup বা Related মডেল অনুযায়ী ফিল্ড নাম অ্যাডজাস্ট করে নিতে পারেন)
-            subject_name = getattr(config.exam_setup, 'subject_name', str(config.exam_setup))
+            # config.exam_setup এর বদলে config.exam_routine ব্যবহার করা হলো
+            subject_name = getattr(config.exam_routine, 'subject_name', str(config.exam_routine))
 
             subject_results.append({
                 "subject": subject_name,
