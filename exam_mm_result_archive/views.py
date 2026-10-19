@@ -54,12 +54,15 @@ class StudentListByClassSectionView(generics.GenericAPIView):
         except AcademicClass.DoesNotExist:
             return Response({'error': 'Class not found'}, status=404)
 
-        students = Student.objects.filter(class_name_static=academic_class.name)
+        # পরিবর্তন: নামের পরিবর্তে সরাসরি অবজেক্ট বা ID পাস করা হলো
+        students = Student.objects.filter(class_name_static=academic_class) 
+        # অথবা যদি আইডি ফিল্ড হয়: class_name_static_id=academic_class.id
 
         if section_id:
             try:
                 section = Section.objects.get(id=section_id)
-                students = students.filter(section_static=section.name)
+                students = students.filter(section_static=section)
+                # অথবা যদি আইডি ফিল্ড হয়: section_static_id=section.id
             except Section.DoesNotExist:
                 return Response({'error': 'Section not found'}, status=404)
 
