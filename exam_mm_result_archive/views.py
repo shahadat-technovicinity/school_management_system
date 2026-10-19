@@ -201,28 +201,126 @@ class BulkResultInputView(generics.GenericAPIView):
 
 
 class StudentDetailedMarksheetView(APIView):
-    """
-    একই API দিয়ে class_id ও section_id মাধ্যমে পুরো ক্লাসের অথবা 
-    student_id দিয়ে নির্দিষ্ট একজন স্টুডেন্টের সাবজেক্ট-ওয়াইজ রেজাল্ট ও CGPA দেখা যাবে।
-    """
 
+    def get(self, request, student_id):
+        # select_related এ exam_setup এর বদলে exam_routine ব্যবহার করা হলো
+        results = StudentExamResult.objects.filter(student_id=student_id).select_related(
+            'result_config', 'result_config__exam_routine', 'student', 'section'
+        )
+
+        if not results.exists():
+            return Response({"error": "এই স্টুডেন্টের কোনো পরীক্ষার রেজাল্ট পাওয়া যায়নি।"}, status=status.HTTP_404_NOT_FOUND)
+
+        student = results.first().student
+        section = results.first().section
+
+        subject_results = []
+        grand_total_marks = 0
+        total_gpa = 0.0
+        is_overall_passed = True
+        subject_count = results.count()
+
+        for res in results:
+            config = res.result_config
+            # config.exam_setup এর বদলে config.exam_routine ব্যবহার করা হলো
+            subject_name = getattr(config.exam_routine, 'subject_name', str(config.exam_routine))
+
+            subject_results.append({
+                "subject": subject_name,
+                "written_marks": res.written_marks,
+                "mcq_marks": res.mcq_marks,
+                "practical_marks": res.practical_marks if config.has_practical else 0,
+                "total_marks": res.total_marks,
+                "grade": res.grade,
+                "gpa": float(res.gpa),
+                "status": res.overall_status
+            })
+
+            grand_total_marks += float(res.total_marks)
+            total_gpa += float(res.gpa)
+
+            # যদি কোনো একটি সাবজেক্টেও ফেল করে, তবে ওভারঅল ফেল ধরা হবে
+            if res.overall_status == 'fail' or res.grade == 'F':
+                is_overall_passed = False
+
+        # সিজিপিএ (CGPA) ক্যালকুলেশন (সকল সাবজেক্টের জিপিএ এর গড়)
+        cgpa = round(total_gpa / subject_count, 2) if subject_count > 0 else 0.0
+        
+        if not is_overall_passed:
+            cgpa = 0.0
+            overall_grade = 'F'
+        else:
+            # সিজিপিএ অনুযায়ী ওভারঅল গ্রেড নির্ধারণ
+            if cgpa >= 5.0:
+                overall_grade = 'A+'
+            elif cgpa >= 4.0:
+                overall_grade = 'A'
+            elif cgpa >= 3.5:
+                overall_grade = 'A-'
+            elif cgpa >= 3.0:
+                overall_grade = 'B'
+            elif cgpa >= 2.0:
+                overall_grade = 'C'
+            elif cgpa >= 1.0:
+                overall_grade = 'D'
+            else:
+                overall_grade = 'F'
+
+        response_data = {
+            "student_id": student.id,
+            "student_name": getattr(student, 'full_name', getattr(student, 'name', str(student))),
+            "roll_number": getattr(student, 'roll_number', ''),
+            "section": getattr(section, 'name', '') if section else '',
+            "subject_wise_results": subject_results,
+            "summary": {
+                "total_subjects": subject_count,
+                "grand_total_marks": grand_total_marks,
+                "cgpa": cgpa,
+                "overall_grade": overall_grade,
+                "overall_status": "pass" if is_overall_passed else "fail"
+            }
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+
+class ClassSectionResultSummaryView(APIView):
+    
     @swagger_auto_schema(
         manual_parameters=[
-            openapi.Parameter('class_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False, description="Class ID"),
+            openapi.Parameter('class_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True, description="Class ID"),
             openapi.Parameter('section_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False, description="Section ID (Optional)"),
-            openapi.Parameter('student_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False, description="Student ID (Single Student Search)"),
             openapi.Parameter('result_config_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False, description="Result Config ID (Optional)"),
         ]
     )
-    def get(self, request, student_id=None):
-        # URL kwarg (যেমন /student-marksheet/15/) অথবা Query Param (?student_id=15) দুটিই হ্যান্ডেল করবে
-        search_student_id = student_id or request.query_params.get('student_id')
+    def get(self, request):
         class_id = request.query_params.get('class_id')
         section_id = request.query_params.get('section_id')
         result_config_id = request.query_params.get('result_config_id')
 
-        # স্টুডেন্টের ফলাফল প্রোসেস করার হেলপার ফাংশন
-        def process_student_result(student):
+        if not class_id:
+            return Response({'error': 'class_id প্রদান করা বাধ্যতামূলক।'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            academic_class = AcademicClass.objects.get(id=class_id)
+        except AcademicClass.DoesNotExist:
+            return Response({'error': 'ক্লাসটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
+
+        students = Student.objects.filter(class_name_static=academic_class, status="active")
+        
+        section_obj = None
+        if section_id:
+            try:
+                section_obj = Section.objects.get(id=section_id)
+                students = students.filter(section_static=section_obj)
+            except Section.DoesNotExist:
+                return Response({'error': 'সেকশনটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
+
+        students = students.order_by('roll_number')
+        student_list = []
+
+        for student in students:
             results_qs = StudentExamResult.objects.filter(student=student).select_related(
                 'result_config', 'result_config__exam_routine', 'section'
             )
@@ -270,7 +368,7 @@ class StudentDetailedMarksheetView(APIView):
                 elif cgpa >= 1.0: overall_grade = 'D'
                 else: overall_grade = 'F'
 
-            return {
+            student_list.append({
                 "student_id": student.id,
                 "student_name": getattr(student, 'full_name', getattr(student, 'name', str(student))),
                 "roll_number": getattr(student, 'roll_number', ''),
@@ -283,42 +381,11 @@ class StudentDetailedMarksheetView(APIView):
                     "overall_grade": overall_grade,
                     "overall_status": "pass" if (is_overall_passed and subject_count > 0) else "fail"
                 }
-            }
+            })
 
-        # ১. যদি স্টুডেন্ট আইডি দেওয়া থাকে (URL বা Query Parameter)
-        if search_student_id:
-            try:
-                student = Student.objects.get(id=search_student_id)
-            except Student.DoesNotExist:
-                return Response({'error': 'নির্দিষ্ট স্টুডেন্টটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
-            
-            return Response(process_student_result(student), status=status.HTTP_200_OK)
-
-        # ২. যদি ক্লাস আইডি দেওয়া থাকে (Class & Section Search)
-        if class_id:
-            try:
-                academic_class = AcademicClass.objects.get(id=class_id)
-            except AcademicClass.DoesNotExist:
-                return Response({'error': 'ক্লাসটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
-
-            students = Student.objects.filter(class_name_static=academic_class, status="active")
-            
-            section_obj = None
-            if section_id:
-                try:
-                    section_obj = Section.objects.get(id=section_id)
-                    students = students.filter(section_static=section_obj)
-                except Section.DoesNotExist:
-                    return Response({'error': 'সেকশনটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
-
-            students = students.order_by('roll_number')
-            student_list = [process_student_result(s) for s in students]
-
-            return Response({
-                "class": academic_class.name,
-                "section": section_obj.name if section_obj else "All Sections",
-                "total_students": len(student_list),
-                "students": student_list
-            }, status=status.HTTP_200_OK)
-
-        return Response({'error': 'অনুগ্রহ করে `class_id` অথবা `student_id` প্রদান করুন।'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "class": academic_class.name,
+            "section": section_obj.name if section_obj else "All Sections",
+            "total_students": len(student_list),
+            "students": student_list
+        }, status=status.HTTP_200_OK)
