@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     ExamResultConfigListCreateView,
     ExamResultConfigDetailView,
+    StudentDetailedMarksheetView,
     StudentListByClassSectionView,
     StudentExamResultListCreateView,
     StudentExamResultDetailView,
@@ -15,4 +16,5 @@ urlpatterns = [
     path('results/', StudentExamResultListCreateView.as_view(), name='result-list'),
     path('results/<int:pk>/', StudentExamResultDetailView.as_view(), name='result-detail'),
     path('results/bulk/', BulkResultInputView.as_view(), name='bulk-result-input'),
+    path('student-marksheet/<int:student_id>/', StudentDetailedMarksheetView.as_view(), name='student-detailed-marksheet'),
 ]
