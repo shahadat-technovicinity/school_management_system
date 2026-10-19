@@ -1,4 +1,5 @@
 from rest_framework import generics, filters, pagination, parsers, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -195,3 +196,88 @@ class BulkResultInputView(generics.GenericAPIView):
             'updated': updated,
             'errors': errors,
         }, status=status.HTTP_200_OK)
+
+
+
+
+class StudentDetailedMarksheetView(APIView):
+
+    def get(self, request, student_id):
+        results = StudentExamResult.objects.filter(student_id=student_id).select_related(
+            'result_config', 'result_config__exam_setup', 'student', 'section'
+        )
+
+        if not results.exists():
+            return Response({"error": "এই স্টুডেন্টের কোনো পরীক্ষার রেজাল্ট পাওয়া যায়নি।"}, status=status.HTTP_404_NOT_FOUND)
+
+        student = results.first().student
+        section = results.first().section
+
+        subject_results = []
+        grand_total_marks = 0
+        total_gpa = 0.0
+        is_overall_passed = True
+        subject_count = results.count()
+
+        for res in results:
+            config = res.result_config
+            # সাবজেক্টের নাম (আপনার ExamSetup বা Related মডেল অনুযায়ী ফিল্ড নাম অ্যাডজাস্ট করে নিতে পারেন)
+            subject_name = getattr(config.exam_setup, 'subject_name', str(config.exam_setup))
+
+            subject_results.append({
+                "subject": subject_name,
+                "written_marks": res.written_marks,
+                "mcq_marks": res.mcq_marks,
+                "practical_marks": res.practical_marks if config.has_practical else 0,
+                "total_marks": res.total_marks,
+                "grade": res.grade,
+                "gpa": float(res.gpa),
+                "status": res.overall_status
+            })
+
+            grand_total_marks += float(res.total_marks)
+            total_gpa += float(res.gpa)
+
+            # যদি কোনো একটি সাবজেক্টেও ফেল করে, তবে ওভারঅল ফেল ধরা হবে
+            if res.overall_status == 'fail' or res.grade == 'F':
+                is_overall_passed = False
+
+        # সিজিপিএ (CGPA) ক্যালকুলেশন (সকল সাবজেক্টের জিপিএ এর গড়)
+        cgpa = round(total_gpa / subject_count, 2) if subject_count > 0 else 0.0
+        
+        if not is_overall_passed:
+            cgpa = 0.0
+            overall_grade = 'F'
+        else:
+            # সিজিপিএ অনুযায়ী ওভারঅল গ্রেড নির্ধারণ
+            if cgpa >= 5.0:
+                overall_grade = 'A+'
+            elif cgpa >= 4.0:
+                overall_grade = 'A'
+            elif cgpa >= 3.5:
+                overall_grade = 'A-'
+            elif cgpa >= 3.0:
+                overall_grade = 'B'
+            elif cgpa >= 2.0:
+                overall_grade = 'C'
+            elif cgpa >= 1.0:
+                overall_grade = 'D'
+            else:
+                overall_grade = 'F'
+
+        response_data = {
+            "student_id": student.id,
+            "student_name": getattr(student, 'full_name', getattr(student, 'name', str(student))),
+            "roll_number": getattr(student, 'roll_number', ''),
+            "section": getattr(section, 'name', '') if section else '',
+            "subject_wise_results": subject_results,
+            "summary": {
+                "total_subjects": subject_count,
+                "grand_total_marks": grand_total_marks,
+                "cgpa": cgpa,
+                "overall_grade": overall_grade,
+                "overall_status": "pass" if is_overall_passed else "fail"
+            }
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
