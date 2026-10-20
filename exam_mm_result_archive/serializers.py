@@ -55,10 +55,25 @@ class StudentExamResultSerializer(serializers.ModelSerializer):
         return obj.result_config.has_practical
 
     def validate(self, data):
-        # Class 6-8 এ practical marks 0 করে দাও
         result_config = data.get('result_config')
+        student = data.get('student')
+
+        if result_config and student:
+            routine = result_config.exam_routine
+
+            # Class match check
+            student_class = student.class_name_static
+            routine_class = routine.academic_class.name
+
+            if student_class != routine_class:
+                raise serializers.ValidationError(
+                    f"Student এর class ({student_class}) আর Routine এর class ({routine_class}) মিলছে না।"
+                )
+
+        # Class 6-8 এ practical marks 0 করে দাও
         if result_config and not result_config.has_practical:
             data['practical_marks'] = 0
+
         return data
 
 
