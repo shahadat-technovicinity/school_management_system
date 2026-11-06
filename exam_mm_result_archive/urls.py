@@ -9,6 +9,11 @@ from .views import (
     StudentExamResultDetailView,
     BulkResultInputView,
 )
+from .combined import (
+    CombinedResultConfigListCreateView,
+    CombinedResultConfigDetailView,
+    CombinedResultView,
+)
 
 urlpatterns = [
     path('result-config/', ExamResultConfigListCreateView.as_view(), name='result-config-list'),
@@ -19,4 +24,11 @@ urlpatterns = [
     path('results/bulk/', BulkResultInputView.as_view(), name='bulk-result-input'),
     path('student-marksheet/<int:student_id>/', StudentDetailedMarksheetView.as_view(), name='student-detailed-marksheet'),
     path('class-section-result-summary/', ClassSectionResultSummaryView.as_view(), name='class-section-result-summary'),
+
+
+    # Combined Result URLs
+    path('combined-result-config/', CombinedResultConfigListCreateView.as_view(), name='combined-result-config-list'),
+    path('combined-result-config/<int:pk>/', CombinedResultConfigDetailView.as_view(), name='combined-result-config-detail'),
+    path('combined-results/', CombinedResultView.as_view(), name='combined-results'),
+
 ]

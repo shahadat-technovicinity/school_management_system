@@ -6,14 +6,14 @@ from exam_mm_exam_setup.models import ExamName, ExamSetup
 
 class ExamsRoutine(models.Model):
     exam_name = models.ForeignKey(
-        ExamName, 
-        on_delete=models.CASCADE, 
+        ExamName,
+        on_delete=models.CASCADE,
         related_name='exam_routinesss'
     )
-    
+
     academic_class = models.ForeignKey(
-        AcademicClass, 
-        on_delete=models.CASCADE, 
+        AcademicClass,
+        on_delete=models.CASCADE,
         related_name='exam_routiness'
     )
 
@@ -23,12 +23,12 @@ class ExamsRoutine(models.Model):
         related_name='exam_routines',
         null=True,
         blank=True,
-        help_text="Automated reference to the configured exam setup"
+        help_text="Specific exam setup (section-wise)"
     )
 
     # Dynamic subject
     subject = models.ForeignKey(
-        Subject_Name, 
+        Subject_Name,
         on_delete=models.CASCADE,
         related_name='exam_routiness'
     )
@@ -37,11 +37,11 @@ class ExamsRoutine(models.Model):
     start_time = models.TimeField(null=True, blank=True, help_text="Exam start time (e.g. 10:00:00)")
     end_time = models.TimeField(null=True, blank=True, help_text="Exam end time (e.g. 13:00:00)")
     total_marks = models.DecimalField(
-        max_digits=5, 
-        decimal_places=2, 
+        max_digits=5,
+        decimal_places=2,
         help_text="Exam full mark (e.g. 100.00)"
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -49,12 +49,10 @@ class ExamsRoutine(models.Model):
         ordering = ['exam_date', 'start_time', 'id']
 
     def save(self, *args, **kwargs):
-        setup = ExamSetup.objects.filter(
-            exam_name=self.exam_name,
-            academic_class=self.academic_class
-        ).first()
-        if setup:
-            self.exam_setup = setup
+        # exam_name ও class সবসময় setup থেকে আসবে, অনুমান করে খোঁজা হবে না
+        if self.exam_setup_id:
+            self.exam_name = self.exam_setup.exam_name
+            self.academic_class = self.exam_setup.academic_class
         super().save(*args, **kwargs)
 
     def __str__(self):

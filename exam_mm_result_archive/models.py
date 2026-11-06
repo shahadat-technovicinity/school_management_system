@@ -2,6 +2,7 @@ from django.db import models
 from apps.students.models import Student
 from academic_mm_class_and_section.models import AcademicClass, Section
 from exam_mm_exmroutine_exmadmit.models import ExamsRoutine
+from exam_mm_exam_setup.models import ExamSetup
 
 
 def calculate_grade_and_gpa(percentage):
@@ -143,3 +144,33 @@ class StudentExamResult(models.Model):
     def save(self, *args, **kwargs):
         self.calculate_result()
         super().save(*args, **kwargs)
+
+
+
+class CombinedResultConfig(models.Model):
+    """
+    Admin এখানে ঠিক করে কোন কোন exam setup এর result মিলিয়ে বার্ষিক result হবে।
+    যেমন: Half Yearly (দশম-A setup) + Final (দশম-A setup)।
+    কোনো মার্ক আলাদা করে ঢোকানো হয় না, archive এর StudentExamResult থেকেই যোগ হয়।
+    """
+    name = models.CharField(max_length=150, help_text="যেমন: Annual Result 2026")
+    academic_class = models.ForeignKey(
+        AcademicClass,
+        on_delete=models.CASCADE,
+        related_name='combined_result_configs',
+    )
+    exam_setups = models.ManyToManyField(
+        ExamSetup,
+        related_name='combined_result_configs',
+        help_text="যে setup গুলোর result যোগ হবে (Half Yearly + Final)",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Combined Result Config"
+
+    def __str__(self):
+        return f"{self.name} - {self.academic_class}"
+
+
