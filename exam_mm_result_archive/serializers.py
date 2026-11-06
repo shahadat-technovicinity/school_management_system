@@ -1,8 +1,20 @@
 from rest_framework import serializers
 from apps.students.models import Student
-from academic_mm_class_and_section.models import AcademicClass, Section
-from exam_mm_exmroutine_exmadmit.models import ExamsRoutine
 from .models import ExamResultConfig, StudentExamResult
+
+
+def check_student_matches_routine(student, routine):
+    """Student এর class ও section routine এর setup এর সাথে মিলছে কিনা দেখে।
+    মিললে None, না মিললে error message return করে।"""
+    if student.class_name_static_id != routine.academic_class_id:
+        return "Student এর class এই routine এর class এর সাথে মিলছে না।"
+
+    setup = routine.exam_setup
+    if setup is not None:
+        section_id = student.section_static_id
+        if not section_id or not setup.sections.filter(id=section_id).exists():
+            return "Student এর section এই exam setup এ নেই।"
+    return None
 
 
 class ExamResultConfigSerializer(serializers.ModelSerializer):
@@ -55,22 +67,14 @@ class StudentExamResultSerializer(serializers.ModelSerializer):
         return obj.result_config.has_practical
 
     def validate(self, data):
-        result_config = data.get('result_config')
-        student = data.get('student')
+        result_config = data.get('result_config') or getattr(self.instance, 'result_config', None)
+        student = data.get('student') or getattr(self.instance, 'student', None)
 
         if result_config and student:
-            routine = result_config.exam_routine
+            error = check_student_matches_routine(student, result_config.exam_routine)
+            if error:
+                raise serializers.ValidationError(error)
 
-            # Class match check
-            student_class = student.class_name_static
-            routine_class = routine.academic_class.name
-
-            if student_class != routine_class:
-                raise serializers.ValidationError(
-                    f"Student এর class ({student_class}) আর Routine এর class ({routine_class}) মিলছে না।"
-                )
-
-        # Class 6-8 এ practical marks 0 করে দাও
         if result_config and not result_config.has_practical:
             data['practical_marks'] = 0
 
@@ -87,7 +91,6 @@ class StudentListForResultSerializer(serializers.ModelSerializer):
 
 class BulkResultInputSerializer(serializers.Serializer):
     result_config = serializers.IntegerField()
-    section = serializers.IntegerField(required=False)
     results = serializers.ListField(child=serializers.DictField())
 
     def validate_results(self, value):

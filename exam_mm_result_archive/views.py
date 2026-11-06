@@ -11,6 +11,7 @@ from .serializers import (
     StudentExamResultSerializer,
     StudentListForResultSerializer,
     BulkResultInputSerializer,
+    check_student_matches_routine,
 )
 
 
@@ -18,6 +19,22 @@ class ResultPagination(pagination.PageNumberPagination):
     page_size = 50
     page_size_query_param = 'page_size'
     max_page_size = 200
+
+
+def overall_grade_from_cgpa(cgpa):
+    if cgpa >= 5.0:
+        return 'A+'
+    elif cgpa >= 4.0:
+        return 'A'
+    elif cgpa >= 3.5:
+        return 'A-'
+    elif cgpa >= 3.0:
+        return 'B'
+    elif cgpa >= 2.0:
+        return 'C'
+    elif cgpa >= 1.0:
+        return 'D'
+    return 'F'
 
 
 class ExamResultConfigListCreateView(generics.ListCreateAPIView):
@@ -55,35 +72,53 @@ class StudentListByClassSectionView(generics.GenericAPIView):
         except AcademicClass.DoesNotExist:
             return Response({'error': 'Class not found'}, status=404)
 
-        # পরিবর্তন: নামের পরিবর্তে সরাসরি অবজেক্ট বা ID পাস করা হলো
-        students = Student.objects.filter(class_name_static=academic_class) 
-        # অথবা যদি আইডি ফিল্ড হয়: class_name_static_id=academic_class.id
+        students = Student.objects.filter(class_name_static=academic_class)
 
+        section = None
         if section_id:
             try:
                 section = Section.objects.get(id=section_id)
-                students = students.filter(section_static=section)
-                # অথবা যদি আইডি ফিল্ড হয়: section_static_id=section.id
             except Section.DoesNotExist:
                 return Response({'error': 'Section not found'}, status=404)
+            students = students.filter(section_static=section)
 
-        students = students.order_by('roll_number')
-
+        config = None
         config_data = None
         if result_config_id:
             try:
-                config = ExamResultConfig.objects.get(id=result_config_id)
-                config_data = ExamResultConfigSerializer(config).data
+                config = ExamResultConfig.objects.select_related(
+                    'exam_routine__exam_setup'
+                ).get(id=result_config_id)
             except ExamResultConfig.DoesNotExist:
-                pass
+                return Response({'error': 'Result config not found'}, status=404)
+
+            if config.exam_routine.academic_class_id != academic_class.id:
+                return Response(
+                    {'error': 'এই result config অন্য class এর।'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            setup = config.exam_routine.exam_setup
+            if setup:
+                setup_sections = setup.sections.all()
+                if section and not setup_sections.filter(id=section.id).exists():
+                    return Response(
+                        {'error': 'এই section এই exam setup এ নেই।'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                students = students.filter(section_static__in=setup_sections)
+
+            config_data = ExamResultConfigSerializer(config).data
+
+        students = students.order_by('roll_number')
 
         student_list = []
         for student in students:
             existing_result = None
-            if result_config_id:
+            if config:
                 result = StudentExamResult.objects.filter(
                     student=student,
-                    result_config_id=result_config_id
+                    result_config=config
                 ).first()
                 if result:
                     existing_result = StudentExamResultSerializer(result).data
@@ -142,21 +177,16 @@ class BulkResultInputView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         data = serializer.validated_data
-        result_config_id = data['result_config']
-        section_id = data.get('section')
         results = data['results']
 
         try:
-            config = ExamResultConfig.objects.get(id=result_config_id)
+            config = ExamResultConfig.objects.select_related(
+                'exam_routine__exam_setup'
+            ).get(id=data['result_config'])
         except ExamResultConfig.DoesNotExist:
             return Response({'error': 'Result config not found'}, status=404)
 
-        section = None
-        if section_id:
-            try:
-                section = Section.objects.get(id=section_id)
-            except Section.DoesNotExist:
-                pass
+        routine = config.exam_routine
 
         created = []
         updated = []
@@ -174,6 +204,11 @@ class BulkResultInputView(generics.GenericAPIView):
                 errors.append({'student': student_id, 'error': 'Student not found'})
                 continue
 
+            error = check_student_matches_routine(student, routine)
+            if error:
+                errors.append({'student': student_id, 'error': error})
+                continue
+
             result, is_created = StudentExamResult.objects.update_or_create(
                 result_config=config,
                 student=student,
@@ -181,7 +216,7 @@ class BulkResultInputView(generics.GenericAPIView):
                     'written_marks': written_marks,
                     'mcq_marks': mcq_marks,
                     'practical_marks': practical_marks,
-                    'section': section,
+                    'section': student.section_static,
                 }
             )
 
@@ -191,25 +226,25 @@ class BulkResultInputView(generics.GenericAPIView):
                 updated.append(student_id)
 
         return Response({
-            'message': f'{len(created)} created, {len(updated)} updated',
+            'message': f'{len(created)} created, {len(updated)} updated, {len(errors)} errors',
             'created': created,
             'updated': updated,
             'errors': errors,
         }, status=status.HTTP_200_OK)
 
 
-
-
 class StudentDetailedMarksheetView(APIView):
 
     def get(self, request, student_id):
-        # select_related এ exam_setup এর বদলে exam_routine ব্যবহার করা হলো
         results = StudentExamResult.objects.filter(student_id=student_id).select_related(
-            'result_config', 'result_config__exam_routine', 'student', 'section'
+            'result_config', 'result_config__exam_routine__subject', 'student', 'section'
         )
 
         if not results.exists():
-            return Response({"error": "এই স্টুডেন্টের কোনো পরীক্ষার রেজাল্ট পাওয়া যায়নি।"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "এই স্টুডেন্টের কোনো পরীক্ষার রেজাল্ট পাওয়া যায়নি।"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         student = results.first().student
         section = results.first().section
@@ -222,8 +257,7 @@ class StudentDetailedMarksheetView(APIView):
 
         for res in results:
             config = res.result_config
-            # config.exam_setup এর বদলে config.exam_routine ব্যবহার করা হলো
-            subject_name = getattr(config.exam_routine, 'subject_name', str(config.exam_routine))
+            subject_name = config.exam_routine.subject.name
 
             subject_results.append({
                 "subject": subject_name,
@@ -239,36 +273,20 @@ class StudentDetailedMarksheetView(APIView):
             grand_total_marks += float(res.total_marks)
             total_gpa += float(res.gpa)
 
-            # যদি কোনো একটি সাবজেক্টেও ফেল করে, তবে ওভারঅল ফেল ধরা হবে
             if res.overall_status == 'fail' or res.grade == 'F':
                 is_overall_passed = False
 
-        # সিজিপিএ (CGPA) ক্যালকুলেশন (সকল সাবজেক্টের জিপিএ এর গড়)
         cgpa = round(total_gpa / subject_count, 2) if subject_count > 0 else 0.0
-        
+
         if not is_overall_passed:
             cgpa = 0.0
             overall_grade = 'F'
         else:
-            # সিজিপিএ অনুযায়ী ওভারঅল গ্রেড নির্ধারণ
-            if cgpa >= 5.0:
-                overall_grade = 'A+'
-            elif cgpa >= 4.0:
-                overall_grade = 'A'
-            elif cgpa >= 3.5:
-                overall_grade = 'A-'
-            elif cgpa >= 3.0:
-                overall_grade = 'B'
-            elif cgpa >= 2.0:
-                overall_grade = 'C'
-            elif cgpa >= 1.0:
-                overall_grade = 'D'
-            else:
-                overall_grade = 'F'
+            overall_grade = overall_grade_from_cgpa(cgpa)
 
-        response_data = {
+        return Response({
             "student_id": student.id,
-            "student_name": getattr(student, 'full_name', getattr(student, 'name', str(student))),
+            "student_name": getattr(student, 'full_name', str(student)),
             "roll_number": getattr(student, 'roll_number', ''),
             "section": getattr(section, 'name', '') if section else '',
             "subject_wise_results": subject_results,
@@ -279,14 +297,11 @@ class StudentDetailedMarksheetView(APIView):
                 "overall_grade": overall_grade,
                 "overall_status": "pass" if is_overall_passed else "fail"
             }
-        }
-
-        return Response(response_data, status=status.HTTP_200_OK)
-
+        }, status=status.HTTP_200_OK)
 
 
 class ClassSectionResultSummaryView(APIView):
-    
+
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('class_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True, description="Class ID"),
@@ -305,24 +320,24 @@ class ClassSectionResultSummaryView(APIView):
         try:
             academic_class = AcademicClass.objects.get(id=class_id)
         except AcademicClass.DoesNotExist:
-            return Response({'error': 'ক্লাসটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'ক্লাসটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
 
         students = Student.objects.filter(class_name_static=academic_class, status="active")
-        
+
         section_obj = None
         if section_id:
             try:
                 section_obj = Section.objects.get(id=section_id)
                 students = students.filter(section_static=section_obj)
             except Section.DoesNotExist:
-                return Response({'error': 'সেকশনটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error': 'সেকশনটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
 
         students = students.order_by('roll_number')
         student_list = []
 
         for student in students:
             results_qs = StudentExamResult.objects.filter(student=student).select_related(
-                'result_config', 'result_config__exam_routine', 'section'
+                'result_config', 'result_config__exam_routine__subject', 'section'
             )
             if result_config_id:
                 results_qs = results_qs.filter(result_config_id=result_config_id)
@@ -335,11 +350,10 @@ class ClassSectionResultSummaryView(APIView):
 
             for res in results_qs:
                 config = res.result_config
-                subject_name = getattr(config.exam_routine, 'subject_name', str(config.exam_routine))
 
                 subject_results.append({
                     "subject_id": config.id,
-                    "subject": subject_name,
+                    "subject": config.exam_routine.subject.name,
                     "written_marks": res.written_marks,
                     "mcq_marks": res.mcq_marks,
                     "practical_marks": res.practical_marks if config.has_practical else 0,
@@ -356,23 +370,19 @@ class ClassSectionResultSummaryView(APIView):
                     is_overall_passed = False
 
             cgpa = round(total_gpa / subject_count, 2) if subject_count > 0 else 0.0
-            
-            if not is_overall_passed or subject_count == 0:
-                overall_grade = 'F' if subject_count > 0 else '-'
+
+            if subject_count == 0:
+                overall_grade = '-'
+            elif not is_overall_passed:
+                overall_grade = 'F'
             else:
-                if cgpa >= 5.0: overall_grade = 'A+'
-                elif cgpa >= 4.0: overall_grade = 'A'
-                elif cgpa >= 3.5: overall_grade = 'A-'
-                elif cgpa >= 3.0: overall_grade = 'B'
-                elif cgpa >= 2.0: overall_grade = 'C'
-                elif cgpa >= 1.0: overall_grade = 'D'
-                else: overall_grade = 'F'
+                overall_grade = overall_grade_from_cgpa(cgpa)
 
             student_list.append({
                 "student_id": student.id,
-                "student_name": getattr(student, 'full_name', getattr(student, 'name', str(student))),
+                "student_name": getattr(student, 'full_name', str(student)),
                 "roll_number": getattr(student, 'roll_number', ''),
-                "section": getattr(student.section_static, 'name', '') if hasattr(student, 'section_static') and student.section_static else '',
+                "section": getattr(student.section_static, 'name', '') if student.section_static else '',
                 "subject_wise_results": subject_results,
                 "summary": {
                     "total_subjects": subject_count,
