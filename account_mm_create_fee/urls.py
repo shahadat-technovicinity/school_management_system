@@ -1,12 +1,15 @@
 from django.urls import path
-from .views import *
 
+from .views import (
+    FeeFormItemsView,
+    FeeStructureDetailView,
+    FeeStructureListCreateView,
+    StudentPickerView,
+)
 
 urlpatterns = [
-    path("create_free/", FeeListCreateView.as_view(), name="create_free"),
-    path("FeeCreateUpdateDelete/<int:pk>/", FeeCreateUpdateDelete.as_view(), name="create_free"),
-    path("FormFilupListCreateView/", FormFilupListCreateView.as_view(), name="create_free"),
-    path("FormFilupUpdateDelete/<int:pk>/", FormFilupUpdateDelete.as_view(), name="create_free"),
-
+    path('fee-structures/', FeeStructureListCreateView.as_view(), name='fee-structure-list'),
+    path('fee-structures/form-items/', FeeFormItemsView.as_view(), name='fee-structure-form-items'),
+    path('fee-structures/students/', StudentPickerView.as_view(), name='fee-structure-students'),
+    path('fee-structures/<int:pk>/', FeeStructureDetailView.as_view(), name='fee-structure-detail'),
 ]
-

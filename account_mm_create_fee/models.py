@@ -1,75 +1,74 @@
 from django.db import models
+
 from academic_mm_class_and_section.models import AcademicClass, Section
+from accounts_mm_fee_type.models import FeeHead
+from apps.students.models import Student
 
-# চয়েসগুলো উপরে একবার ডিফাইন করলে কোড ক্লিন থাকে (DRY Principle)
-ASSIGNMENT_TYPE_CHOICES = [
-    ('class_wise', 'Class-wise Fee'),
-    ('individual', 'Individual Student Fee'),
-]
-
-
-DECIMAL_OPTIONS = {
-    'max_digits': 10,
-    'decimal_places': 2,
-    'default': 0.00
-}
 
 class CreateFee(models.Model):
-    FEE_TYPE_CHOICES = [
-        ('tuition fee', 'Tuition Fee'),
-        ('exam fee', 'Examination Fee'),
-        ('registration fee', 'Registration Fee'),
-        ('session fee', 'Session Fee'),
+    APPLIES_TO_CHOICES = [
+        ('class', 'Class wise'),
+        ('student', 'Individual student'),
     ]
-    
-    assignment_type = models.CharField(max_length=20, choices=ASSIGNMENT_TYPE_CHOICES)
-    select_class = models.ForeignKey(AcademicClass, on_delete=models.PROTECT)
-    select_section = models.ForeignKey(Section, on_delete=models.PROTECT)
-    fee_type = models.CharField(max_length=50, choices=FEE_TYPE_CHOICES)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total amount assigned.")
-    due_date = models.DateField()
-    payment_period = models.CharField(max_length=50)
+    PERIOD_CHOICES = [
+        ('one_time', 'One-time'),
+        ('monthly', 'Monthly'),
+        ('quarterly', 'Quarterly'),
+        ('semester', 'Semester'),
+        ('yearly', 'Yearly'),
+    ]
+
+    fee_head = models.ForeignKey(
+        FeeHead, on_delete=models.PROTECT, related_name='fee_structures',
+        help_text="যে Fee Type বাছা হয়েছে (সর্বোচ্চ স্তর বা যেকোনো স্তর)",
+    )
+    applies_to = models.CharField(max_length=10, choices=APPLIES_TO_CHOICES, default='class')
+
+    # class wise হলে
+    academic_class = models.ForeignKey(
+        AcademicClass, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='fee_structures',
+    )
+    sections = models.ManyToManyField(
+        Section, blank=True, related_name='fee_structures',
+        help_text="Class wise fee এ কমপক্ষে একটা section বাছতে হবে",
+    )
+
+    # individual হলে
+    students = models.ManyToManyField(
+        Student, blank=True, related_name='fee_structures',
+    )
+
+    payment_period = models.CharField(max_length=10, choices=PERIOD_CHOICES)
+    valid_from = models.DateField()
+    valid_until = models.DateField()
+    is_active = models.BooleanField(default=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Fee Structure"
 
     def __str__(self):
-        return f"Fee ID: {self.pk} - {self.fee_type} for {self.select_class}"
+        return f"{self.fee_head.name} ({self.get_applies_to_display()})"
 
-class FormFilupAmount(models.Model):
-    assignment_type = models.CharField(max_length=20, choices=ASSIGNMENT_TYPE_CHOICES)
-    select_class = models.ForeignKey(AcademicClass, on_delete=models.PROTECT)
-    select_section = models.ForeignKey(Section, on_delete=models.PROTECT)
-    fee_type = models.CharField(max_length=50, default='form filup', editable=False)
-    
-    # Amount
-    Printing_Xerox_Expense = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Printing/Xerox Expense")
-    Magazine_Fee_Expense = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Magazine Fee/Expense")
-    Sports_Fee = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Sports Fee")
-    Cultural_Debate_Fee = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Cultural/Debate Fee")
-    Victory_Day_Celebration = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Victory Day Celebration")
-    Formation_of_various_clubs = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Formation of various clubs")
-    Library = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Library")
-    Welfare_Poor_Fund = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Welfare/Poor Fund")
-    ICT = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="ICT")
-    Garden_Maintenance = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Garden Maintenance")
-    Labratory = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Labratory")
-    scout_Red_Crescent_Celebration = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Scout/Red-Crescent Celebration")
-    Common_Room = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Common Room")
-    Identity_Card = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Identity Card")
-    Essential_Expense = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Essential Expense")
-    Freshers_Farewell_Reception = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Freshers/Farewell Reception")
-    Medical_Service = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Medical Service")
-    Miscellaneous_Ancillary = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Miscellaneous/Ancillary")
-    Development = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Development")
-    Electricity = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Electricity")
-    Educational_Tour = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Educational Tour")
-    Swimming_Training = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Swimming Training")
-    Retirement = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Retirement")
-    Welfare = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Welfare")
-    Mosque = models.DecimalField(**DECIMAL_OPTIONS, verbose_name="Mosque")
- 
-    due_date = models.DateField()
-    payment_period = models.CharField(max_length=50)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
+    @property
+    def total_amount(self):
+        return sum((i.amount for i in self.items.all()), 0)
+
+
+class FeeStructureItem(models.Model):
+    """একদম নিচের স্তরের fee এর টাকা। Fee Type এর নিচে sub category না থাকলে Fee Type নিজেই item।"""
+
+    structure = models.ForeignKey(CreateFee, on_delete=models.CASCADE, related_name='items')
+    fee_head = models.ForeignKey(FeeHead, on_delete=models.PROTECT, related_name='fee_structure_items')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        unique_together = ('structure', 'fee_head')
+        ordering = ['fee_head__order', 'fee_head_id']
+
     def __str__(self):
-        return f"Form Filup Amount ID: {self.pk} - {self.select_class}"
+        return f"{self.fee_head.name}: {self.amount}"
