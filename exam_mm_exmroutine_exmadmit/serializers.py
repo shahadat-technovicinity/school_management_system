@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import ExamsRoutine
+from .utils import subject_is_optional
 from academic_create_subject.models import Subject_Name
 from exam_mm_exam_setup.models import ExamSetup
 from apps.students.models import Student
@@ -88,7 +89,11 @@ class SingleStudentAdmitCardSerializer(serializers.ModelSerializer):
 
 class ExamRoutineItemForAdmitCardSerializer(serializers.ModelSerializer):
     subject_name = serializers.ReadOnlyField(source='subject.name')
+    is_optional = serializers.SerializerMethodField()
 
     class Meta:
         model = ExamsRoutine
-        fields = ['subject_name', 'exam_date', 'start_time', 'end_time', 'total_marks']
+        fields = ['subject_name', 'is_optional', 'exam_date', 'start_time', 'end_time', 'total_marks']
+
+    def get_is_optional(self, obj):
+        return subject_is_optional(obj.subject)

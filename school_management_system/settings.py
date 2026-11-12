@@ -217,6 +217,7 @@ INSTALLED_APPS = [
     'account_mm_create_fee',
     'account_mm_expence',
     'account_mm_collect_fee',
+    'accounts_mm_fee_type',
 
 
 

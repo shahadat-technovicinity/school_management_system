@@ -7,3 +7,5 @@ class Subject_Name(models.Model):
 
     def __str__(self):
         return self.name
+    
+

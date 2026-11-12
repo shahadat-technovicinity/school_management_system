@@ -86,6 +86,7 @@ urlpatterns = [
     path("account_mm_create_fee/", include('account_mm_create_fee.urls')),
     path("account_mm_expence/", include('account_mm_expence.urls')),
     path("account_mm_collect_fee/", include('account_mm_collect_fee.urls')),
+    path("accounts_mm_fee_type/", include('accounts_mm_fee_type.urls')),
 
 
 
