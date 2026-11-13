@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -7,12 +7,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.students.models import Student
-from .models import (
-    CombinedResultConfig,
-    StudentExamResult,
-    calculate_grade_and_gpa,
-)
-from .views import overall_grade_from_cgpa
+from .models import CombinedResultConfig, StudentExamResult
+from .views import ScaleBook, load_group_map, summarize_student
 
 
 class CombinedResultConfigSerializer(serializers.ModelSerializer):
@@ -61,8 +57,8 @@ class CombinedResultView(APIView):
     """
     প্রতিটা exam এর নিজের result (exam_wise_results) এবং সবগুলো যোগ করা result (combined) দুটোই দেয়।
     একটা setup বাছলে combined মানে ওই একটা exam ই (is_combined = false)।
-    দুটো বা বেশি বাছলে প্রতি subject এ মার্ক যোগ হয়, মোট পূর্ণমান দিয়ে percentage, তারপর Grade ও GPA।
-    Subject এর combined grade F হলে সেই subject fail, কোনো subject fail হলে overall fail।
+    দুটো বা বেশি বাছলে প্রতি বিষয়ে মার্ক যোগ হয়, মোট পূর্ণমান দিয়ে grade ও GPA হিসাব হয়।
+    সব নিয়ম (English/Bangla দুই পেপার, ধর্ম বিষয়, ৪র্থ বিষয়) আলাদা আলাদা exam এ আর যোগফলে দুই জায়গাতেই চলে।
     """
 
     @swagger_auto_schema(
@@ -92,7 +88,7 @@ class CombinedResultView(APIView):
             students = students.filter(section_static_id=section_id)
         if student_id:
             students = students.filter(id=student_id)
-        students = students.select_related('section_static').order_by('section_static__name', 'roll_number')
+        students = list(students.select_related('section_static').order_by('section_static__name', 'roll_number'))
 
         results = StudentExamResult.objects.filter(
             student__in=students,
@@ -100,114 +96,37 @@ class CombinedResultView(APIView):
         ).select_related(
             'result_config__exam_routine__subject',
             'result_config__exam_routine__exam_name',
+            'result_config__exam_routine__academic_class',
         )
 
-        # student -> subject -> list of exam results
-        grouped = {}
+        by_student = defaultdict(list)
         for res in results:
-            routine = res.result_config.exam_routine
-            by_subject = grouped.setdefault(res.student_id, OrderedDict())
-            by_subject.setdefault(routine.subject_id, {'name': routine.subject.name, 'items': []})
-            by_subject[routine.subject_id]['items'].append((routine, res))
+            by_student[res.student_id].append(res)
+
+        academic_class = config.academic_class
+        scale_book, group_map = ScaleBook(academic_class.id), load_group_map()
 
         student_list = []
         for student in students:
-            by_subject = grouped.get(student.id, {})
-            exam_map = OrderedDict()
-            subject_rows = []
-            grand_total = 0.0
-            grand_full = 0.0
-            total_gpa = 0.0
-            all_passed = True
+            student_results = by_student.get(student.id, [])
 
-            for subject in by_subject.values():
-                exams = []
-                total = 0.0
-                full = 0.0
-                for routine, res in sorted(subject['items'], key=lambda x: x[0].exam_date):
-                    total += float(res.total_marks)
-                    full += float(routine.total_marks)
-
-                    ex = exam_map.setdefault(routine.exam_setup_id, {
-                        'setup_id': routine.exam_setup_id,
-                        'exam': routine.exam_name.name,
-                        'setup': setup_titles.get(routine.exam_setup_id, ''),
-                        'subjects': [], 'gpa_sum': 0.0, 'passed': True,
-                        'total': 0.0, 'full': 0.0,
-                    })
-                    ex['subjects'].append({
-                        'subject': subject['name'],
-                        'written_marks': res.written_marks,
-                        'mcq_marks': res.mcq_marks,
-                        'practical_marks': res.practical_marks,
-                        'total_marks': res.total_marks,
-                        'full_marks': routine.total_marks,
-                        'grade': res.grade,
-                        'gpa': float(res.gpa),
-                        'status': res.overall_status,
-                    })
-                    ex['gpa_sum'] += float(res.gpa)
-                    ex['total'] += float(res.total_marks)
-                    ex['full'] += float(routine.total_marks)
-                    if res.overall_status == 'fail' or res.grade == 'F':
-                        ex['passed'] = False
-                    exams.append({
-                        'exam': routine.exam_name.name,
-                        'marks': float(res.total_marks),
-                        'full_marks': float(routine.total_marks),
-                        'grade': res.grade,
-                    })
-
-                percentage = (total / full) * 100 if full > 0 else 0
-                grade, gpa = calculate_grade_and_gpa(percentage)
-                if grade == 'F':
-                    all_passed = False
-
-                grand_total += total
-                grand_full += full
-                total_gpa += gpa
-                subject_rows.append({
-                    'subject': subject['name'],
-                    'exams': exams,
-                    'total_marks': round(total, 2),
-                    'full_marks': round(full, 2),
-                    'percentage': round(percentage, 2),
-                    'grade': grade,
-                    'gpa': gpa,
-                    'status': 'fail' if grade == 'F' else 'pass',
-                })
-
-            count = len(subject_rows)
-            cgpa = round(total_gpa / count, 2) if count else 0.0
-            if count == 0:
-                overall_grade, cgpa = '-', 0.0
-            elif not all_passed:
-                overall_grade, cgpa = 'F', 0.0
-            else:
-                overall_grade = overall_grade_from_cgpa(cgpa)
+            per_setup = OrderedDict()
+            for res in student_results:
+                per_setup.setdefault(res.result_config.exam_routine.exam_setup_id, []).append(res)
 
             exam_wise = []
-            for ex in exam_map.values():
-                n = len(ex['subjects'])
-                ex_cgpa = round(ex['gpa_sum'] / n, 2) if n else 0.0
-                if not ex['passed']:
-                    ex_grade, ex_cgpa = 'F', 0.0
-                else:
-                    ex_grade = overall_grade_from_cgpa(ex_cgpa)
+            for setup_id, setup_results in per_setup.items():
+                exam_data = summarize_student(student, setup_results, academic_class, scale_book, group_map)
                 exam_wise.append({
-                    'setup_id': ex['setup_id'],
-                    'exam': ex['exam'],
-                    'setup': ex['setup'],
-                    'subject_wise_results': ex['subjects'],
-                    'summary': {
-                        'total_subjects': n,
-                        'grand_total_marks': round(ex['total'], 2),
-                        'grand_full_marks': round(ex['full'], 2),
-                        'cgpa': ex_cgpa,
-                        'overall_grade': ex_grade,
-                        'overall_status': 'pass' if ex['passed'] else 'fail',
-                    },
+                    'setup_id': setup_id,
+                    'exam': setup_results[0].result_config.exam_routine.exam_name.name,
+                    'setup': setup_titles.get(setup_id, ''),
+                    **exam_data,
                 })
+
+            combined = summarize_student(
+                student, student_results, academic_class, scale_book, group_map, check_components=False
+            )
 
             student_list.append({
                 'student_id': student.id,
@@ -215,23 +134,13 @@ class CombinedResultView(APIView):
                 'roll_number': student.roll_number,
                 'section': student.section_static.name if student.section_static else '',
                 'exam_wise_results': exam_wise,
-                'combined': {
-                  'subject_wise_results': subject_rows,
-                  'summary': {
-                    'total_subjects': count,
-                    'grand_total_marks': round(grand_total, 2),
-                    'grand_full_marks': round(grand_full, 2),
-                    'cgpa': cgpa,
-                    'overall_grade': overall_grade,
-                    'overall_status': 'pass' if (all_passed and count > 0) else 'fail',
-                  },
-                },
+                'combined': combined,
             })
 
         return Response({
             'config_id': config.id,
             'name': config.name,
-            'class': config.academic_class.name,
+            'class': academic_class.name,
             'exams_combined': [str(s) for s in setups],
             'is_combined': len(setups) > 1,
             'total_students': len(student_list),
