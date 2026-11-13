@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='stipend_free_hf',
             name='percent',
-            field=models.DecimalField(decimal_places=2, default=django.utils.timezone.now, max_digits=5, validators=[django.core.validators.MinValueValidator(Decimal('0.01')), django.core.validators.MaxValueValidator(Decimal('100'))]),
+            field=models.DecimalField(decimal_places=2, default=0, max_digits=5, validators=[django.core.validators.MinValueValidator(Decimal('0.01')), django.core.validators.MaxValueValidator(Decimal('100'))]),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='stipend_free_hf',
             name='valid_from',
-            field=models.DateField(default=1),
+            field=models.DateField(default='2026-11-13'),
             preserve_default=False,
         ),
         migrations.AlterField(
