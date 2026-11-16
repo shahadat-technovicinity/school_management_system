@@ -81,7 +81,8 @@ class ClassWiseAdmitCardGenerateView(generics.GenericAPIView):
         setup_id = request.query_params.get('exam_setup_id')
         exam_id = request.query_params.get('exam_id')
         section_id = request.query_params.get('section_id')
-        student_id = request.query_params.get('student_id')
+        # student_id URL এর path এ থাকলেও (…/<student_id>/) চলবে, query তেও চলবে
+        student_id = kwargs.get('student_id') or request.query_params.get('student_id')
 
         if not class_id:
             return Response(
@@ -290,11 +291,121 @@ table {{ width: 100%; border-collapse: collapse; }}
 </style></head><body>{''.join(cards)}{script}</body></html>"""
 
 
+def _find_bangla_font():
+    """PDF এর জন্য বাংলা TTF ফন্ট খোঁজে। settings.ADMIT_CARD_FONT বা env ADMIT_CARD_FONT দিলে সেটাই নেয়।"""
+    import glob
+    import os
+    from django.conf import settings
+
+    candidates = [getattr(settings, 'ADMIT_CARD_FONT', None), os.environ.get('ADMIT_CARD_FONT')]
+    win = os.environ.get('WINDIR', r'C:\Windows')
+    for name in ('Nirmala.ttf', 'nirmala.ttf', 'Shonar.ttf', 'vrinda.ttf'):
+        candidates.append(os.path.join(win, 'Fonts', name))
+    candidates += glob.glob('/usr/share/fonts/**/NotoSansBengali*Regular*.ttf', recursive=True)
+    candidates += glob.glob('/usr/share/fonts/**/*Bengali*.ttf', recursive=True)
+    candidates += glob.glob('/usr/share/fonts/**/*Siyam*.ttf', recursive=True)
+    candidates += glob.glob('/usr/share/fonts/**/*Solaiman*.ttf', recursive=True)
+    candidates += glob.glob('/Library/Fonts/**/*Bangla*.ttf', recursive=True)
+    for path in candidates:
+        if path and os.path.isfile(path):
+            return path
+    return None
+
+
+def render_admit_cards_pdf(data):
+    """
+    শুধু `pip install fpdf2 uharfbuzz` হলেই চলে (Windows এও), weasyprint লাগে না।
+    প্রতি ছাত্র = ১ পাতা। বাংলা সঠিকভাবে জোড়া লাগাতে একটা বাংলা TTF ফন্ট লাগে।
+    """
+    import base64
+    import io
+    from fpdf import FPDF
+
+    font_path = _find_bangla_font()
+    if not font_path:
+        raise RuntimeError(
+            "বাংলা ফন্ট পাওয়া যায়নি। settings.py তে ADMIT_CARD_FONT = r'C:\\Windows\\Fonts\\Nirmala.ttf' "
+            "(বা যেকোনো বাংলা .ttf এর পথ) দিন।"
+        )
+
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.set_auto_page_break(False)
+    pdf.add_font('bn', '', font_path)
+    pdf.set_text_shaping(True)
+    sig = base64.b64decode(HEADMASTER_SIGNATURE_B64)
+
+    L, R = 14, 196          # বাম/ডান সীমা (mm)
+    W = R - L
+
+    def text(x, y, w, h, value, size=11, align='L', color=(26, 26, 26)):
+        pdf.set_font('bn', size=size)
+        pdf.set_text_color(*color)
+        pdf.set_xy(x, y)
+        pdf.cell(w, h, str(value), align=align)
+
+    def hline(y, x1=L, x2=R, color=(225, 225, 225), width=0.2):
+        pdf.set_draw_color(*color)
+        pdf.set_line_width(width)
+        pdf.line(x1, y, x2, y)
+
+    for card in data['admit_cards']:
+        info = card['student_info']
+        pdf.add_page()
+
+        text(L, 16, W, 11, SCHOOL_NAME, 25, 'C')
+        text(L, 28, W, 8, 'Admit Card', 16, 'C')
+        text(L, 36, W, 6, str(card['exam_title']).upper(), 10, 'C', (110, 110, 110))
+        hline(45, color=(79, 70, 229), width=0.7)
+
+        y = 50
+        rows = [
+            ('Student Name', info['student_name']), ('Student ID', info['student_id']),
+            ('Roll No', info['roll_no']), ('Class', info['class_name']),
+            ('Section', info['section_name']), ('Shift', info.get('shift') or ''),
+        ]
+        for label, value in rows:
+            text(L + 3, y, 50, 9, label, 10.5, 'L', (95, 95, 95))
+            text(L + 50, y, W - 55, 9, value, 11.5)
+            hline(y + 9.3)
+            y += 10
+
+        text(L, y + 8, W, 7, 'EXAM SCHEDULE', 11.5, 'L', (79, 70, 229))
+        y += 17
+        cols = [(L, 10, 'L'), (L + 10, 66, 'L'), (L + 76, 32, 'L'), (L + 108, 52, 'L'), (L + 160, 22, 'R')]
+        pdf.set_fill_color(244, 245, 248)
+        pdf.rect(L, y, W, 9, 'F')
+        for (x, w, a), head in zip(cols, ['#', 'Subject', 'Date', 'Time', 'Marks']):
+            text(x + 2, y + 0.5, w - 4, 8, head, 10, a)
+        y += 9
+        for i, r in enumerate(card['routines'], start=1):
+            name = r['subject_name'] + (' (4th)' if r.get('is_optional') else '')
+            cells = [str(i), name, _fmt_date(r['exam_date']),
+                     f"{_fmt_time(r['start_time'])} - {_fmt_time(r['end_time'])}", _fmt_marks(r['total_marks'])]
+            for (x, w, a), value in zip(cols, cells):
+                text(x + 2, y + 0.5, w - 4, 8, value, 10.5, a)
+            hline(y + 9)
+            y += 9.6
+
+        sy = min(max(y + 30, 215), 262)
+        blocks = [(L, "Student's Signature", None), (L + 66, "Class Teacher's Signature", None),
+                  (L + 132, 'Head Teacher', HEADMASTER_NAME)]
+        for x, label, name in blocks:
+            hline(sy, x, x + 50, color=(51, 51, 51), width=0.3)
+            if name:
+                pdf.image(io.BytesIO(sig), x=x + 7, y=sy - 18, h=17)
+                text(x - 4, sy + 1, 58, 5, name, 9.5, 'C')
+                text(x - 4, sy + 6, 58, 5, label, 9, 'C')
+            else:
+                text(x - 4, sy + 1, 58, 5, label, 9.5, 'C')
+
+    return bytes(pdf.output())
+
+
 class AdmitCardPrintView(ClassWiseAdmitCardGenerateView):
     """
     class + section + exam দিলে ওই section এর সব ছাত্রের admit card (roll অনুযায়ী serial) একসাথে বানিয়ে দেয়।
-    - ডিফল্ট: ছাপার উপযোগী HTML (খুললে নিজে print dialog আসে; "Save as PDF" দিলেই PDF)
-    - ?output=pdf : সরাসরি PDF ফাইল ডাউনলোড (সার্ভারে weasyprint ইনস্টল থাকলে)
+    - ডিফল্ট: সরাসরি PDF ফাইল ডাউনলোড (pip install fpdf2 uharfbuzz লাগে)
+    - ?output=html : ছাপার উপযোগী HTML (খুললে print dialog আসে)
     - ?print=0 : print dialog ছাড়া শুধু দেখানো
     - ?download=1 : (HTML এর ক্ষেত্রে) ফাইল হিসেবে নামানো
     """
@@ -307,7 +418,7 @@ class AdmitCardPrintView(ClassWiseAdmitCardGenerateView):
             openapi.Parameter('exam_id', openapi.IN_QUERY, description="section_id সহ দিন", type=openapi.TYPE_INTEGER, required=False),
             openapi.Parameter('section_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
             openapi.Parameter('student_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
-            openapi.Parameter('output', openapi.IN_QUERY, description="html (ডিফল্ট) অথবা pdf", type=openapi.TYPE_STRING, required=False),
+            openapi.Parameter('output', openapi.IN_QUERY, description="pdf (ডিফল্ট, ডাউনলোড) অথবা html", type=openapi.TYPE_STRING, required=False),
             openapi.Parameter('print', openapi.IN_QUERY, description="0 দিলে print dialog আসবে না", type=openapi.TYPE_STRING, required=False),
             openapi.Parameter('download', openapi.IN_QUERY, description="1 দিলে ফাইল হিসেবে নামবে", type=openapi.TYPE_STRING, required=False),
         ]
@@ -321,18 +432,28 @@ class AdmitCardPrintView(ClassWiseAdmitCardGenerateView):
             return Response({"error": "এই নির্বাচনে কোনো শিক্ষার্থী পাওয়া যায়নি।"}, status=status.HTTP_404_NOT_FOUND)
 
         # 'format' নাম DRF নিজে ব্যবহার করে (renderer বাছতে), তাই এখানে 'output'
-        fmt = (request.query_params.get('output') or 'html').lower()
+        fmt = (request.query_params.get('output') or 'pdf').lower()
         filename = f"admit_cards_{data['class_name']}_{data['exam_title']}".replace(' ', '_')
 
         if fmt == 'pdf':
+            pdf = None
+            # ১) weasyprint থাকলে সেটা (দেখতে HTML এর মতোই), ২) নাহলে fpdf2 (শুধু pip install)
             try:
                 from weasyprint import HTML
+                pdf = HTML(string=render_admit_cards_html(data, auto_print=False)).write_pdf()
             except Exception:
-                return Response(
-                    {"error": "PDF বানাতে সার্ভারে weasyprint ইনস্টল নেই। output=html ব্যবহার করুন (print → Save as PDF) অথবা weasyprint ইনস্টল করুন।"},
-                    status=status.HTTP_501_NOT_IMPLEMENTED,
-                )
-            pdf = HTML(string=render_admit_cards_html(data, auto_print=False)).write_pdf()
+                try:
+                    import fpdf  # noqa: F401
+                    import uharfbuzz  # noqa: F401
+                except ImportError:
+                    return Response(
+                        {"error": "PDF বানাতে এই কমান্ড চালান: pip install fpdf2 uharfbuzz"},
+                        status=status.HTTP_501_NOT_IMPLEMENTED,
+                    )
+                try:
+                    pdf = render_admit_cards_pdf(data)
+                except RuntimeError as exc:
+                    return Response({"error": str(exc)}, status=status.HTTP_501_NOT_IMPLEMENTED)
             out = HttpResponse(pdf, content_type='application/pdf')
             out['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
             return out
