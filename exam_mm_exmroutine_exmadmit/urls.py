@@ -13,8 +13,9 @@ urlpatterns = [
     path('exam-routines/admit-cards/', ClassWiseAdmitCardGenerateView.as_view(), name='generate-admit-cards'),
     path('exam-routines/admit-cards/<int:student_id>/', ClassWiseAdmitCardGenerateView.as_view(), name='generate-admit-card-for-student'),
 
-    # ক্লাস/সেকশন/পরীক্ষা দিয়ে সবার admit card (PDF)
-    path('exam-routines/admit-cards/print/', AdmitCardPrintView.as_view(), name='print-admit-cards'),
     # একজনের admit card (PDF)
     path('exam-routines/admit-cards/print/<int:student_id>/', AdmitCardPrintView.as_view(), name='print-admit-card'),
+    # ক্লাস/সেকশন/পরীক্ষা দিয়ে সবার admit card (PDF)
+    path('exam-routines/admit-cards/print/', AdmitCardPrintView.as_view(), name='print-admit-cards'),
+   
 ]
