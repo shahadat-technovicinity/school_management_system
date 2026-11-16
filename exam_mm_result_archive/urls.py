@@ -72,3 +72,5 @@ urlpatterns = [
     path('combined-result-config/<int:pk>/', CombinedResultConfigDetailView.as_view(), name='combined-result-config-detail'),
     path('combined-results/<int:config_id>/', CombinedResultView.as_view(), name='combined-results'),
 ]
+
+
