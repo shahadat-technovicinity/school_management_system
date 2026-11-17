@@ -54,3 +54,6 @@ def student_takes_subject(student, subject):
     if religion:
         return (student.religion or '') == religion
     return True
+
+
+
