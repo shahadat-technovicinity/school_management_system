@@ -219,9 +219,20 @@ ENGLISH_LABELS = {
 }
 
 
+def _norm_bn(value):
+    """বাংলা লেখার একই শব্দ ভিন্ন কোডপয়েন্টে (য় = য+়, ো = ে+া, অদৃশ্য ZWJ) থাকলেও মিলিয়ে নেয়।"""
+    import unicodedata
+    text = unicodedata.normalize('NFC', str(value or ''))
+    text = text.replace('\u200c', '').replace('\u200d', '')
+    return ' '.join(text.split())
+
+
+_ENGLISH_LABELS_NORM = {_norm_bn(k): v for k, v in ENGLISH_LABELS.items()}
+
+
 def to_english(value):
-    text = ' '.join(str(value or '').split())
-    return ENGLISH_LABELS.get(text, text)
+    text = _norm_bn(value)
+    return _ENGLISH_LABELS_NORM.get(text, text)
 
 
 def _fmt_date(value):
