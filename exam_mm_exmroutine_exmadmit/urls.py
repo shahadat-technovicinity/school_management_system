@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    ExamAttendanceSheetPrintView,
     ExamRoutineListCreateView,
     ExamRoutineDetailView,
     ClassWiseAdmitCardGenerateView,
@@ -17,5 +18,7 @@ urlpatterns = [
     path('exam-routines/admit-cards/print/<int:student_id>/', AdmitCardPrintView.as_view(), name='print-admit-card'),
     # ক্লাস/সেকশন/পরীক্ষা দিয়ে সবার admit card (PDF)
     path('exam-routines/admit-cards/print/', AdmitCardPrintView.as_view(), name='print-admit-cards'),
-   
+
+    # পরীক্ষার উপর ভিত্তি করে attendance sheet (PDF)
+    path('exam-routines/attendance-sheets/print/', ExamAttendanceSheetPrintView.as_view(), name='print-attendance-sheets'),
 ]
