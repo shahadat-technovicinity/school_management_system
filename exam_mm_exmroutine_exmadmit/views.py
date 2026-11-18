@@ -451,15 +451,23 @@ SCHOOL_LOGO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAQQAAADeCAYAAADb2n73AABJf0lEQVR42u19d
 
 
 
-# ExamAttendance
-
-
+# ---------------------------------------------------------------------------
+# Exam Attendance Sheet (তারিখ অনুযায়ী আলাদা শিট, প্রতি পেজে ২৪ জন)
+# ---------------------------------------------------------------------------
 ATTENDANCE_ROWS_PER_PAGE = 24   # ২০–২৫ এর মধ্যে বদলাতে পারো
+
+
+def _fmt_date_numeric(value):
+    """তারিখ সংখ্যায়: দিন-মাস-বছর (যেমন 17-11-2026)"""
+    try:
+        return datetime.date.fromisoformat(str(value)).strftime('%d-%m-%Y')
+    except ValueError:
+        return str(value or '')
 
 
 def build_attendance_sheets(data):
     """
-    admit_cards থেকে (section, exam_date) অনুযায়ী শিট বানায়।
+    admit_cards থেকে (exam_date, section) অনুযায়ী শিট বানায়।
     ধর্ম/ঐচ্ছিক বিষয়ের কারণে সেই তারিখে যার পরীক্ষা নেই, সে ওই শিটে আসবে না।
     """
     sheets = {}
@@ -507,7 +515,7 @@ def render_attendance_sheets_html(data, auto_print=False):
   <h2>Exam Attendance Sheet</h2>
   <div class="exam">{escape(data['exam_title']).upper()}</div>
   <table class="meta">
-    <tr><td>Date: <b>{_fmt_date(exam_date)}</b></td><td>Subject: <b>{subjects}</b></td><td>Time: <b>{time_text}</b></td></tr>
+    <tr><td>Date: <b>{_fmt_date_numeric(exam_date)}</b></td><td>Subject: <b>{subjects}</b></td><td>Time: <b>{time_text}</b></td></tr>
     <tr><td>Class: <b>{class_name}</b></td><td>Section: <b>{section_name}</b></td>
         <td>Total Students: <b>{len(students)}</b> &nbsp; (Page {page_no}/{len(chunks)})</td></tr>
   </table>
