@@ -1,11 +1,20 @@
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import Q
 from apps.students.models import Student
 from academic_mm_class_and_section.models import AcademicClass, Section
 from academic_create_subject.models import Subject_Name
 from exam_mm_exmroutine_exmadmit.models import ExamsRoutine
 from exam_mm_exam_setup.models import ExamSetup
+
+
+def _exam_name_model():
+    """ExamSetup.exam_name যে model এর FK, সেটাই নেয় (নাম/app আলাদা করে লিখতে হয় না)।"""
+    related = ExamSetup._meta.get_field('exam_name').remote_field.model
+    if isinstance(related, str):
+        return related if '.' in related else f"{ExamSetup._meta.app_label}.{related}"
+    return related
 
 
 # ---------------------------------------------------------------------------
@@ -53,19 +62,41 @@ class SubjectGroup(models.Model):
 
 class GradeScale(models.Model):
     """
-    কোন বিষয়ে (বা বিষয় গ্রুপে) শতকরা কত পেলে কোন grade/point, তা admin ঠিক করে।
-    পূর্ণমান আর pass mark আসে exam routine ও result-config থেকে (এখানে কোনো পূর্ণমান ধরা হয় না)।
-    academic_class ফাঁকা হলে সব ক্লাসের জন্য।
+    কোন বিষয়ে (বা বিষয় গ্রুপে) কত পেলে কোন grade/point, তা admin ঠিক করে।
+
+    কোন পরীক্ষার জন্য: exam_name (ফাঁকা হলে সব পরীক্ষার জন্য)
+    কোন ক্লাসের জন্য:  academic_class (ফাঁকা হলে সব ক্লাসের জন্য)
+    কোন সেকশনের জন্য: section (ফাঁকা হলে ওই exam setup এর সব সেকশন; ক্লাস ৯-১০ এ আলাদা সেকশন বাছা যায়)
+
+    input_mode:
+      percent -> সারিতে শতকরা (0-100) দেওয়া হয়
+      marks   -> সারিতে সরাসরি নম্বর দেওয়া হয়; সর্বোচ্চ নম্বর আসে exam routine এর total_marks থেকে
+                 (গ্রুপ হলে সব পেপারের যোগফল, যেমন 100 + 100 = 200)
     """
+    INPUT_PERCENT = 'percent'
+    INPUT_MARKS = 'marks'
+    INPUT_CHOICES = [
+        (INPUT_PERCENT, 'Percent'),
+        (INPUT_MARKS, 'Marks'),
+    ]
+
     subject = models.ForeignKey(
         Subject_Name, on_delete=models.CASCADE, null=True, blank=True, related_name='grade_scales'
     )
     group = models.ForeignKey(
         SubjectGroup, on_delete=models.CASCADE, null=True, blank=True, related_name='grade_scales'
     )
+    exam_name = models.ForeignKey(
+        _exam_name_model(), on_delete=models.CASCADE, null=True, blank=True,
+        related_name='result_grade_scales',
+    )
     academic_class = models.ForeignKey(
         AcademicClass, on_delete=models.CASCADE, null=True, blank=True, related_name='grade_scales'
     )
+    section = models.ForeignKey(
+        Section, on_delete=models.CASCADE, null=True, blank=True, related_name='result_grade_scales'
+    )
+    input_mode = models.CharField(max_length=10, choices=INPUT_CHOICES, default=INPUT_PERCENT)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -73,33 +104,71 @@ class GradeScale(models.Model):
 
     def __str__(self):
         target = self.group.name if self.group_id else (self.subject.name if self.subject_id else '-')
-        return f"{target} / {self.academic_class or 'all classes'}"
+        return f"{target} / {self.exam_name or 'all exams'} / {self.academic_class or 'all classes'}"
 
 
 class GradeScaleRow(models.Model):
     scale = models.ForeignKey(GradeScale, on_delete=models.CASCADE, related_name='rows')
-    min_percent = models.DecimalField(max_digits=5, decimal_places=2, help_text="শতকরা এত বা এর বেশি পেলে")
+    min_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text="percent mode: শতকরা এত বা এর বেশি পেলে",
+    )
+    min_marks = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text="marks mode: নম্বর এত বা এর বেশি পেলে",
+    )
     grade = models.CharField(max_length=5)
     point = models.DecimalField(max_digits=3, decimal_places=2, help_text="0 হলে fail")
 
     class Meta:
-        ordering = ['-min_percent']
+        ordering = ['-min_percent', '-min_marks']
 
     def __str__(self):
+        if self.min_marks is not None:
+            return f"{self.min_marks} marks+ -> {self.grade} ({self.point})"
         return f"{self.min_percent}%+ -> {self.grade} ({self.point})"
 
 
-def find_scale(subject_id, class_id, group_id=None):
+def pick_scale(candidates, exam_id=None, section_id=None):
+    """
+    একাধিক grade তালিকার মধ্যে সবচেয়ে নির্দিষ্টটা বাছে।
+    exam মিললে সবচেয়ে বেশি গুরুত্ব, তারপর section, তারপর class।
+    exam_id=None দিলে (একাধিক পরীক্ষা যোগ করার সময়) শুধু 'সব পরীক্ষার' তালিকা চলে।
+    """
+    best, best_score = None, -1
+    for scale in candidates:
+        if scale.exam_name_id and scale.exam_name_id != exam_id:
+            continue
+        if scale.section_id and scale.section_id != section_id:
+            continue
+        score = (4 if scale.exam_name_id else 0) + (2 if scale.section_id else 0) + (1 if scale.academic_class_id else 0)
+        if score > best_score:
+            best, best_score = scale, score
+    return best
+
+
+def find_scale(subject_id, class_id, group_id=None, exam_id=None, section_id=None):
     qs = GradeScale.objects.prefetch_related('rows')
     qs = qs.filter(group_id=group_id) if group_id else qs.filter(subject_id=subject_id)
-    return qs.filter(academic_class_id=class_id).first() or qs.filter(academic_class__isnull=True).first()
+    qs = qs.filter(Q(academic_class_id=class_id) | Q(academic_class__isnull=True))
+    return pick_scale(qs, exam_id, section_id)
 
 
 def grade_from_scale(scale, obtained, full):
-    """(grade, point) দেয়। শতকরা হিসাব করে admin এর তালিকা থেকে grade খোঁজে।"""
-    percent = (float(obtained) / float(full)) * 100 if full and float(full) > 0 else 0.0
-    for row in sorted(scale.rows.all(), key=lambda r: r.min_percent, reverse=True):
-        if percent + 1e-9 >= float(row.min_percent):
+    """(grade, point) দেয়। percent mode এ শতকরা, marks mode এ সরাসরি নম্বর মিলিয়ে grade খোঁজে।"""
+    if scale.input_mode == GradeScale.INPUT_MARKS:
+        value = float(obtained)
+
+        def threshold(row):
+            return float(row.min_marks or 0)
+    else:
+        value = (float(obtained) / float(full)) * 100 if full and float(full) > 0 else 0.0
+
+        def threshold(row):
+            return float(row.min_percent or 0)
+
+    for row in sorted(scale.rows.all(), key=threshold, reverse=True):
+        if value + 1e-9 >= threshold(row):
             return row.grade, float(row.point)
     return 'F', 0.0
 
@@ -226,8 +295,12 @@ class StudentExamResult(models.Model):
         self.grace_marks = min(config.grace_marks or Decimal('0'), room)
         self.total_marks = raw_total + self.grace_marks
 
-        # Grade/GPA: admin এর তালিকা থাকলে সেটা, নাহলে সাধারণ তালিকা
-        scale = find_scale(routine.subject_id, routine.academic_class_id)
+        # Grade/GPA: এই exam/class/section এর জন্য admin এর তালিকা থাকলে সেটা, নাহলে সাধারণ তালিকা
+        section_id = self.section_id or getattr(self.student, 'section_static_id', None)
+        scale = find_scale(
+            routine.subject_id, routine.academic_class_id,
+            exam_id=routine.exam_name_id, section_id=section_id,
+        )
         if scale:
             self.grade, gpa = grade_from_scale(scale, self.total_marks, full)
         else:
@@ -293,3 +366,5 @@ class CombinedResultConfig(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.academic_class}"
+
+
