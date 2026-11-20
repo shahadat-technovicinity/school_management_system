@@ -14,6 +14,7 @@ from .views import (
     SubjectGroupDetailView,
     GradeScaleListCreateView,
     GradeScaleDetailView,
+    GradeScaleOptionsView,
     Class68ResultConfigListCreateView,
     Class68ResultConfigDetailView,
     Class68StudentListView,
@@ -49,6 +50,7 @@ urlpatterns = [
     path('subject-groups/', SubjectGroupListCreateView.as_view(), name='subject-group-list'),
     path('subject-groups/<int:pk>/', SubjectGroupDetailView.as_view(), name='subject-group-detail'),
     path('grade-scales/', GradeScaleListCreateView.as_view(), name='grade-scale-list'),
+    path('grade-scales/options/', GradeScaleOptionsView.as_view(), name='grade-scale-options'),
     path('grade-scales/<int:pk>/', GradeScaleDetailView.as_view(), name='grade-scale-detail'),
 
     # ক্লাস ৬-৮ এর আলাদা API (written + mcq)
@@ -72,5 +74,3 @@ urlpatterns = [
     path('combined-result-config/<int:pk>/', CombinedResultConfigDetailView.as_view(), name='combined-result-config-detail'),
     path('combined-results/<int:config_id>/', CombinedResultView.as_view(), name='combined-results'),
 ]
-
-

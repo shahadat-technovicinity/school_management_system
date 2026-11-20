@@ -19,6 +19,7 @@ from .models import (
     calculate_grade_and_gpa,
     class_has_practical,
     grade_from_scale,
+    pick_scale,
 )
 from .serializers import (
     ExamResultConfigSerializer,
@@ -27,6 +28,8 @@ from .serializers import (
     StudentListForResultSerializer,
     BulkResultInputSerializer,
     SubjectGroupSerializer,
+    full_marks_for,
+    sections_for_exam_class,
     to_decimal,
     validate_marks_entry,
 )
@@ -56,6 +59,7 @@ class ResultPagination(pagination.PageNumberPagination):
 # - পূর্ণমান ও pass mark আসে exam routine ও result-config থেকে।
 # - ক্লাস ৬-৮: written + mcq যোগ করে মোট নম্বরে pass/fail।
 # - ক্লাস ৯-১০: written, mcq, practical প্রতিটায় আলাদা pass করতে হয়।
+# - Grade তালিকা: exam + class + section অনুযায়ী সবচেয়ে নির্দিষ্টটা চলে (pick_scale)।
 # ---------------------------------------------------------------------------
 def overall_grade_from_cgpa(cgpa):
     if cgpa >= 5.0:
@@ -80,19 +84,18 @@ class ScaleBook:
         scales = GradeScale.objects.filter(
             Q(academic_class_id=academic_class_id) | Q(academic_class__isnull=True)
         ).prefetch_related('rows')
-        self._subject, self._group = {}, {}
+        self._subject, self._group = defaultdict(list), defaultdict(list)
         for s in scales:
-            target = self._group if s.group_id else self._subject
-            key = s.group_id or s.subject_id
-            cur = target.get(key)
-            if cur is None or (s.academic_class_id and not cur.academic_class_id):
-                target[key] = s  # ক্লাস-নির্দিষ্ট তালিকা সাধারণটার ওপরে
+            if s.group_id:
+                self._group[s.group_id].append(s)
+            elif s.subject_id:
+                self._subject[s.subject_id].append(s)
 
-    def for_subject(self, subject_id):
-        return self._subject.get(subject_id)
+    def for_subject(self, subject_id, exam_id=None, section_id=None):
+        return pick_scale(self._subject.get(subject_id, []), exam_id, section_id)
 
-    def for_group(self, group_id):
-        return self._group.get(group_id)
+    def for_group(self, group_id, exam_id=None, section_id=None):
+        return pick_scale(self._group.get(group_id, []), exam_id, section_id)
 
 
 def load_group_map():
@@ -153,8 +156,11 @@ def _build_buckets(student, results, group_map):
     return buckets, skipped
 
 
-def _evaluate(b, academic_class, scale_book, check_components):
-    scale = scale_book.for_group(b['group_id']) if b['group_id'] else scale_book.for_subject(b['subject_id'])
+def _evaluate(b, academic_class, scale_book, check_components, exam_id=None, section_id=None):
+    if b['group_id']:
+        scale = scale_book.for_group(b['group_id'], exam_id, section_id)
+    else:
+        scale = scale_book.for_subject(b['subject_id'], exam_id, section_id)
     total, full = b['total'], b['full']
     if scale:
         grade, point = grade_from_scale(scale, total, full)
@@ -200,9 +206,17 @@ def summarize_student(student, results, academic_class, scale_book, group_map, c
     """
     results: ওই ছাত্রের StudentExamResult এর তালিকা (select_related করা)।
     check_components=False দিলে (একাধিক পরীক্ষা যোগ করার সময়) written/mcq/practical আলাদা pass দেখা হয় না।
+    Grade তালিকা: results একটাই exam এর হলে ওই exam এর তালিকা চলে; একাধিক exam মিলালে 'সব পরীক্ষার' তালিকা।
     """
+    exam_ids = {r.result_config.exam_routine.exam_name_id for r in results}
+    exam_id = next(iter(exam_ids)) if len(exam_ids) == 1 else None
+    section_id = getattr(student, 'section_static_id', None)
+
     buckets, skipped = _build_buckets(student, results, group_map)
-    rows = [_evaluate(b, academic_class, scale_book, check_components) for b in buckets.values()]
+    rows = [
+        _evaluate(b, academic_class, scale_book, check_components, exam_id, section_id)
+        for b in buckets.values()
+    ]
 
     main = [r for r in rows if not r['is_optional']]
     optional = [r for r in rows if r['is_optional']]
@@ -746,7 +760,9 @@ class GradeScaleListCreateView(generics.ListCreateAPIView):
     @swagger_auto_schema(manual_parameters=[
         openapi.Parameter('subject', openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
         openapi.Parameter('group', openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
+        openapi.Parameter('exam_name', openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
         openapi.Parameter('academic_class', openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
+        openapi.Parameter('section', openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
     ])
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -754,20 +770,76 @@ class GradeScaleListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return GradeScale.objects.none()
-        qs = GradeScale.objects.select_related('subject', 'group', 'academic_class').prefetch_related('rows')
+        qs = GradeScale.objects.select_related(
+            'subject', 'group', 'exam_name', 'academic_class', 'section'
+        ).prefetch_related('rows', 'group__subjects')
         p = self.request.query_params
         if p.get('subject'):
             qs = qs.filter(subject_id=p['subject'])
         if p.get('group'):
             qs = qs.filter(group_id=p['group'])
+        if p.get('exam_name'):
+            qs = qs.filter(exam_name_id=p['exam_name'])
         if p.get('academic_class'):
             qs = qs.filter(academic_class_id=p['academic_class'])
+        if p.get('section'):
+            qs = qs.filter(section_id=p['section'])
         return qs
 
 
 class GradeScaleDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = GradeScale.objects.select_related('subject', 'group', 'academic_class').prefetch_related('rows')
+    queryset = GradeScale.objects.select_related(
+        'subject', 'group', 'exam_name', 'academic_class', 'section'
+    ).prefetch_related('rows', 'group__subjects')
     serializer_class = GradeScaleSerializer
+
+
+class GradeScaleOptionsView(APIView):
+    """
+    Grade scale ফর্মের জন্য: exam ও class বাছার পর এটা ডাকলে
+      - ওই exam setup এর সেকশনগুলো অটোমেটিক আসে (sections)
+      - ক্লাস ৯-১০ হলে has_section_choice = true (UI তে section বাছার অপশন দেখান)
+      - subject/group দিলে সর্বোচ্চ নম্বর (max_marks) আসে: exam routine এর total_marks, গ্রুপ হলে পেপারগুলোর যোগফল
+    """
+
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('exam_name', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True),
+        openapi.Parameter('academic_class', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True),
+        openapi.Parameter('subject', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+        openapi.Parameter('group', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+    ])
+    def get(self, request):
+        p = request.query_params
+        exam_id, class_id = p.get('exam_name'), p.get('academic_class')
+        if not exam_id or not class_id:
+            return Response({'error': 'exam_name ও academic_class দিন।'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            academic_class = AcademicClass.objects.get(id=class_id)
+        except AcademicClass.DoesNotExist:
+            return Response({'error': 'ক্লাসটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not ExamSetup.objects.filter(exam_name_id=exam_id, academic_class_id=class_id).exists():
+            return Response({'error': 'এই exam ও class এর কোনো exam setup নেই।'}, status=status.HTTP_404_NOT_FOUND)
+
+        max_marks = None
+        group_id, subject_id = p.get('group'), p.get('subject')
+        if group_id:
+            try:
+                group = SubjectGroup.objects.prefetch_related('subjects').get(id=group_id)
+            except SubjectGroup.DoesNotExist:
+                return Response({'error': 'Subject group পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
+            max_marks = full_marks_for([s.id for s in group.subjects.all()], exam_id, class_id)
+        elif subject_id:
+            max_marks = full_marks_for([int(subject_id)], exam_id, class_id)
+
+        return Response({
+            'exam_name': int(exam_id),
+            'academic_class': {'id': academic_class.id, 'name': academic_class.name},
+            'has_section_choice': class_has_practical(academic_class),
+            'sections': sections_for_exam_class(exam_id, class_id),
+            'max_marks': str(max_marks) if max_marks is not None else None,
+        })
 
 
 # ---------------------------------------------------------------------------
