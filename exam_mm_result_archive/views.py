@@ -1,3 +1,9 @@
+import base64
+import os
+import uuid
+from django.conf import settings
+from rest_framework.renderers import BaseRenderer, JSONRenderer
+from django.urls import reverse
 from collections import OrderedDict, defaultdict
 
 from django.db.models import Q
@@ -12,6 +18,7 @@ from academic_mm_class_and_section.models import AcademicClass, Section
 from exam_mm_exam_setup.models import ExamSetup
 from exam_mm_exmroutine_exmadmit.utils import student_takes_subject, subject_is_optional
 from .models import (
+    MarksEntryLog,
     ExamResultConfig,
     GradeScale,
     StudentExamResult,
@@ -130,7 +137,7 @@ def _build_buckets(student, results, group_map):
                 'subject_id': None if group else subject.id,
                 'is_optional': False if group else subject_is_optional(subject),
                 'papers': [], 'exams': [],
-                'written': 0.0, 'mcq': 0.0, 'practical': 0.0, 'grace': 0.0,
+                'written': 0.0, 'mcq': 0.0, 'practical': 0.0, 'grace': 0.0, 'gw': 0.0, 'gm': 0.0, 'gp': 0.0,
                 'written_pass': 0.0, 'mcq_pass': 0.0, 'practical_pass': 0.0, 'pass_total': 0.0,
                 'total': 0.0, 'full': 0.0,
             }
@@ -146,6 +153,9 @@ def _build_buckets(student, results, group_map):
         b['mcq'] += float(res.mcq_marks)
         b['practical'] += float(res.practical_marks)
         b['grace'] += float(res.grace_marks)
+        b['gw'] += float(res.grace_written)
+        b['gm'] += float(res.grace_mcq)
+        b['gp'] += float(res.grace_practical)
         cfg = res.result_config
         b['written_pass'] += float(cfg.written_pass_marks)
         b['mcq_pass'] += float(cfg.mcq_pass_marks)
@@ -178,9 +188,9 @@ def _evaluate(b, academic_class, scale_book, check_components, exam_id=None, sec
     if check_components and class_has_practical(academic_class):
         passed = (
             passed
-            and (b['written'] + b['grace']) >= b['written_pass']
-            and b['mcq'] >= b['mcq_pass']
-            and b['practical'] >= b['practical_pass']
+            and (b['written'] + b['gw']) >= b['written_pass']
+            and (b['mcq'] + b['gm']) >= b['mcq_pass']
+            and (b['practical'] + b['gp']) >= b['practical_pass']
         )
 
     return {
@@ -190,6 +200,9 @@ def _evaluate(b, academic_class, scale_book, check_components, exam_id=None, sec
         'written_marks': round(b['written'], 2),
         'mcq_marks': round(b['mcq'], 2),
         'practical_marks': round(b['practical'], 2),
+        'grace_written': round(b['gw'], 2),
+        'grace_mcq': round(b['gm'], 2),
+        'grace_practical': round(b['gp'], 2),
         'grace_marks': round(b['grace'], 2),
         'total_marks': round(total, 2),
         'full_marks': round(full, 2),
@@ -451,6 +464,32 @@ class StudentExamResultDetailView(generics.RetrieveUpdateDestroyAPIView):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
 
+def _who(request):
+    user = getattr(request, 'user', None)
+    if user is not None and getattr(user, 'is_authenticated', False):
+        full = user.get_full_name() if hasattr(user, 'get_full_name') else ''
+        return (full or user.get_username())[:150]
+    return ''
+
+
+def log_marks_entry(batch_id, config, student, result, old, request, is_created):
+    """old = (written, mcq, practical) আগের মান, নতুন হলে None।"""
+    new = (result.written_marks, result.mcq_marks, result.practical_marks)
+    if is_created:
+        action = 'created'
+    elif old is not None and tuple(old) == tuple(new):
+        action = 'unchanged'
+    else:
+        action = 'updated'
+    MarksEntryLog.objects.create(
+        batch_id=batch_id, result_config=config, student=student, action=action,
+        old_written=old[0] if old else None, old_mcq=old[1] if old else None,
+        old_practical=old[2] if old else None,
+        new_written=new[0], new_mcq=new[1], new_practical=new[2],
+        new_total=result.total_marks, new_grade=result.grade, entered_by=_who(request),
+    )
+
+
 class BulkResultInputView(generics.GenericAPIView):
     serializer_class = BulkResultInputSerializer
     parser_classes = [parsers.JSONParser]
@@ -476,6 +515,7 @@ class BulkResultInputView(generics.GenericAPIView):
         created = []
         updated = []
         errors = []
+        batch_id = uuid.uuid4()
 
         for item in results:
             student_id = item.get('student')
@@ -501,6 +541,8 @@ class BulkResultInputView(generics.GenericAPIView):
                 errors.append({'student': student_id, 'error': error})
                 continue
 
+            previous = StudentExamResult.objects.filter(result_config=config, student=student).first()
+            old = (previous.written_marks, previous.mcq_marks, previous.practical_marks) if previous else None
             result, is_created = StudentExamResult.objects.update_or_create(
                 result_config=config,
                 student=student,
@@ -512,6 +554,8 @@ class BulkResultInputView(generics.GenericAPIView):
                 }
             )
 
+            log_marks_entry(batch_id, config, student, result, old, request, is_created)
+
             if is_created:
                 created.append(student_id)
             else:
@@ -519,6 +563,8 @@ class BulkResultInputView(generics.GenericAPIView):
 
         return Response({
             'message': f'{len(created)} created, {len(updated)} updated, {len(errors)} errors',
+            'batch_id': str(batch_id),
+            'receipt_url': request.build_absolute_uri(reverse('marks-entry-receipt')) + f'?batch={batch_id}',
             'created': created,
             'updated': updated,
             'errors': errors,
@@ -559,31 +605,56 @@ class RecalculateResultsView(APIView):
 
 class GraceMarksApplyView(APIView):
     """
-    Grace marks একসাথে বসানো (dynamic)। বসানোর পর ওই exam এর সব result নিজে থেকে আবার হিসাব হয়।
-    body: { "exam_setup": 5, "grace_marks": 5 }                      → ওই setup এর সব বিষয়ে
-          { "exam_setup": 5, "grace_marks": 5, "subject": 21 }       → শুধু একটি বিষয়ে
-          { "exam_setup": 5, "grace_marks": 0 }                      → grace তুলে দিতে
-    শুধু একটি বিষয়ের জন্য চাইলে result-config/<id>/ এ grace_marks PATCH করলেও হয়।
+    Grace marks একসাথে বসানো। written, mcq, practical প্রতিটা আলাদা করে দেওয়া যায়
+    (practical শুধু ক্লাস ৯-১০ এর জন্য)। মোট নম্বরে আলাদা কোনো সংখ্যা যোগ হয় না,
+    প্রতিটা অংশের grace ওই অংশের নম্বরের সাথে যোগ হয় (ওই অংশের পূর্ণমান ছাড়ায় না)।
+    বসানোর পর ওই exam এর সব result নিজে থেকে আবার হিসাব হয়।
+
+    body: { "exam_setup": 5, "grace_written": 3, "grace_mcq": 2 }               → ওই setup এর সব বিষয়ে
+          { "exam_setup": 5, "grace_written": 3, "grace_mcq": 2,
+            "grace_practical": 1, "subject": 21 }                                → শুধু একটি বিষয়ে
+          { "exam_setup": 5, "grace_written": 0, "grace_mcq": 0 }               → grace তুলে দিতে
+    যে field পাঠানো হবে শুধু সেটাই বদলাবে, না পাঠালে আগেরটাই থাকবে।
     """
 
     @swagger_auto_schema(request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
-        required=['exam_setup', 'grace_marks'],
+        required=['exam_setup'],
         properties={
             'exam_setup': openapi.Schema(type=openapi.TYPE_INTEGER),
-            'grace_marks': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'subject': openapi.Schema(type=openapi.TYPE_INTEGER, description='ঐচ্ছিক'),
+            'subject': openapi.Schema(type=openapi.TYPE_INTEGER, description='ঐচ্ছিক (না দিলে সব বিষয়)'),
+            'grace_written': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'grace_mcq': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'grace_practical': openapi.Schema(type=openapi.TYPE_NUMBER, description='শুধু ক্লাস ৯-১০'),
         },
     ))
     def post(self, request):
         setup_id = request.data.get('exam_setup')
         if not setup_id:
             return Response({'error': 'exam_setup দিন।'}, status=400)
-        grace, err = to_decimal(request.data.get('grace_marks'), 'Grace marks')
-        if err:
-            return Response({'error': err}, status=400)
-        if grace < 0:
-            return Response({'error': 'Grace marks ঋণাত্মক হতে পারবে না।'}, status=400)
+
+        values = {}
+        for field, label in (('grace_written', 'Written grace'), ('grace_mcq', 'MCQ grace'),
+                             ('grace_practical', 'Practical grace')):
+            raw = request.data.get(field)
+            if raw is None or raw == '':
+                continue
+            val, err = to_decimal(raw, label)
+            if err:
+                return Response({'error': err}, status=400)
+            if val < 0:
+                return Response({'error': f'{label} ঋণাত্মক হতে পারবে না।'}, status=400)
+            values[field] = val
+        if not values:
+            return Response({'error': 'grace_written, grace_mcq বা grace_practical এর অন্তত একটা দিন।'},
+                            status=400)
+
+        setup = ExamSetup.objects.filter(id=setup_id).select_related('academic_class').first()
+        if not setup:
+            return Response({'error': 'Exam setup পাওয়া যায়নি।'}, status=404)
+        if values.get('grace_practical', 0) > 0 and not class_has_practical(setup.academic_class):
+            return Response({'error': 'এই ক্লাসে practical নেই, তাই grace_practical দেওয়া যাবে না (শুধু ক্লাস ৯-১০)।'},
+                            status=400)
 
         configs = ExamResultConfig.objects.filter(exam_routine__exam_setup_id=setup_id)
         subject_id = request.data.get('subject')
@@ -594,7 +665,7 @@ class GraceMarksApplyView(APIView):
             return Response({'error': 'এই exam setup এ কোনো result config পাওয়া যায়নি। আগে result-config বানান।'},
                             status=404)
 
-        configs.update(grace_marks=grace)
+        configs.update(**values)
         count = 0
         for res in StudentExamResult.objects.filter(result_config_id__in=config_ids).select_related(
             'result_config__exam_routine__subject', 'result_config__exam_routine__academic_class'
@@ -602,7 +673,7 @@ class GraceMarksApplyView(APIView):
             res.save()
             count += 1
         return Response({'configs_updated': len(config_ids), 'results_recalculated': count,
-                         'grace_marks': float(grace)})
+                         **{k: float(v) for k, v in values.items()}})
 
 
 def _result_queryset():
@@ -903,3 +974,165 @@ class Class910StudentMarksheetView(Band910, StudentDetailedMarksheetView):
 
 class Class910ResultSummaryView(Band910, ClassSectionResultSummaryView):
     pass
+
+
+# ---------------------------------------------------------------------------
+# Marks entry log ও রিসিপ্ট (কে কখন কত নম্বর দিল, পরে বদলালে ধরার জন্য)
+# ---------------------------------------------------------------------------
+def _fm(x):
+    if x is None:
+        return '-'
+    x = float(x)
+    return str(int(x)) if x == int(x) else f'{x:g}'
+
+
+class BinaryPDFRenderer(BaseRenderer):
+    media_type = 'application/pdf'
+    format = 'pdf'
+    charset = None
+    render_style = 'binary'
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
+
+
+def load_font_base64():
+    path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'SolaimanLipi.ttf')
+    if os.path.exists(path):
+        with open(path, 'rb') as f:
+            return base64.b64encode(f.read()).decode('utf-8')
+    return ''
+
+
+SCHOOL_NAME = "Harikhali High School"
+
+
+class MarksEntryLogView(APIView):
+    """GET ?result_config=ID[&student=ID][&batch=UUID] → save/update এর ইতিহাস (JSON)"""
+
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('result_config', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+        openapi.Parameter('student', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+        openapi.Parameter('batch', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False),
+    ])
+    def get(self, request):
+        qs = _log_queryset(request)
+        if qs is None:
+            return Response({'error': 'result_config অথবা batch দিন।'}, status=400)
+        rows = [{
+            'batch_id': str(l.batch_id), 'time': l.created_at, 'action': l.action,
+            'student_id': l.student_id, 'student': getattr(l.student, 'full_name', str(l.student)),
+            'roll': l.student.roll_number, 'entered_by': l.entered_by,
+            'old': None if l.old_written is None else {
+                'written': float(l.old_written), 'mcq': float(l.old_mcq), 'practical': float(l.old_practical)},
+            'new': {'written': float(l.new_written), 'mcq': float(l.new_mcq),
+                    'practical': float(l.new_practical), 'total': float(l.new_total), 'grade': l.new_grade},
+        } for l in qs[:1000]]
+        return Response({'count': len(rows), 'logs': rows})
+
+
+def _log_queryset(request):
+    qs = MarksEntryLog.objects.select_related(
+        'student', 'result_config__exam_routine__subject', 'result_config__exam_routine__exam_name',
+        'result_config__exam_routine__academic_class')
+    batch = request.query_params.get('batch')
+    config_id = request.query_params.get('result_config')
+    student_id = request.query_params.get('student')
+    if not batch and not config_id:
+        return None
+    if batch:
+        qs = qs.filter(batch_id=batch)
+    if config_id:
+        qs = qs.filter(result_config_id=config_id)
+    if student_id:
+        qs = qs.filter(student_id=student_id)
+    return qs
+
+
+class MarksReceiptView(APIView):
+    """
+    Marks entry রিসিপ্ট PDF (কোন তারিখে, কোন বিষয়ে, কাকে কত নম্বর দেওয়া হলো)।
+    ?batch=UUID         → ওই একবারের save এর রিসিপ্ট (save করার response এ batch_id আসে)
+    ?result_config=ID   → ওই বিষয়ের সব save/update এর পুরো ইতিহাস
+    ?output=html        → PDF এর বদলে HTML দেখতে
+    """
+    renderer_classes = [JSONRenderer, BinaryPDFRenderer]
+    produces = ['application/pdf']
+
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('batch', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False),
+        openapi.Parameter('result_config', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+        openapi.Parameter('output', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False,
+                          description='pdf (default) / html'),
+    ])
+    def get(self, request):
+        import html as _html
+        from django.http import HttpResponse
+        from django.utils import timezone
+
+        qs = _log_queryset(request)
+        if qs is None:
+            return Response({'error': 'batch অথবা result_config দিন।'}, status=400)
+        logs = list(qs.order_by('created_at', 'id'))
+        if not logs:
+            return Response({'error': 'কোনো রেকর্ড পাওয়া যায়নি।'}, status=404)
+
+        first = logs[0]
+        routine = first.result_config.exam_routine
+        e = _html.escape
+        multi = len({l.batch_id for l in logs}) > 1
+        rows = ''
+        for i, l in enumerate(sorted(logs, key=lambda x: (x.student.roll_number or '', x.created_at)), 1):
+            t = timezone.localtime(l.created_at).strftime('%d-%m-%Y %I:%M %p')
+            old = '' if l.old_written is None else (
+                f"{_fm(l.old_written)} / {_fm(l.old_mcq)} / {_fm(l.old_practical)}")
+            label = {'created': 'New', 'updated': 'Changed', 'unchanged': 'Same'}.get(l.action, l.action)
+            rows += (f"<tr class='{l.action}'><td>{i}</td><td>{e(str(l.student.roll_number or ''))}</td>"
+                     f"<td class='n'>{e(getattr(l.student, 'full_name', str(l.student)))}</td>"
+                     f"<td>{_fm(l.new_written)}</td><td>{_fm(l.new_mcq)}</td><td>{_fm(l.new_practical)}</td>"
+                     f"<td><b>{_fm(l.new_total)}</b></td><td>{e(l.new_grade)}</td>"
+                     f"<td>{label}</td><td>{e(old)}</td><td>{e(l.entered_by or '-')}</td><td>{t}</td></tr>")
+
+        font = load_font_base64()
+        font_css = ("@font-face{font-family:'SolaimanLipi';src:url(data:font/ttf;base64,%s) format('truetype');}" % font
+                    if font else '')
+        printed = timezone.localtime().strftime('%d-%m-%Y %I:%M %p')
+        title = 'Marks Entry History' if multi else 'Marks Entry Receipt'
+        doc = f"""<!doctype html><html><head><meta charset='utf-8'><style>
+{font_css}
+@page{{size:A4 landscape;margin:10mm}}
+body{{font-family:'SolaimanLipi',Arial,sans-serif;font-size:11px;color:#111}}
+h1{{text-align:center;margin:0;font-size:20px}} h2{{text-align:center;margin:2px 0 8px;font-size:14px}}
+.meta{{display:flex;flex-wrap:wrap;gap:4px 24px;border:1px solid #333;padding:6px 10px;margin-bottom:8px}}
+table{{width:100%;border-collapse:collapse}} th,td{{border:1px solid #444;padding:3px 4px;text-align:center}}
+th{{background:#e8ecf5}} td.n{{text-align:left}} tr.updated td{{background:#fff3cd}} tr.created td{{background:#eefaf0}}
+.foot{{margin-top:8px;font-size:10px;color:#444}}
+</style></head><body>
+<h1>{e(SCHOOL_NAME)}</h1><h2>{title}</h2>
+<div class='meta'><div><b>Exam:</b> {e(routine.exam_name.name)}</div>
+<div><b>Class:</b> {e(routine.academic_class.name)}</div>
+<div><b>Subject:</b> {e(routine.subject.name)}</div>
+<div><b>Printed:</b> {printed}</div></div>
+<table><tr><th>#</th><th>Roll</th><th>Student</th><th>Written</th><th>MCQ</th><th>Practical</th><th>Total</th>
+<th>Grade</th><th>Status</th><th>Before (W/M/P)</th><th>Entered by</th><th>Date &amp; time</th></tr>{rows}</table>
+<div class='foot'>Yellow = marks changed after earlier entry. This receipt is system generated.</div>
+</body></html>"""
+
+        if request.query_params.get('output') == 'html':
+            return HttpResponse(doc, content_type='text/html; charset=utf-8')
+
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True, args=[
+                '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
+                '--disable-gpu', '--no-zygote', '--single-process'])
+            try:
+                page = browser.new_context().new_page()
+                page.set_content(doc, wait_until='load')
+                pdf = page.pdf(format='A4', landscape=True, print_background=True, prefer_css_page_size=True)
+            finally:
+                browser.close()
+        resp = HttpResponse(pdf, content_type='application/pdf')
+        name = f"MarksReceipt_config{first.result_config_id}_{timezone.localtime():%Y%m%d_%H%M}.pdf"
+        resp['Content-Disposition'] = f'attachment; filename="{name}"'
+        return resp

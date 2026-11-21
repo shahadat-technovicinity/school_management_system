@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from django.db import models
@@ -189,10 +190,10 @@ class ExamResultConfig(models.Model):
     mcq_pass_marks = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     practical_full_marks = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     practical_pass_marks = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    grace_marks = models.DecimalField(
-        max_digits=5, decimal_places=2, default=0,
-        help_text="Grace marks: এই বিষয়ের সবার মোট নম্বরের সাথে যোগ হবে (পূর্ণমান ছাড়াবে না)। 0 = নেই"
-    )
+    # Grace marks: প্রতিটা অংশে আলাদা। প্রতিজনের ওই অংশের নম্বরের সাথে যোগ হয় (ওই অংশের পূর্ণমান ছাড়ায় না)
+    grace_written = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    grace_mcq = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    grace_practical = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # শুধু ক্লাস ৯-১০
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -256,7 +257,11 @@ class StudentExamResult(models.Model):
     mcq_marks = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     practical_marks = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
-    grace_marks = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # আসলে যতটুকু যোগ হয়েছে (হিসাব করা)
+    # আসলে যতটুকু grace যোগ হয়েছে (হিসাব করা, অংশ অনুযায়ী) এবং তাদের যোগফল
+    grace_written = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    grace_mcq = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    grace_practical = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    grace_marks = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     total_marks = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     grade = models.CharField(max_length=5, blank=True)
@@ -289,10 +294,30 @@ class StudentExamResult(models.Model):
 
         full = config.total_full_marks_calc
 
-        # Grace marks: admin এর দেওয়া সংখ্যা সবার মোট নম্বরে যোগ হয়, তবে পূর্ণমান ছাড়ায় না
+        # Grace marks: written / mcq / practical প্রতিটায় আলাদা। ওই অংশের পূর্ণমান ছাড়ায় না
+        def _grace(raw, grace, part_full):
+            grace = grace or Decimal('0')
+            part_full = Decimal(str(part_full or 0))
+            if part_full > 0:
+                grace = min(grace, max(part_full - raw, Decimal('0')))
+            return max(grace, Decimal('0'))
+
+        gw = _grace(self.written_marks, config.grace_written, config.written_full_marks)
+        gm = _grace(self.mcq_marks, config.grace_mcq, config.mcq_full_marks)
+        gp = _grace(self.practical_marks, config.grace_practical, config.practical_full_marks) if has_practical \
+            else Decimal('0')
+
+        # মোট পূর্ণমান ছাড়াবে না (ছাড়ালে practical, তারপর mcq, তারপর written থেকে কমে)
         raw_total = self.written_marks + self.mcq_marks + self.practical_marks
         room = max(Decimal(str(full)) - raw_total, Decimal('0'))
-        self.grace_marks = min(config.grace_marks or Decimal('0'), room)
+        excess = gw + gm + gp - room
+        if excess > 0:
+            cut = min(excess, gp); gp -= cut; excess -= cut
+            cut = min(excess, gm); gm -= cut; excess -= cut
+            cut = min(excess, gw); gw -= cut; excess -= cut
+
+        self.grace_written, self.grace_mcq, self.grace_practical = gw, gm, gp
+        self.grace_marks = gw + gm + gp
         self.total_marks = raw_total + self.grace_marks
 
         # Grade/GPA: এই exam/class/section এর জন্য admin এর তালিকা থাকলে সেটা, নাহলে সাধারণ তালিকা
@@ -315,10 +340,10 @@ class StudentExamResult(models.Model):
 
         if has_practical:
             # ক্লাস ৯-১০: written, mcq, practical প্রতিটায় আলাদা করে pass করতে হবে
-            # grace marks written অংশের সাথে ধরা হয়
-            self.written_status = 'pass' if (self.written_marks + self.grace_marks) >= config.written_pass_marks else 'fail'
-            self.mcq_status = 'pass' if self.mcq_marks >= config.mcq_pass_marks else 'fail'
-            self.practical_status = 'pass' if self.practical_marks >= config.practical_pass_marks else 'fail'
+            # প্রতিটা অংশের নিজের grace ওই অংশের সাথেই ধরা হয়
+            self.written_status = 'pass' if (self.written_marks + gw) >= config.written_pass_marks else 'fail'
+            self.mcq_status = 'pass' if (self.mcq_marks + gm) >= config.mcq_pass_marks else 'fail'
+            self.practical_status = 'pass' if (self.practical_marks + gp) >= config.practical_pass_marks else 'fail'
             statuses = [self.written_status, self.mcq_status, self.practical_status]
             self.overall_status = 'pass' if all(s == 'pass' for s in statuses) and gpa > 0 else 'fail'
         else:
@@ -335,7 +360,7 @@ class StudentExamResult(models.Model):
         update_fields = kwargs.get('update_fields')
         if update_fields is not None:
             kwargs['update_fields'] = set(update_fields) | {
-                'total_marks', 'grace_marks', 'grade', 'gpa',
+                'total_marks', 'grace_written', 'grace_mcq', 'grace_practical', 'grace_marks', 'grade', 'gpa',
                 'written_status', 'mcq_status', 'practical_status', 'overall_status',
             }
         super().save(*args, **kwargs)
@@ -368,3 +393,33 @@ class CombinedResultConfig(models.Model):
         return f"{self.name} - {self.academic_class}"
 
 
+
+
+class MarksEntryLog(models.Model):
+    """
+    প্রতিবার marks save/update হলে এখানে একটা রেকর্ড জমা হয় (কে, কখন, আগে কত ছিল, এখন কত)।
+    পরে কেউ নম্বর বদলালে এই log দেখে ধরা যায়, আর রিসিপ্ট PDF হিসেবে নামিয়ে রাখা যায়।
+    """
+    batch_id = models.UUIDField(default=uuid.uuid4, db_index=True)
+    result_config = models.ForeignKey(ExamResultConfig, on_delete=models.CASCADE, related_name='entry_logs')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='marks_entry_logs')
+    action = models.CharField(max_length=10)  # created / updated / unchanged
+
+    old_written = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    old_mcq = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    old_practical = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    new_written = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    new_mcq = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    new_practical = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    new_total = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    new_grade = models.CharField(max_length=5, blank=True)
+
+    entered_by = models.CharField(max_length=150, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        verbose_name = "Marks Entry Log"
+
+    def __str__(self):
+        return f"{self.student_id} {self.action} {self.created_at:%Y-%m-%d %H:%M}"
