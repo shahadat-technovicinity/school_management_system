@@ -8,6 +8,7 @@ from exam_mm_exam_setup.models import ExamSetup
 from exam_mm_exmroutine_exmadmit.models import ExamsRoutine
 from exam_mm_exmroutine_exmadmit.utils import student_takes_subject, subject_is_optional
 from .models import (
+    class_has_practical,
     ExamResultConfig,
     GradeScale,
     GradeScaleRow,
@@ -104,13 +105,21 @@ class ExamResultConfigSerializer(serializers.ModelSerializer):
             'mcq_pass_marks': {'required': False},
             'practical_full_marks': {'required': False},
             'practical_pass_marks': {'required': False},
-            'grace_marks': {'required': False},
+            'grace_written': {'required': False},
+            'grace_mcq': {'required': False},
+            'grace_practical': {'required': False},
         }
 
-    def validate_grace_marks(self, value):
-        if value is not None and value < 0:
-            raise serializers.ValidationError("Grace marks ঋণাত্মক হতে পারবে না।")
-        return value
+    def validate(self, attrs):
+        for f in ('grace_written', 'grace_mcq', 'grace_practical'):
+            v = attrs.get(f)
+            if v is not None and v < 0:
+                raise serializers.ValidationError({f: "Grace marks ঋণাত্মক হতে পারবে না।"})
+        routine = attrs.get('exam_routine') or getattr(self.instance, 'exam_routine', None)
+        if routine is not None and not class_has_practical(routine.academic_class):
+            if (attrs.get('grace_practical') or 0) > 0:
+                raise serializers.ValidationError({'grace_practical': "এই ক্লাসে practical নেই।"})
+        return attrs
 
 
 class StudentExamResultSerializer(serializers.ModelSerializer):
@@ -122,7 +131,7 @@ class StudentExamResultSerializer(serializers.ModelSerializer):
         model = StudentExamResult
         fields = '__all__'
         read_only_fields = [
-            'total_marks', 'grace_marks', 'grade', 'gpa',
+            'total_marks', 'grace_written', 'grace_mcq', 'grace_practical', 'grace_marks', 'grade', 'gpa',
             'written_status', 'mcq_status',
             'practical_status', 'overall_status',
         ]
