@@ -320,7 +320,8 @@ class StudentExamResult(models.Model):
         self.grace_marks = gw + gm + gp
         self.total_marks = raw_total + self.grace_marks
 
-        # Grade/GPA: এই exam/class/section এর জন্য admin এর তালিকা থাকলে সেটা, নাহলে সাধারণ তালিকা
+        # Grade/GPA: শুধু admin এর Grade Scale থেকে (এই বিষয়/exam/class/section এর জন্য)।
+        # Scale না থাকলে নিজে থেকে grade বসানো হয় না: grade ফাঁকা, GPA 0 (pass/fail হয় pass marks দিয়ে)
         section_id = self.section_id or getattr(self.student, 'section_static_id', None)
         scale = find_scale(
             routine.subject_id, routine.academic_class_id,
@@ -329,29 +330,29 @@ class StudentExamResult(models.Model):
         if scale:
             self.grade, gpa = grade_from_scale(scale, self.total_marks, full)
         else:
-            percentage = (float(self.total_marks) / full) * 100 if full > 0 else 0
-            self.grade, gpa = calculate_grade_and_gpa(percentage)
+            self.grade, gpa = '', 0.0
 
         # admin এর দেওয়া মোট pass mark এর নিচে হলে fail
         pass_total = config.total_pass_marks_calc
-        if pass_total > 0 and float(self.total_marks) < pass_total:
+        below_total = pass_total > 0 and float(self.total_marks) < pass_total
+        if below_total:
             self.grade, gpa = 'F', 0.0
         self.gpa = gpa
 
+        # সব ক্লাসেই: প্রতিটা অংশ (written, mcq, এবং ক্লাস ৯-১০ এ practical) নিজের pass marks পার করতে হবে।
+        # কোনো অংশের pass marks 0 দিলে ওই অংশের আলাদা শর্ত থাকে না। প্রতিটা অংশের নিজের grace ওই অংশের সাথে ধরা হয়।
+        self.written_status = 'pass' if (self.written_marks + gw) >= config.written_pass_marks else 'fail'
+        self.mcq_status = 'pass' if (self.mcq_marks + gm) >= config.mcq_pass_marks else 'fail'
         if has_practical:
-            # ক্লাস ৯-১০: written, mcq, practical প্রতিটায় আলাদা করে pass করতে হবে
-            # প্রতিটা অংশের নিজের grace ওই অংশের সাথেই ধরা হয়
-            self.written_status = 'pass' if (self.written_marks + gw) >= config.written_pass_marks else 'fail'
-            self.mcq_status = 'pass' if (self.mcq_marks + gm) >= config.mcq_pass_marks else 'fail'
             self.practical_status = 'pass' if (self.practical_marks + gp) >= config.practical_pass_marks else 'fail'
-            statuses = [self.written_status, self.mcq_status, self.practical_status]
-            self.overall_status = 'pass' if all(s == 'pass' for s in statuses) and gpa > 0 else 'fail'
         else:
-            # ক্লাস ৬-৮: written + mcq মিলিয়ে মোট নম্বরেই pass/fail
-            self.overall_status = 'pass' if gpa > 0 else 'fail'
-            self.written_status = self.overall_status
-            self.mcq_status = self.overall_status
             self.practical_status = 'pass'
+        statuses = [self.written_status, self.mcq_status, self.practical_status]
+        if any(s == 'fail' for s in statuses):
+            # যেকোনো একটা অংশে fail করলে grade F, GPA 0 (কোন অংশে fail তা *_status ফিল্ডে থাকে)
+            self.grade, gpa, self.gpa = 'F', 0.0, 0.0
+        grade_ok = (gpa > 0) if scale else True  # scale না থাকলে শুধু pass marks দেখা হয়
+        self.overall_status = 'pass' if all(s == 'pass' for s in statuses) and not below_total and grade_ok else 'fail'
 
     def save(self, *args, **kwargs):
         self.calculate_result()
