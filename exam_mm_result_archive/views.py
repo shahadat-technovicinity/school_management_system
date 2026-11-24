@@ -23,7 +23,6 @@ from .models import (
     GradeScale,
     StudentExamResult,
     SubjectGroup,
-    calculate_grade_and_gpa,
     class_has_practical,
     grade_from_scale,
     pick_scale,
@@ -176,22 +175,27 @@ def _evaluate(b, academic_class, scale_book, check_components, exam_id=None, sec
         grade, point = grade_from_scale(scale, total, full)
         source = 'admin'
     else:
-        pct = (total / full) * 100 if full > 0 else 0
-        grade, point = calculate_grade_and_gpa(pct)
-        source = 'default'
+        # Scale না থাকলে নিজে থেকে grade বসানো হয় না
+        grade, point = '', 0.0
+        source = 'none'
 
     # admin এর দেওয়া মোট pass mark (পেপার যোগ করে) এর নিচে হলে fail
-    if b['pass_total'] > 0 and total < b['pass_total']:
+    below_total = b['pass_total'] > 0 and total < b['pass_total']
+    if below_total:
         grade, point = 'F', 0.0
 
-    passed = point > 0
-    if check_components and class_has_practical(academic_class):
-        passed = (
-            passed
-            and (b['written'] + b['gw']) >= b['written_pass']
-            and (b['mcq'] + b['gm']) >= b['mcq_pass']
-            and (b['practical'] + b['gp']) >= b['practical_pass']
-        )
+    passed = (point > 0 if scale else True) and not below_total
+    failed_parts = []
+    if check_components:
+        if (b['written'] + b['gw']) < b['written_pass']:
+            failed_parts.append('written')
+        if (b['mcq'] + b['gm']) < b['mcq_pass']:
+            failed_parts.append('mcq')
+        if class_has_practical(academic_class) and (b['practical'] + b['gp']) < b['practical_pass']:
+            failed_parts.append('practical')
+        if failed_parts:
+            # যেকোনো একটা অংশে fail করলে grade F, GPA 0
+            grade, point, passed = 'F', 0.0, False
 
     return {
         'subject': b['name'],
@@ -200,6 +204,7 @@ def _evaluate(b, academic_class, scale_book, check_components, exam_id=None, sec
         'written_marks': round(b['written'], 2),
         'mcq_marks': round(b['mcq'], 2),
         'practical_marks': round(b['practical'], 2),
+        'failed_parts': failed_parts,
         'grace_written': round(b['gw'], 2),
         'grace_mcq': round(b['gm'], 2),
         'grace_practical': round(b['gp'], 2),
@@ -256,6 +261,9 @@ def summarize_student(student, results, academic_class, scale_book, group_map, c
         r['bonus_gpa'] = 0.0
 
     count = len(main)
+    no_scale = [r['subject'] for r in main if r['grade_source'] == 'none']
+    if no_scale:
+        warnings.append("Grade Scale নেই (grade/GPA হিসাব হয়নি): " + ", ".join(no_scale))
     all_main_passed = all(r['status'] == 'pass' for r in main)
 
     # ৪র্থ বিষয়ের bonus: শুধু ছাত্র পাস করলে আর ঐচ্ছিক বিষয়ে নিজে pass করলে, GPA - 2 (2 এর বেশি হলে)
@@ -268,6 +276,9 @@ def summarize_student(student, results, academic_class, scale_book, group_map, c
         cgpa, overall_grade, overall_status = 0.0, '-', 'fail'
     elif not all_main_passed:
         cgpa, overall_grade, overall_status = 0.0, 'F', 'fail'
+    elif no_scale:
+        # কোনো বিষয়ে Grade Scale না থাকলে CGPA বানানো যায় না
+        cgpa, overall_grade, overall_status = None, '-', 'pass'
     else:
         cgpa = min(5.0, round((sum(r['gpa'] for r in main) + bonus) / count, 2))
         overall_grade, overall_status = overall_grade_from_cgpa(cgpa), 'pass'
@@ -824,6 +835,29 @@ class SubjectGroupDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = SubjectGroupSerializer
 
 
+def recalc_results_for_scale(scale):
+    """
+    Grade তালিকা বানানো/বদলানো/মোছার পর, ওই তালিকা যেসব সংরক্ষিত নম্বরে খাটে সেগুলোর grade সাথে সাথে আবার হিসাব হয়
+    (না হলে পুরোনো সংরক্ষিত grade ডিফল্ট তালিকার মতোই থেকে যায়)। গ্রুপের তালিকা result দেখার সময় হিসাব হয়, তাই সেটা লাগে না।
+    """
+    if not scale.subject_id:
+        return 0
+    qs = StudentExamResult.objects.filter(
+        result_config__exam_routine__subject_id=scale.subject_id
+    ).select_related('result_config__exam_routine__subject', 'result_config__exam_routine__academic_class', 'student')
+    if scale.academic_class_id:
+        qs = qs.filter(result_config__exam_routine__academic_class_id=scale.academic_class_id)
+    if scale.exam_name_id:
+        qs = qs.filter(result_config__exam_routine__exam_name_id=scale.exam_name_id)
+    if scale.section_id:
+        qs = qs.filter(student__section_static_id=scale.section_id)
+    count = 0
+    for res in qs:
+        res.save()
+        count += 1
+    return count
+
+
 class GradeScaleListCreateView(generics.ListCreateAPIView):
     serializer_class = GradeScaleSerializer
     pagination_class = None
@@ -837,6 +871,10 @@ class GradeScaleListCreateView(generics.ListCreateAPIView):
     ])
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        scale = serializer.save()
+        recalc_results_for_scale(scale)
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -863,6 +901,16 @@ class GradeScaleDetailView(generics.RetrieveUpdateDestroyAPIView):
         'subject', 'group', 'exam_name', 'academic_class', 'section'
     ).prefetch_related('rows', 'group__subjects')
     serializer_class = GradeScaleSerializer
+
+    def perform_update(self, serializer):
+        scale = serializer.save()
+        recalc_results_for_scale(scale)
+
+    def perform_destroy(self, instance):
+        info = GradeScale(subject_id=instance.subject_id, academic_class_id=instance.academic_class_id,
+                          exam_name_id=instance.exam_name_id, section_id=instance.section_id)
+        instance.delete()
+        recalc_results_for_scale(info)
 
 
 class GradeScaleOptionsView(APIView):
