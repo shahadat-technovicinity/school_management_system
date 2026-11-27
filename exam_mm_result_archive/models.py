@@ -294,18 +294,23 @@ class StudentExamResult(models.Model):
 
         full = config.total_full_marks_calc
 
-        # Grace marks: written / mcq / practical প্রতিটায় আলাদা। ওই অংশের পূর্ণমান ছাড়ায় না
-        def _grace(raw, grace, part_full):
+        # Grace marks: written / mcq / practical প্রতিটায় আলাদা।
+        # শুধু যে ছাত্র ওই অংশে ফেল (নম্বর < ওই অংশের pass marks) তারই ওই অংশে grace যোগ হয়;
+        # যে পাস করেছে তার নম্বর বদলায় না। যোগ হলে ওই অংশের পূর্ণমান ছাড়ায় না।
+        def _grace(raw, grace, part_full, part_pass):
             grace = grace or Decimal('0')
+            part_pass = Decimal(str(part_pass or 0))
+            if grace <= 0 or raw >= part_pass:
+                return Decimal('0')
             part_full = Decimal(str(part_full or 0))
             if part_full > 0:
                 grace = min(grace, max(part_full - raw, Decimal('0')))
             return max(grace, Decimal('0'))
 
-        gw = _grace(self.written_marks, config.grace_written, config.written_full_marks)
-        gm = _grace(self.mcq_marks, config.grace_mcq, config.mcq_full_marks)
-        gp = _grace(self.practical_marks, config.grace_practical, config.practical_full_marks) if has_practical \
-            else Decimal('0')
+        gw = _grace(self.written_marks, config.grace_written, config.written_full_marks, config.written_pass_marks)
+        gm = _grace(self.mcq_marks, config.grace_mcq, config.mcq_full_marks, config.mcq_pass_marks)
+        gp = _grace(self.practical_marks, config.grace_practical, config.practical_full_marks,
+                    config.practical_pass_marks) if has_practical else Decimal('0')
 
         # মোট পূর্ণমান ছাড়াবে না (ছাড়ালে practical, তারপর mcq, তারপর written থেকে কমে)
         raw_total = self.written_marks + self.mcq_marks + self.practical_marks

@@ -1184,3 +1184,6 @@ th{{background:#e8ecf5}} td.n{{text-align:left}} tr.updated td{{background:#fff3
         name = f"MarksReceipt_config{first.result_config_id}_{timezone.localtime():%Y%m%d_%H%M}.pdf"
         resp['Content-Disposition'] = f'attachment; filename="{name}"'
         return resp
+
+
+
