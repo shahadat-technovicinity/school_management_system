@@ -420,7 +420,9 @@ class MarksEntryLog(models.Model):
     new_total = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     new_grade = models.CharField(max_length=5, blank=True)
 
-    entered_by = models.CharField(max_length=150, blank=True)
+    entered_by = models.CharField(max_length=150, blank=True)       # যে নম্বর দিল তার নাম
+    entered_by_role = models.CharField(max_length=80, blank=True)   # তার রোল (Admin / Teacher / Staff ...)
+    entered_by_id = models.PositiveIntegerField(null=True, blank=True)  # তার user id
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -429,3 +431,35 @@ class MarksEntryLog(models.Model):
 
     def __str__(self):
         return f"{self.student_id} {self.action} {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class ResultPublishSchedule(models.Model):
+    """
+    Result কখন সবার জন্য প্রকাশ হবে — Admin ক্লাস/সেকশন/exam (বা combined) অনুযায়ী তারিখ-সময় ঠিক করে।
+    ওই সময় পার হলেই public result API নিজে থেকে চালু হয় (আলাদা কোনো job লাগে না)।
+    """
+    academic_class = models.ForeignKey(AcademicClass, on_delete=models.CASCADE, related_name='result_publish_schedules')
+    section = models.ForeignKey(
+        Section, on_delete=models.CASCADE, null=True, blank=True, related_name='result_publish_schedules',
+        help_text="ফাঁকা = ওই exam এর সব সেকশন",
+    )
+    exam_setup = models.ForeignKey(
+        ExamSetup, on_delete=models.CASCADE, null=True, blank=True, related_name='result_publish_schedules',
+        help_text="একটা exam এর result প্রকাশ করতে",
+    )
+    combined_config = models.ForeignKey(
+        CombinedResultConfig, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='result_publish_schedules', help_text="একাধিক exam মিলানো result প্রকাশ করতে",
+    )
+    publish_at = models.DateTimeField(help_text="এই তারিখ-সময় থেকে result সবাই দেখতে পাবে")
+    is_active = models.BooleanField(default=True, help_text="বন্ধ করলে result প্রকাশ হবে না (আগে প্রকাশ হলেও লুকানো)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-publish_at']
+        verbose_name = "Result Publish Schedule"
+
+    def __str__(self):
+        target = self.exam_setup or self.combined_config
+        return f"{self.academic_class} · {target} · {self.publish_at:%Y-%m-%d %H:%M}"
