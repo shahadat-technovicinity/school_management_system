@@ -420,14 +420,15 @@ class StudentListByClassSectionView(generics.GenericAPIView):
 
         student_list = []
         for student in students:
+            # জমা হওয়া নম্বর এখানে দেখানো হয় না (গোপন) — শুধু জানানো হয় জমা হয়েছে। নম্বর দেখা যাবে ফলাফলে।
             existing_result = None
             if config:
                 result = StudentExamResult.objects.filter(
                     student=student,
                     result_config=config
-                ).first()
+                ).only('id').first()
                 if result:
-                    existing_result = StudentExamResultSerializer(result).data
+                    existing_result = {'entered': True, 'result_id': result.id}
 
             student_list.append({
                 'id': student.id,
@@ -453,6 +454,10 @@ class StudentExamResultListCreateView(generics.ListCreateAPIView):
     filter_backends = [filters.SearchFilter]
     search_fields = ['student__first_name', 'student__last_name', 'overall_status']
 
+    def perform_create(self, serializer):
+        result = serializer.save()
+        log_marks_entry(uuid.uuid4(), result.result_config, result.student, result, None, self.request, True)
+
     def get_queryset(self):
         queryset = StudentExamResult.objects.all().select_related('student', 'result_config', 'section')
         config_id = self.request.query_params.get('result_config')
@@ -473,6 +478,13 @@ class StudentExamResultDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = StudentExamResult.objects.all().select_related('student', 'result_config')
     serializer_class = StudentExamResultSerializer
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+
+    def perform_update(self, serializer):
+        # Edit: সংশোধন হলে log এ updated + আগের মান জমা থাকে
+        inst = serializer.instance
+        old = (inst.written_marks, inst.mcq_marks, inst.practical_marks)
+        result = serializer.save()
+        log_marks_entry(uuid.uuid4(), result.result_config, result.student, result, old, self.request, False)
 
 
 def _who(request):
@@ -552,30 +564,31 @@ class BulkResultInputView(generics.GenericAPIView):
                 errors.append({'student': student_id, 'error': error})
                 continue
 
-            previous = StudentExamResult.objects.filter(result_config=config, student=student).first()
-            old = (previous.written_marks, previous.mcq_marks, previous.practical_marks) if previous else None
-            result, is_created = StudentExamResult.objects.update_or_create(
+            # একবার জমা (Save) হয়ে গেলে এই API দিয়ে আর নম্বর জমা/বদলানো যায় না — বদলাতে Edit (results/<id>/) ব্যবহার করতে হবে
+            if StudentExamResult.objects.filter(result_config=config, student=student).exists():
+                errors.append({
+                    'student': student_id,
+                    'code': 'already_submitted',
+                    'error': 'এই ছাত্রের নম্বর আগেই জমা হয়েছে। বদলাতে Edit ব্যবহার করুন (অনুমতি লাগবে)।',
+                })
+                continue
+
+            result = StudentExamResult.objects.create(
                 result_config=config,
                 student=student,
-                defaults={
-                    'written_marks': written,
-                    'mcq_marks': mcq,
-                    'practical_marks': practical,
-                    'section': student.section_static,
-                }
+                written_marks=written,
+                mcq_marks=mcq,
+                practical_marks=practical,
+                section=student.section_static,
             )
 
-            log_marks_entry(batch_id, config, student, result, old, request, is_created)
-
-            if is_created:
-                created.append(student_id)
-            else:
-                updated.append(student_id)
+            log_marks_entry(batch_id, config, student, result, None, request, True)
+            created.append(student_id)
 
         return Response({
             'message': f'{len(created)} created, {len(updated)} updated, {len(errors)} errors',
-            'batch_id': str(batch_id),
-            'receipt_url': request.build_absolute_uri(reverse('marks-entry-receipt')) + f'?batch={batch_id}',
+            'batch_id': str(batch_id) if created else None,
+            'receipt_url': (request.build_absolute_uri(reverse('marks-entry-receipt')) + f'?batch={batch_id}') if created else None,
             'created': created,
             'updated': updated,
             'errors': errors,
@@ -1184,6 +1197,3 @@ th{{background:#e8ecf5}} td.n{{text-align:left}} tr.updated td{{background:#fff3
         name = f"MarksReceipt_config{first.result_config_id}_{timezone.localtime():%Y%m%d_%H%M}.pdf"
         resp['Content-Disposition'] = f'attachment; filename="{name}"'
         return resp
-
-
-
