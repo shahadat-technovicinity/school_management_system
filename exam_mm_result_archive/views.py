@@ -1338,8 +1338,10 @@ def failed_summary_data(class_id, setup_id, section_id=None):
     for sec_name, subs in tree.items():
         subject_rows = []
         for sub_name, n in subs.items():
-            parts = [{'part': label, 'pass_marks': p['pass_marks'], 'failed_count': sum(p['dist'].values()),
-                      'distribution': dist_list(p['dist'])} for label, p in n['parts'].items()]
+            parts = [{'part': label, 'pass_marks': n['parts'][label]['pass_marks'],
+                      'failed_count': sum(n['parts'][label]['dist'].values()),
+                      'distribution': dist_list(n['parts'][label]['dist'])}
+                     for _key, label in PART if label in n['parts']]  # সবসময় Written, MCQ, Practical ক্রমে
             total_part = None
             if n['total']['dist']:
                 total_part = {'pass_marks': n['total']['pass_marks'], 'failed_count': sum(n['total']['dist'].values()),
