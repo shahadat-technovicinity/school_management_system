@@ -18,6 +18,7 @@ from academic_mm_class_and_section.models import AcademicClass, Section
 from exam_mm_exam_setup.models import ExamSetup
 from exam_mm_exmroutine_exmadmit.utils import student_takes_subject, subject_is_optional
 from .models import (
+    ResultPublishSchedule,
     MarksEntryLog,
     ExamResultConfig,
     GradeScale,
@@ -28,6 +29,7 @@ from .models import (
     pick_scale,
 )
 from .serializers import (
+    ResultPublishScheduleSerializer,
     ExamResultConfigSerializer,
     GradeScaleSerializer,
     StudentExamResultSerializer,
@@ -205,6 +207,8 @@ def _evaluate(b, academic_class, scale_book, check_components, exam_id=None, sec
         'mcq_marks': round(b['mcq'], 2),
         'practical_marks': round(b['practical'], 2),
         'failed_parts': failed_parts,
+        'pass_marks': {'written': round(b['written_pass'], 2), 'mcq': round(b['mcq_pass'], 2),
+                       'practical': round(b['practical_pass'], 2), 'total': round(b['pass_total'], 2)},
         'grace_written': round(b['gw'], 2),
         'grace_mcq': round(b['gm'], 2),
         'grace_practical': round(b['gp'], 2),
@@ -347,6 +351,34 @@ class ExamResultConfigDetailView(generics.RetrieveUpdateDestroyAPIView):
         return band_filter(self, super().get_queryset(), 'exam_routine__academic_class')
 
 
+def build_entry_info(config, student_ids):
+    """
+    এই বিষয়ে কে কখন নম্বর দিয়েছে তার সারাংশ (নাম, রোল, কতজনের, প্রথম/শেষ সময়) এবং কে শেষ বদলেছে।
+    """
+    logs = list(MarksEntryLog.objects.filter(result_config=config, student_id__in=student_ids).order_by('created_at', 'id'))
+    groups = OrderedDict()
+    last_by_student = {}
+    last_edit = None
+    for l in logs:
+        if l.action == 'unchanged':
+            continue
+        key = (l.entered_by, l.entered_by_role)
+        g = groups.setdefault(key, {'entered_by': l.entered_by or '-', 'role': l.entered_by_role or '-',
+                                    'students': set(), 'first_at': l.created_at, 'last_at': l.created_at})
+        g['students'].add(l.student_id)
+        g['last_at'] = l.created_at
+        last_by_student[l.student_id] = {'entered_by': l.entered_by or '-', 'entered_by_role': l.entered_by_role or '-',
+                                         'entered_at': l.created_at}
+        if l.action == 'updated':
+            last_edit = {'entered_by': l.entered_by or '-', 'role': l.entered_by_role or '-', 'at': l.created_at}
+    return {
+        'entered_by': [{**{k: v for k, v in g.items() if k != 'students'}, 'student_count': len(g['students'])}
+                       for g in groups.values()],
+        'last_edited_by': last_edit,
+        '_last_by_student': last_by_student,
+    }
+
+
 class StudentListByClassSectionView(generics.GenericAPIView):
     serializer_class = StudentListForResultSerializer
 
@@ -439,12 +471,24 @@ class StudentListByClassSectionView(generics.GenericAPIView):
                 'existing_result': existing_result,
             })
 
-        return Response({
-            'class': academic_class.name,
-            'has_practical': class_has_practical(academic_class),
-            'result_config': config_data,
-            'students': student_list,
-        })
+        # কে নম্বর দিয়েছে — উপরে (students এর আগে) দেখানোর জন্য
+        entry_info = None
+        if config:
+            entry_info = build_entry_info(config, [s.id for s in students])
+            for item, student in zip(student_list, students):
+                if item['existing_result'] is not None:
+                    info = entry_info['_last_by_student'].get(student.id)
+                    if info:
+                        item['existing_result'].update(info)
+            entry_info.pop('_last_by_student', None)
+
+        return Response(OrderedDict([
+            ('class', academic_class.name),
+            ('has_practical', class_has_practical(academic_class)),
+            ('result_config', config_data),
+            ('entry_info', entry_info),
+            ('students', student_list),
+        ]))
 
 
 class StudentExamResultListCreateView(generics.ListCreateAPIView):
@@ -487,12 +531,38 @@ class StudentExamResultDetailView(generics.RetrieveUpdateDestroyAPIView):
         log_marks_entry(uuid.uuid4(), result.result_config, result.student, result, old, self.request, False)
 
 
-def _who(request):
+def _who_info(request):
+    """যে নম্বর দিচ্ছে: (নাম, রোল, user id)। লগইন না থাকলে ফাঁকা।"""
     user = getattr(request, 'user', None)
-    if user is not None and getattr(user, 'is_authenticated', False):
-        full = user.get_full_name() if hasattr(user, 'get_full_name') else ''
-        return (full or user.get_username())[:150]
-    return ''
+    if user is None or not getattr(user, 'is_authenticated', False):
+        return '', '', None
+    name = ''
+    try:
+        name = (user.get_full_name() or '').strip()
+    except Exception:
+        pass
+    name = (name or user.get_username())[:150]
+
+    role = ''
+    r = getattr(user, 'role', None)
+    if r:
+        role = getattr(r, 'name', None) or getattr(r, 'title', None) or str(r)
+    if not role and hasattr(user, 'groups'):
+        try:
+            g = user.groups.first()
+            role = g.name if g else ''
+        except Exception:
+            role = ''
+    if not role:
+        if getattr(user, 'is_superuser', False):
+            role = 'Admin'
+        elif getattr(user, 'is_staff', False):
+            role = 'Staff'
+    return name, str(role)[:80], getattr(user, 'pk', None)
+
+
+def _who(request):
+    return _who_info(request)[0]
 
 
 def log_marks_entry(batch_id, config, student, result, old, request, is_created):
@@ -509,7 +579,8 @@ def log_marks_entry(batch_id, config, student, result, old, request, is_created)
         old_written=old[0] if old else None, old_mcq=old[1] if old else None,
         old_practical=old[2] if old else None,
         new_written=new[0], new_mcq=new[1], new_practical=new[2],
-        new_total=result.total_marks, new_grade=result.grade, entered_by=_who(request),
+        new_total=result.total_marks, new_grade=result.grade,
+        entered_by=_who_info(request)[0], entered_by_role=_who_info(request)[1], entered_by_id=_who_info(request)[2],
     )
 
 
@@ -802,6 +873,8 @@ class ClassSectionResultSummaryView(APIView):
             except Section.DoesNotExist:
                 return Response({'error': 'সেকশনটি খুঁজে পাওয়া যায়নি।'}, status=status.HTTP_404_NOT_FOUND)
 
+        if request.query_params.get('student_id'):
+            students = students.filter(id=request.query_params.get('student_id'))
         students = list(students.select_related('section_static').order_by('roll_number'))
 
         results_qs = _result_queryset().filter(student__in=students)
@@ -1083,7 +1156,7 @@ class MarksEntryLogView(APIView):
         rows = [{
             'batch_id': str(l.batch_id), 'time': l.created_at, 'action': l.action,
             'student_id': l.student_id, 'student': getattr(l.student, 'full_name', str(l.student)),
-            'roll': l.student.roll_number, 'entered_by': l.entered_by,
+            'roll': l.student.roll_number, 'entered_by': l.entered_by, 'entered_by_role': l.entered_by_role,
             'old': None if l.old_written is None else {
                 'written': float(l.old_written), 'mcq': float(l.old_mcq), 'practical': float(l.old_practical)},
             'new': {'written': float(l.new_written), 'mcq': float(l.new_mcq),
@@ -1152,7 +1225,7 @@ class MarksReceiptView(APIView):
                      f"<td class='n'>{e(getattr(l.student, 'full_name', str(l.student)))}</td>"
                      f"<td>{_fm(l.new_written)}</td><td>{_fm(l.new_mcq)}</td><td>{_fm(l.new_practical)}</td>"
                      f"<td><b>{_fm(l.new_total)}</b></td><td>{e(l.new_grade)}</td>"
-                     f"<td>{label}</td><td>{e(old)}</td><td>{e(l.entered_by or '-')}</td><td>{t}</td></tr>")
+                     f"<td>{label}</td><td>{e(old)}</td><td>{e(l.entered_by or '-')}{(' (' + e(l.entered_by_role) + ')') if l.entered_by_role else ''}</td><td>{t}</td></tr>")
 
         font = load_font_base64()
         font_css = ("@font-face{font-family:'SolaimanLipi';src:url(data:font/ttf;base64,%s) format('truetype');}" % font
@@ -1196,4 +1269,251 @@ th{{background:#e8ecf5}} td.n{{text-align:left}} tr.updated td{{background:#fff3
         resp = HttpResponse(pdf, content_type='application/pdf')
         name = f"MarksReceipt_config{first.result_config_id}_{timezone.localtime():%Y%m%d_%H%M}.pdf"
         resp['Content-Disposition'] = f'attachment; filename="{name}"'
+        return resp
+
+
+# ---------------------------------------------------------------------------
+# ফেল করা ছাত্রের তালিকা (ক্লাস/সেকশন/exam অনুযায়ী) — দেখা ও PDF ডাউনলোড
+# ---------------------------------------------------------------------------
+class _Params:
+    """আরেকটা view এর get() কে ভেতর থেকে ডাকতে হালকা request।"""
+    def __init__(self, data):
+        self.query_params = data
+
+
+def html_to_pdf(doc, landscape=True):
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=[
+            '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
+            '--disable-gpu', '--no-zygote', '--single-process'])
+        try:
+            page = browser.new_context().new_page()
+            page.set_content(doc, wait_until='load')
+            return page.pdf(format='A4', landscape=landscape, print_background=True, prefer_css_page_size=True)
+        finally:
+            browser.close()
+
+
+def failed_summary_data(class_id, setup_id, section_id=None):
+    """
+    ছাত্রের নাম ছাড়া সারাংশ: সেকশন → বিষয় → অংশ (Written/MCQ/Practical) অনুযায়ী
+    কত নম্বর পেয়ে কতজন ফেল (যেমন 32 পেয়ে 5 জন, 31 পেয়ে 2 জন)।
+    """
+    params = {'class_id': class_id, 'exam_setup_id': setup_id}
+    if section_id:
+        params['section_id'] = section_id
+    resp = ClassSectionResultSummaryView().get(_Params(params))
+    if resp.status_code != 200:
+        return None, None, resp
+    data = resp.data
+    PART = (('written', 'Written'), ('mcq', 'MCQ'), ('practical', 'Practical'))
+
+    tree = OrderedDict()  # section -> subject -> {appeared, failed, parts{}, total{}}
+    for st in data['students']:
+        sec = tree.setdefault(st['section'] or '-', OrderedDict())
+        for sub in st['subject_wise_results']:
+            if sub['is_optional']:
+                continue
+            node = sec.setdefault(sub['subject'], {
+                'appeared': 0, 'failed': 0, 'parts': OrderedDict(), 'total': {'pass_marks': 0, 'dist': defaultdict(int)},
+            })
+            node['appeared'] += 1
+            if sub['status'] != 'fail':
+                continue
+            node['failed'] += 1
+            if sub['failed_parts']:
+                for key, label in PART:
+                    if key in sub['failed_parts']:
+                        p = node['parts'].setdefault(label, {'pass_marks': sub['pass_marks'][key], 'dist': defaultdict(int)})
+                        p['dist'][round(sub[f'{key}_marks'] + sub[f'grace_{key}'], 2)] += 1
+            else:
+                node['total']['pass_marks'] = sub['pass_marks']['total']
+                node['total']['dist'][round(sub['total_marks'], 2)] += 1
+
+    def dist_list(d):
+        return [{'marks': m, 'students': n} for m, n in sorted(d.items(), key=lambda kv: -kv[0])]
+
+    sections = []
+    for sec_name, subs in tree.items():
+        subject_rows = []
+        for sub_name, n in subs.items():
+            parts = [{'part': label, 'pass_marks': p['pass_marks'], 'failed_count': sum(p['dist'].values()),
+                      'distribution': dist_list(p['dist'])} for label, p in n['parts'].items()]
+            total_part = None
+            if n['total']['dist']:
+                total_part = {'pass_marks': n['total']['pass_marks'], 'failed_count': sum(n['total']['dist'].values()),
+                              'distribution': dist_list(n['total']['dist'])}
+            subject_rows.append({'subject': sub_name, 'appeared': n['appeared'], 'failed': n['failed'],
+                                 'parts': parts, 'total_only': total_part})
+        sections.append({'section': sec_name, 'subjects': subject_rows})
+    meta = {'class': data['class'], 'section': data['section'], 'total_students': data['total_students']}
+    return sections, meta, None
+
+
+class FailedStudentsView(APIView):
+    """
+    ফেলের সারাংশ (ছাত্রের নাম ছাড়া): ক্লাস → সেকশন → বিষয় অনুযায়ী, প্রতিটা অংশে (Written/MCQ/Practical)
+    কত নম্বর পেয়ে কতজন ফেল। যে অংশে পাস, সেটা ধরা হয় না।
+    ?output=pdf দিলে PDF ডাউনলোড, html দিলে প্রিভিউ, না দিলে JSON।
+    """
+    renderer_classes = [JSONRenderer, BinaryPDFRenderer]
+    produces = ['application/pdf', 'application/json']
+
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('class_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True),
+        openapi.Parameter('exam_setup_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True),
+        openapi.Parameter('section_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+        openapi.Parameter('output', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False,
+                          description='json (default) / pdf / html'),
+    ])
+    def get(self, request):
+        import html as _html
+        from django.http import HttpResponse
+        from django.utils import timezone
+
+        class_id = request.query_params.get('class_id')
+        setup_id = request.query_params.get('exam_setup_id')
+        if not class_id or not setup_id:
+            return Response({'error': 'class_id ও exam_setup_id দিন।'}, status=400)
+        sections, meta, err = failed_summary_data(class_id, setup_id, request.query_params.get('section_id'))
+        if err is not None:
+            return err
+
+        setup = ExamSetup.objects.select_related('exam_name').get(id=setup_id)
+        output = request.query_params.get('output', 'json')
+        if output not in ('pdf', 'html'):
+            return Response({'exam': str(setup), **meta, 'sections': sections}, status=200)
+
+        e = _html.escape
+
+        def dist_text(d):
+            return ',  '.join(f"{_fm(x['marks'])} → {x['students']} জন" for x in d)
+
+        body = ''
+        for sec in sections:
+            body += f"<h3>সেকশন: {e(str(sec['section']))}</h3><table><tr><th>বিষয়</th><th>পরীক্ষা দিয়েছে</th><th>ফেল</th><th>অংশ</th><th>পাস মার্ক</th><th>ফেল</th><th>কত নম্বর পেয়ে কতজন ফেল</th></tr>"
+            for s in sec['subjects']:
+                lines = [(p['part'], p['pass_marks'], p['failed_count'], p['distribution']) for p in s['parts']]
+                if s['total_only']:
+                    t = s['total_only']
+                    lines.append(('মোট', t['pass_marks'], t['failed_count'], t['distribution']))
+                if not lines:
+                    body += f"<tr><td class='n'>{e(s['subject'])}</td><td>{s['appeared']}</td><td>0</td><td colspan=4>কেউ ফেল করেনি</td></tr>"
+                    continue
+                for i, (part, pm, cnt, d) in enumerate(lines):
+                    first = (f"<td rowspan={len(lines)} class='n'>{e(s['subject'])}</td><td rowspan={len(lines)}>{s['appeared']}</td>"
+                             f"<td rowspan={len(lines)}>{s['failed']}</td>") if i == 0 else ''
+                    body += f"<tr>{first}<td>{e(part)}</td><td>{_fm(pm)}</td><td>{cnt}</td><td class='n'>{e(dist_text(d))}</td></tr>"
+            body += "</table>"
+        font = load_font_base64()
+        font_css = ("@font-face{font-family:'SolaimanLipi';src:url(data:font/ttf;base64,%s) format('truetype');}" % font if font else '')
+        doc = f"""<!doctype html><html><head><meta charset='utf-8'><style>{font_css}
+@page{{size:A4 portrait;margin:10mm}}
+body{{font-family:'SolaimanLipi',Arial,sans-serif;font-size:12px;color:#111}}
+h1{{text-align:center;margin:0;font-size:20px}} h2{{text-align:center;margin:2px 0 8px;font-size:14px}} h3{{margin:12px 0 4px}}
+.meta{{border:1px solid #333;padding:6px 10px;margin-bottom:8px;display:flex;gap:22px;flex-wrap:wrap}}
+table{{width:100%;border-collapse:collapse}} th,td{{border:1px solid #444;padding:4px 5px;text-align:center;vertical-align:middle}}
+th{{background:#fde8e8}} td.n{{text-align:left}} tr{{page-break-inside:avoid}}
+</style></head><body><h1>{e(SCHOOL_NAME)}</h1><h2>ফেলের সারাংশ (বিষয় ও অংশ অনুযায়ী)</h2>
+<div class='meta'><div><b>Exam:</b> {e(str(setup))}</div><div><b>Class:</b> {e(str(meta['class']))}</div>
+<div><b>Section:</b> {e(str(meta['section']))}</div><div><b>মোট ছাত্র:</b> {meta['total_students']}</div>
+<div><b>Printed:</b> {timezone.localtime():%d-%m-%Y %I:%M %p}</div></div>{body}</body></html>"""
+        if output == 'html':
+            return HttpResponse(doc, content_type='text/html; charset=utf-8')
+        resp = HttpResponse(html_to_pdf(doc, landscape=False), content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="FailedSummary_class{class_id}_setup{setup_id}.pdf"'
+        return resp
+
+
+# ---------------------------------------------------------------------------
+# Result প্রকাশের সময় (Admin) ও Public result (সময় হলে নিজে থেকে চালু)
+# ---------------------------------------------------------------------------
+class ResultPublishScheduleListCreateView(generics.ListCreateAPIView):
+    serializer_class = ResultPublishScheduleSerializer
+
+    def get_queryset(self):
+        qs = ResultPublishSchedule.objects.select_related('academic_class', 'section', 'exam_setup', 'combined_config')
+        for param, field in (('class_id', 'academic_class_id'), ('exam_setup_id', 'exam_setup_id'),
+                             ('combined_config_id', 'combined_config_id'), ('section_id', 'section_id')):
+            val = self.request.query_params.get(param)
+            if val:
+                qs = qs.filter(**{field: val})
+        return qs
+
+
+class ResultPublishScheduleDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ResultPublishSchedule.objects.select_related('academic_class', 'section', 'exam_setup', 'combined_config')
+    serializer_class = ResultPublishScheduleSerializer
+
+
+class PublicResultView(APIView):
+    """
+    Public result: Admin এর ঠিক করা সময় পার হলেই চালু, তার আগে 403 (প্রকাশের সময়সহ)।
+    একটা exam হলে ওই exam এর result, combined হলে প্রতি exam এর আলাদা নম্বর + যোগ করা result পাশাপাশি।
+    ছাত্র বাছতে student_id বা roll_number (সেকশন সহ) দিতে পারো; না দিলে ক্লাস/সেকশনের সবার।
+    """
+    authentication_classes = []  # মেয়াদ-শেষ token এ 401 এড়াতে
+    from rest_framework.permissions import AllowAny as _Allow
+    permission_classes = [_Allow]
+
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('class_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True),
+        openapi.Parameter('exam_setup_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+        openapi.Parameter('combined_config_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+        openapi.Parameter('section_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+        openapi.Parameter('student_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False),
+        openapi.Parameter('roll_number', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False),
+    ])
+    def get(self, request):
+        from django.utils import timezone
+        from .combined import CombinedResultView
+
+        q = request.query_params
+        class_id, setup_id, combined_id = q.get('class_id'), q.get('exam_setup_id'), q.get('combined_config_id')
+        section_id = q.get('section_id')
+        if not class_id or bool(setup_id) == bool(combined_id):
+            return Response({'error': 'class_id এবং exam_setup_id অথবা combined_config_id (একটাই) দিন।'}, status=400)
+
+        schedules = ResultPublishSchedule.objects.filter(academic_class_id=class_id)
+        schedules = schedules.filter(exam_setup_id=setup_id) if setup_id else schedules.filter(combined_config_id=combined_id)
+        # সেকশন-নির্দিষ্ট সময় থাকলে সেটা, না থাকলে সব সেকশনের সময়
+        schedule = None
+        if section_id:
+            schedule = schedules.filter(section_id=section_id).first()
+        schedule = schedule or schedules.filter(section__isnull=True).first()
+
+        if not schedule or not schedule.is_active:
+            return Response({'published': False, 'error': 'এই result এখনো প্রকাশের জন্য নির্ধারিত হয়নি।'}, status=403)
+        now = timezone.now()
+        if schedule.publish_at > now:
+            return Response({
+                'published': False,
+                'publish_at': schedule.publish_at,
+                'error': 'এই result এখনো প্রকাশিত হয়নি।',
+            }, status=403)
+
+        student_id = q.get('student_id')
+        roll = q.get('roll_number')
+        if roll and not student_id:
+            found = Student.objects.filter(class_name_static_id=class_id, roll_number=roll)
+            if section_id:
+                found = found.filter(section_static_id=section_id)
+            if found.count() != 1:
+                return Response({'error': 'রোল দিয়ে একজন ছাত্র নির্দিষ্ট করা যায়নি, section_id ও দিন।'}, status=400)
+            student_id = found.first().id
+
+        params = {'class_id': class_id}
+        if section_id:
+            params['section_id'] = section_id
+        if student_id:
+            params['student_id'] = student_id
+        if setup_id:
+            params['exam_setup_id'] = setup_id
+            resp = ClassSectionResultSummaryView().get(_Params(params))
+        else:
+            resp = CombinedResultView().get(_Params(params), combined_id)
+        if resp.status_code == 200:
+            resp.data = {'published': True, 'publish_at': schedule.publish_at,
+                         'is_combined': bool(combined_id), **dict(resp.data)}
         return resp

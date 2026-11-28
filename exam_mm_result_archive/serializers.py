@@ -12,6 +12,7 @@ from .models import (
     ExamResultConfig,
     GradeScale,
     GradeScaleRow,
+    ResultPublishSchedule,
     StudentExamResult,
     SubjectGroup,
 )
@@ -419,3 +420,43 @@ class GradeScaleSerializer(serializers.ModelSerializer):
             instance.rows.all().delete()
             GradeScaleRow.objects.bulk_create([GradeScaleRow(scale=instance, **r) for r in rows])
         return instance
+
+class ResultPublishScheduleSerializer(serializers.ModelSerializer):
+    class_name = serializers.CharField(source='academic_class.name', read_only=True)
+    section_name = serializers.SerializerMethodField(read_only=True)
+    target = serializers.SerializerMethodField(read_only=True)
+    is_published = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ResultPublishSchedule
+        fields = [
+            'id', 'academic_class', 'class_name', 'section', 'section_name',
+            'exam_setup', 'combined_config', 'target', 'publish_at', 'is_active', 'is_published',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+    def get_section_name(self, obj):
+        return obj.section.name if obj.section_id else 'সব সেকশন'
+
+    def get_target(self, obj):
+        return str(obj.exam_setup) if obj.exam_setup_id else (str(obj.combined_config) if obj.combined_config_id else '')
+
+    def get_is_published(self, obj):
+        from django.utils import timezone
+        return bool(obj.is_active and obj.publish_at <= timezone.now())
+
+    def validate(self, attrs):
+        get = lambda k: attrs[k] if k in attrs else getattr(self.instance, k, None)
+        academic_class, section = get('academic_class'), get('section')
+        setup, combined = get('exam_setup'), get('combined_config')
+        if bool(setup) == bool(combined):
+            raise serializers.ValidationError("exam_setup অথবা combined_config — ঠিক একটা বাছতে হবে।")
+        target_class_id = (setup or combined).academic_class_id
+        if academic_class and target_class_id != academic_class.id:
+            raise serializers.ValidationError("এই exam/combined এই class এর না।")
+        if section:
+            allowed = setup.sections.all() if setup else None
+            if setup and not allowed.filter(id=section.id).exists():
+                raise serializers.ValidationError("এই section এই exam setup এ নেই।")
+        return attrs
